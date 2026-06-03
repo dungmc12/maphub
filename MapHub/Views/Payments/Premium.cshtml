@@ -229,8 +229,11 @@
                 <div class="plan-pick-price">@(((decimal)ViewBag.YearAmount).ToString("#,##0"))đ</div>
             </label>
 
-            <button type="submit" class="btn-accent w-100 mt-3">
-                <i class="bi bi-qr-code-scan"></i> Tạo mã QR thanh toán
+            <button type="submit" id="btnCreateQr" class="btn-accent w-100 mt-3" onclick="startLoading()">
+                <span id="btnText"><i class="bi bi-qr-code-scan"></i> Tạo mã QR thanh toán</span>
+                <span id="btnLoading" style="display:none">
+                    <span class="spinner-border spinner-border-sm me-1"></span> Đang tạo…
+                </span>
             </button>
             <p class="text-center mt-2"><small class="text-muted">Quét VietQR bằng app ngân hàng · Tự động lên Pro sau khi chuyển khoản</small></p>
         </form>
@@ -252,5 +255,10 @@ function pickPlan(which) {
     document.getElementById('plan-year-label').classList.toggle('active', which === 'year');
 }
 document.addEventListener('keydown', e => { if (e.key === 'Escape') hidePayment(); });
+function startLoading() {
+    document.getElementById('btnText').style.display = 'none';
+    document.getElementById('btnLoading').style.display = 'inline';
+    document.getElementById('btnCreateQr').disabled = true;
+}
 </script>
 }

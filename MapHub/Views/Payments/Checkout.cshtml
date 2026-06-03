@@ -17,6 +17,10 @@
     }
     .checkout-info > div span { color: #64748b; }
     .checkout-code { font-size: 1.05rem; letter-spacing: .5px; }
+    .qr-box { min-height: 270px; display:flex; align-items:center; justify-content:center; }
+    .copy-btn { cursor:pointer; background:none; border:1px solid #e2e8f0; border-radius:6px;
+                padding:.15rem .5rem; font-size:.8rem; color:#6d28d9; margin-left:.4rem; }
+    .copy-btn:hover { background:#faf5ff; }
 </style>
 
 <div class="container">
@@ -26,9 +30,19 @@
             Gói @ViewBag.PlanLabel · <strong>@Model.Amount.ToString("#,##0")đ</strong>
         </p>
 
-        <div class="text-center my-2">
-            <img src="@ViewBag.QrUrl" alt="VietQR" class="checkout-qr"
-                 onerror="this.style.display='none'">
+        <!-- QR area -->
+        <div class="text-center my-2 qr-box" id="qrBox">
+            <div id="qrLoading">
+                <div class="spinner-border text-secondary mb-2"></div>
+                <div class="text-muted small">Đang tải mã QR…</div>
+            </div>
+            <img id="qrImg" src="@ViewBag.QrUrl" alt="VietQR" class="checkout-qr" style="display:none"
+                 onload="qrLoaded()" onerror="qrFailed()">
+            <div id="qrFallback" style="display:none"
+                 class="alert alert-info small text-start">
+                Không tải được mã QR.<br>
+                Vui lòng chuyển khoản thủ công theo thông tin bên dưới.
+            </div>
         </div>
 
         <div class="checkout-info">
@@ -36,12 +50,16 @@
             <div><span>Số tài khoản</span><strong>@ViewBag.AccountNumber</strong></div>
             <div><span>Chủ tài khoản</span><strong>@ViewBag.AccountName</strong></div>
             <div><span>Số tiền</span><strong>@Model.Amount.ToString("#,##0")đ</strong></div>
-            <div><span>Nội dung CK</span><strong class="text-danger checkout-code">@Model.Code</strong></div>
+            <div>
+                <span>Nội dung CK</span>
+                <strong class="text-danger checkout-code" id="payCode">@Model.Code</strong>
+                <button class="copy-btn" onclick="copyCode()" title="Sao chép">📋</button>
+            </div>
         </div>
 
         <div class="alert alert-warning mt-3 small mb-0">
-            ⚠️ Vui lòng <strong>giữ nguyên nội dung chuyển khoản <span class="text-danger">@Model.Code</span></strong>
-            để hệ thống tự nhận đúng tài khoản của bạn và lên Pro tự động.
+            ⚠️ <strong>Bắt buộc ghi đúng nội dung: <span class="text-danger">@Model.Code</span></strong>
+            — hệ thống tự nhận và lên Pro ngay sau khi chuyển khoản.
         </div>
 
         <div id="payStatus" class="text-center mt-3">
@@ -57,6 +75,22 @@
 
 @section Scripts {
 <script>
+function qrLoaded() {
+    document.getElementById('qrLoading').style.display = 'none';
+    document.getElementById('qrImg').style.display = 'inline';
+}
+function qrFailed() {
+    document.getElementById('qrLoading').style.display = 'none';
+    document.getElementById('qrFallback').style.display = 'block';
+    document.getElementById('qrBox').style.minHeight = 'auto';
+}
+function copyCode() {
+    const code = document.getElementById('payCode').textContent.trim();
+    navigator.clipboard.writeText(code).then(() => {
+        const btn = document.querySelector('.copy-btn');
+        btn.textContent = '✅'; setTimeout(() => btn.textContent = '📋', 1500);
+    });
+}
 const CODE = '@Model.Code';
 const timer = setInterval(async () => {
     try {
@@ -69,7 +103,7 @@ const timer = setInterval(async () => {
                 '<div class="text-success fw-bold">✅ Thanh toán thành công! Đang chuyển hướng…</div>';
             setTimeout(() => location.href = '/Payments/Premium', 1800);
         }
-    } catch { /* bỏ qua lỗi mạng tạm thời */ }
+    } catch { }
 }, 3000);
 </script>
 }
