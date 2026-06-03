@@ -94,7 +94,7 @@ public class PaymentsController : Controller
         var addInfo = Uri.EscapeDataString(payment.Code);
         var accountName = Uri.EscapeDataString(_sepay.AccountName ?? "");
         ViewBag.QrUrl = $"https://img.vietqr.io/image/{_sepay.BankCode}-{_sepay.AccountNumber}-compact2.png" +
-                        $"?amount={payment.Amount}&addInfo={addInfo}&accountName={accountName}";
+                        $"?amount={(long)payment.Amount}&addInfo={addInfo}&accountName={accountName}";
         ViewBag.PlanLabel = price.Label;
         ViewBag.BankCode = _sepay.BankCode;
         ViewBag.AccountNumber = _sepay.AccountNumber;

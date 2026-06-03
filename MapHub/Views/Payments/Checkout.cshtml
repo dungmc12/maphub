@@ -12,10 +12,10 @@
                  color:#fff; padding:1.2rem 1.5rem; text-align:center; }
     .ck-header h5 { margin:0; font-weight:800; font-size:1.1rem; }
     .ck-header small { opacity:.85; }
-    .ck-qr { background:#f8f5ff; padding:1.2rem; text-align:center; border-bottom:1px dashed #e5e7eb; }
-    .ck-qr img { width:240px; max-width:100%; border-radius:14px;
-                 border:3px solid #fff; box-shadow:0 4px 16px rgba(124,58,237,.15); }
-    .ck-qr-spinner { height:270px; display:flex; flex-direction:column;
+    .ck-qr { background:#f8f5ff; padding:1.4rem; text-align:center; border-bottom:1px dashed #e5e7eb; }
+    .ck-qr img { width:260px; max-width:100%; border-radius:16px;
+                 border:4px solid #fff; box-shadow:0 6px 24px rgba(124,58,237,.18); }
+    .ck-qr-spinner { height:280px; display:flex; flex-direction:column;
                      align-items:center; justify-content:center; color:#7c3aed; }
     .ck-info { padding:1rem 1.5rem; }
     .ck-row { display:flex; justify-content:space-between; align-items:center;
@@ -31,6 +31,18 @@
     .ck-confirm { padding:1rem 1.5rem 1.5rem; }
     .ck-done { margin:1rem 1.5rem 1.5rem; background:#f0fdf4; border:1px solid #86efac;
                border-radius:10px; padding:1rem; text-align:center; font-size:.9rem; }
+    .ck-ref-wrap { background:#f0f9ff; border:1px solid #bae6fd; border-radius:12px;
+                   padding:1rem; margin-bottom:1rem; }
+    .ck-ref-label { font-size:.82rem; font-weight:700; color:#0369a1; margin-bottom:.4rem; }
+    .ck-ref-hint { font-size:.77rem; color:#64748b; margin-top:.3rem; }
+    .ck-ref-input { border:2px solid #bae6fd !important; }
+    .ck-ref-input:focus { border-color:#0284c7 !important; outline:none; box-shadow:0 0 0 3px rgba(3,105,161,.12) !important; }
+    .ck-ref-input.invalid { border-color:#ef4444 !important; }
+    .ck-steps { background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px;
+                padding:.9rem 1rem; margin:0 1.5rem 1rem; font-size:.83rem; }
+    .ck-steps li { margin-bottom:.3rem; color:#475569; }
+    .ck-steps li:last-child { margin-bottom:0; }
+    .ck-steps strong { color:#1e293b; }
 </style>
 
 <div class="ck-wrap">
@@ -42,25 +54,33 @@
             <small>Gói @ViewBag.PlanLabel · <strong>@Model.Amount.ToString("#,##0")đ</strong></small>
         </div>
 
+        <!-- Hướng dẫn các bước -->
+        <ol class="ck-steps mt-3">
+            <li><strong>Bước 1:</strong> Quét mã QR bằng app ngân hàng bất kỳ</li>
+            <li><strong>Bước 2:</strong> Chuyển khoản đúng số tiền &amp; nội dung <code>@Model.Code</code></li>
+            <li><strong>Bước 3:</strong> Nhập <strong>mã giao dịch</strong> từ SMS/thông báo ngân hàng rồi bấm xác nhận</li>
+            <li><strong>Bước 4:</strong> Admin duyệt → tài khoản lên Pro trong 24 giờ</li>
+        </ol>
+
         <!-- QR code -->
         <div class="ck-qr">
             <div id="qrLoader" class="ck-qr-spinner">
-                <div class="spinner-border mb-2"></div>
-                <small>Đang tải mã QR…</small>
+                <div class="spinner-border mb-2" style="color:#8b5cf6"></div>
+                <small class="text-muted">Đang tải mã QR…</small>
             </div>
             <img id="qrImg" src="@ViewBag.QrUrl" alt="VietQR"
                  style="display:none"
                  onload="this.style.display='block';document.getElementById('qrLoader').style.display='none'"
-                 onerror="document.getElementById('qrLoader').innerHTML='<div class=\'text-muted small\'>Không tải được QR — dùng thông tin bên dưới</div>'">
+                 onerror="document.getElementById('qrLoader').innerHTML='<small class=\'text-danger\'>Không tải được QR — dùng thông tin bên dưới để CK thủ công</small>'">
             <p class="text-muted small mt-2 mb-0">Mở app ngân hàng → Quét mã QR</p>
         </div>
 
         <!-- Thông tin CK -->
         <div class="ck-info">
-            <div class="ck-row"><span>Ngân hàng</span><strong>@ViewBag.BankCode</strong></div>
+            <div class="ck-row"><span>Ngân hàng</span><strong>Vietcombank (VCB)</strong></div>
             <div class="ck-row"><span>Số tài khoản</span><strong>@ViewBag.AccountNumber</strong></div>
             <div class="ck-row"><span>Chủ tài khoản</span><strong>@ViewBag.AccountName</strong></div>
-            <div class="ck-row"><span>Số tiền</span><strong class="text-primary">@Model.Amount.ToString("#,##0")đ</strong></div>
+            <div class="ck-row"><span>Số tiền</span><strong class="text-primary fs-6">@Model.Amount.ToString("#,##0")đ</strong></div>
             <div class="ck-row">
                 <span>Nội dung CK</span>
                 <span>
@@ -86,23 +106,37 @@
                 else
                 {
                     <div class="text-success fw-bold">✅ Đã gửi xác nhận!</div>
-                    <div class="mt-1">Admin sẽ duyệt và tài khoản bạn lên Pro trong vòng 24 giờ.</div>
+                    <div class="mt-1 text-muted small">Admin sẽ duyệt và tài khoản bạn lên Pro trong vòng 24 giờ.</div>
                 }
                 <a href="/Payments/Premium" class="btn btn-sm btn-outline-secondary mt-2">← Quay lại</a>
             </div>
         }
         else
         {
-            <!-- Form xác nhận sau khi CK -->
+            <!-- Form xác nhận — yêu cầu nhập mã GD ngân hàng -->
             <div class="ck-confirm">
-                <p class="fw-semibold mb-2">Sau khi chuyển khoản xong, bấm xác nhận:</p>
                 <form id="confirmForm">
                     @Html.AntiForgeryToken()
                     <input type="hidden" name="code" value="@Model.Code">
-                    <input type="text" name="bankRef" id="bankRef"
-                           class="form-control form-control-sm mb-2"
-                           placeholder="Mã giao dịch ngân hàng (tuỳ chọn)"
-                           maxlength="100">
+
+                    <div class="ck-ref-wrap">
+                        <div class="ck-ref-label">
+                            <i class="bi bi-phone-fill me-1"></i> Nhập mã giao dịch ngân hàng
+                            <span class="text-danger">*</span>
+                        </div>
+                        <input type="text" name="bankRef" id="bankRef"
+                               class="form-control form-control-sm ck-ref-input"
+                               placeholder="Ví dụ: FT26154XXXXXX hoặc số tham chiếu GD"
+                               maxlength="100" autocomplete="off">
+                        <div class="ck-ref-hint">
+                            Mã này có trong SMS hoặc thông báo app ngân hàng sau khi chuyển khoản thành công.
+                            Bắt buộc điền để admin xác minh.
+                        </div>
+                        <div id="refError" style="display:none;color:#ef4444;font-size:.8rem;margin-top:.3rem">
+                            ⚠️ Vui lòng nhập mã giao dịch từ thông báo ngân hàng trước khi xác nhận.
+                        </div>
+                    </div>
+
                     <button type="button" id="btnConfirm" class="btn-accent w-100" onclick="submitConfirm()">
                         <i class="bi bi-check-circle-fill"></i> Tôi đã chuyển khoản xong
                     </button>
@@ -125,19 +159,29 @@ function copyCode() {
     navigator.clipboard.writeText(code).then(function() {
         btn.textContent = '✅ Đã copy';
         setTimeout(function() { btn.innerHTML = '📋 Copy'; }, 2000);
-    }).catch(function() {
-        btn.textContent = '📋 Copy';
-    });
+    }).catch(function() { btn.textContent = '📋 Copy'; });
 }
 
 async function submitConfirm() {
+    const bankRef = document.getElementById('bankRef').value.trim();
+    const errEl = document.getElementById('refError');
+    const inp = document.getElementById('bankRef');
+
+    // Bắt buộc nhập mã GD
+    if (!bankRef) {
+        inp.classList.add('invalid');
+        errEl.style.display = 'block';
+        inp.focus();
+        return;
+    }
+    inp.classList.remove('invalid');
+    errEl.style.display = 'none';
+
     const btn = document.getElementById('btnConfirm');
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Đang gửi…';
 
-    const form = document.getElementById('confirmForm');
-    const fd = new FormData(form);
-
+    const fd = new FormData(document.getElementById('confirmForm'));
     try {
         const resp = await fetch('/Payments/Confirm', { method: 'POST', body: fd });
         const data = await resp.json();
@@ -146,15 +190,15 @@ async function submitConfirm() {
             const msg = document.getElementById('confirmMsg');
             msg.style.display = 'block';
             msg.innerHTML = '<div class="alert alert-success mt-2 text-center">'
-                + '<div class="fw-bold">✅ Đã gửi xác nhận!</div>'
-                + '<div class="small mt-1">Admin sẽ duyệt và tài khoản bạn lên Pro trong vòng 24 giờ.</div>'
+                + '<div class="fw-bold fs-6">✅ Đã gửi xác nhận!</div>'
+                + '<div class="small mt-1 text-muted">Admin sẽ duyệt và tài khoản bạn lên Pro trong vòng 24 giờ.</div>'
                 + '</div>';
         } else {
             alert(data.msg || 'Có lỗi, vui lòng thử lại.');
             btn.disabled = false;
             btn.innerHTML = '<i class="bi bi-check-circle-fill"></i> Tôi đã chuyển khoản xong';
         }
-    } catch (e) {
+    } catch {
         alert('Lỗi kết nối, vui lòng thử lại.');
         btn.disabled = false;
         btn.innerHTML = '<i class="bi bi-check-circle-fill"></i> Tôi đã chuyển khoản xong';
