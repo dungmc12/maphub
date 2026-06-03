@@ -68,7 +68,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         builder.Entity<Plan>()
             .HasIndex(p => p.ShareToken)
             .IsUnique()
-            .HasFilter("[ShareToken] IS NOT NULL");
+            .HasFilter("\"ShareToken\" IS NOT NULL");
 
         // Event → Place: no cascade to avoid multiple path issues
         builder.Entity<Event>()

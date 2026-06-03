@@ -5,8 +5,6 @@ services:
     dockerfilePath: ./Dockerfile.render
     plan: free
     envVars:
-      - key: DB_PROVIDER
-        value: postgres
       - key: ConnectionStrings__DefaultConnection
         fromDatabase:
           name: cityscout-db
