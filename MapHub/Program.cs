@@ -8,11 +8,12 @@ var builder = WebApplication.CreateBuilder(args);
 var rawConn = builder.Configuration.GetConnectionString("DefaultConnection")
     ?? throw new InvalidOperationException("DefaultConnection is not configured.");
 
-// Render provides PostgreSQL URI (postgresql://user:pass@host:5432/db).
-// Npgsql EF Core requires keyword=value format — convert if needed.
+// Detect provider: use postgres when DB_PROVIDER=postgres (Render) or when URI starts with postgresql://
+var dbProvider = Environment.GetEnvironmentVariable("DB_PROVIDER") ?? "sqlserver";
 var connectionString = rawConn;
 if (rawConn.StartsWith("postgresql://") || rawConn.StartsWith("postgres://"))
 {
+    dbProvider = "postgres";
     var uri = new Uri(rawConn);
     var parts = uri.UserInfo.Split(':', 2);
     var port = uri.Port > 0 ? uri.Port : 5432;
@@ -42,7 +43,12 @@ builder.Services.PostConfigure<AiAssistantOptions>(options =>
 });
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseNpgsql(connectionString));
+{
+    if (dbProvider == "postgres")
+        options.UseNpgsql(connectionString);
+    else
+        options.UseSqlServer(connectionString);
+});
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
 builder.Services
@@ -107,6 +113,7 @@ using (var scope = app.Services.CreateScope())
     var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
 
     context.Database.EnsureCreated();
+    await DataSeeder.SeedAsync(context);
 
     // Tạo roles
     string[] roles = ["Admin", "Pro", "User"];
