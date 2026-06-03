@@ -2,8 +2,7 @@ services:
   - type: web
     name: cityscout
     runtime: docker
-    dockerfilePath: ./MapHub/Dockerfile
-    dockerContext: ./MapHub
+    dockerfilePath: ./Dockerfile.render
     plan: free
     envVars:
       - key: DB_PROVIDER
