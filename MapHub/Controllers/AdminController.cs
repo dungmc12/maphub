@@ -23,15 +23,22 @@ public class AdminController : Controller
 
     public async Task<IActionResult> Index()
     {
-        var pendingCount = await _context.Places.CountAsync(p => !p.IsApproved);
-        var totalPlaces  = await _context.Places.CountAsync();
-        var totalEvents  = await _context.Events.CountAsync();
-        var totalUsers   = await _context.Users.CountAsync();
+        var pendingCount    = await _context.Places.CountAsync(p => !p.IsApproved);
+        var totalPlaces     = await _context.Places.CountAsync();
+        var totalEvents     = await _context.Events.CountAsync();
+        var totalUsers      = await _context.Users.CountAsync();
+        var pendingPayments = await _context.Payments
+            .Where(p => p.Status == "confirming")
+            .OrderByDescending(p => p.CreatedAt)
+            .Select(p => new { p.Id, p.UserId, p.Amount, p.PlanType, p.Code, p.TransactionId, p.CreatedAt,
+                               Email = _context.Users.Where(u => u.Id == p.UserId).Select(u => u.Email).FirstOrDefault() })
+            .ToListAsync();
 
-        ViewBag.PendingCount = pendingCount;
-        ViewBag.TotalPlaces  = totalPlaces;
-        ViewBag.TotalEvents  = totalEvents;
-        ViewBag.TotalUsers   = totalUsers;
+        ViewBag.PendingCount    = pendingCount;
+        ViewBag.TotalPlaces     = totalPlaces;
+        ViewBag.TotalEvents     = totalEvents;
+        ViewBag.TotalUsers      = totalUsers;
+        ViewBag.PendingPayments = pendingPayments;
 
         var places = await _context.Places
             .Include(p => p.Images.Where(i => i.IsPrimary))

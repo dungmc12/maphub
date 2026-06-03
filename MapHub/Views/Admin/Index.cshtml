@@ -48,6 +48,39 @@
         <div class="admin-alert admin-alert-success">✅ @TempData["Success"]</div>
     }
 
+    @{
+        var pendingPay = ViewBag.PendingPayments as IEnumerable<dynamic> ?? Enumerable.Empty<dynamic>();
+        var pendingPayList = pendingPay.ToList();
+    }
+    @if (pendingPayList.Any())
+    {
+        <div class="admin-section-header mt-4">
+            <h2 class="admin-section-title">💳 Thanh toán chờ duyệt <span class="admin-badge-warn">@pendingPayList.Count</span></h2>
+        </div>
+        <div class="table-responsive mb-4">
+            <table class="admin-table">
+                <thead><tr><th>Email</th><th>Gói</th><th>Số tiền</th><th>Mã CK</th><th>Mã GD ngân hàng</th><th>Thời gian</th><th>Thao tác</th></tr></thead>
+                <tbody>
+                @foreach (var p in pendingPayList)
+                {
+                    <tr id="payrow-@p.Id">
+                        <td>@(p.Email ?? p.UserId)</td>
+                        <td>@(p.PlanType == "year" ? "1 năm" : "1 tháng")</td>
+                        <td>@(((decimal)p.Amount).ToString("#,##0"))đ</td>
+                        <td><code>@p.Code</code></td>
+                        <td><small class="text-muted">@(string.IsNullOrEmpty((string?)p.TransactionId) ? "—" : p.TransactionId)</small></td>
+                        <td><small>@p.CreatedAt.ToString("dd/MM HH:mm")</small></td>
+                        <td>
+                            <button class="btn btn-sm btn-success me-1" onclick="approvePayment(@p.Id)">✅ Duyệt</button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="rejectPayment(@p.Id)">✗ Từ chối</button>
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    }
+
     <div class="admin-section-header">
         <div>
             <h2 class="admin-section-title">Địa điểm gần đây</h2>
@@ -136,3 +169,27 @@
         </table>
     </div>
 </div>
+
+@section Scripts {
+<script>
+const _tok = document.querySelector('meta[name="RequestVerificationToken"]')?.content
+    || document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
+
+async function approvePayment(id) {
+    if (!confirm('Duyệt thanh toán này và kích hoạt Pro cho user?')) return;
+    const fd = new FormData(); fd.append('id', id); fd.append('__RequestVerificationToken', _tok);
+    const r = await fetch('/Payments/Approve', { method:'POST', body: fd });
+    const d = await r.json();
+    if (d.ok) { document.getElementById('payrow-' + id)?.remove(); alert('✅ Đã duyệt - user đã lên Pro!'); }
+    else alert('Lỗi: ' + (d.msg||''));
+}
+async function rejectPayment(id) {
+    if (!confirm('Từ chối thanh toán này?')) return;
+    const fd = new FormData(); fd.append('id', id); fd.append('__RequestVerificationToken', _tok);
+    const r = await fetch('/Payments/Reject', { method:'POST', body: fd });
+    const d = await r.json();
+    if (d.ok) { document.getElementById('payrow-' + id)?.remove(); }
+    else alert('Lỗi: ' + (d.msg||''));
+}
+</script>
+}

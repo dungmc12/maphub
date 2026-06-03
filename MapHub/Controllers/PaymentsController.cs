@@ -1,5 +1,6 @@
 using MapHub.Data;
 using MapHub.Models;
+using MapHub.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -13,15 +14,18 @@ public class PaymentsController : Controller
     private readonly ApplicationDbContext _context;
     private readonly PricingOptions _pricing;
     private readonly SePayOptions _sepay;
+    private readonly IProService _proService;
 
     public PaymentsController(
         ApplicationDbContext context,
         IOptions<PricingOptions> pricing,
-        IOptions<SePayOptions> sepay)
+        IOptions<SePayOptions> sepay,
+        IProService proService)
     {
         _context = context;
         _pricing = pricing.Value;
         _sepay = sepay.Value;
+        _proService = proService;
     }
 
     [HttpGet]
@@ -46,14 +50,14 @@ public class PaymentsController : Controller
         return View("Premium");
     }
 
-    // Tạo đơn -> sinh mã nội dung CK duy nhất -> sang trang QR
+    // AJAX: tạo đơn, trả về thông tin QR ngay trong modal
     [HttpPost]
     [Authorize]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(string plan)
     {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (userId == null) return Challenge();
+        if (userId == null) return Unauthorized();
 
         plan = string.Equals(plan, "year", StringComparison.OrdinalIgnoreCase) ? "year" : "month";
         var price = _pricing.For(plan);
@@ -62,49 +66,90 @@ public class PaymentsController : Controller
         {
             UserId = userId,
             Amount = price.Amount,
-            Provider = "sepay",
+            Provider = "manual",
             Status = "pending",
             PlanType = plan,
             Description = $"CityScout Pro {price.Label}",
             CreatedAt = DateTime.UtcNow
         };
         _context.Payments.Add(payment);
-        await _context.SaveChangesAsync();        // lấy Id
-
-        payment.Code = $"CSPRO{payment.Id}";       // nội dung CK duy nhất
         await _context.SaveChangesAsync();
 
-        return RedirectToAction(nameof(Checkout), new { code = payment.Code });
+        payment.Code = $"CSPRO{payment.Id}";
+        await _context.SaveChangesAsync();
+
+        var qrUrl =
+            $"https://img.vietqr.io/image/{_sepay.BankCode}-{_sepay.AccountNumber}-compact2.png" +
+            $"?amount={(long)payment.Amount}" +
+            $"&addInfo={Uri.EscapeDataString(payment.Code)}" +
+            $"&accountName={Uri.EscapeDataString(_sepay.AccountName)}";
+
+        return Json(new
+        {
+            ok = true,
+            code = payment.Code,
+            qrUrl,
+            amount = payment.Amount.ToString("#,##0"),
+            bankCode = _sepay.BankCode,
+            accountNumber = _sepay.AccountNumber,
+            accountName = _sepay.AccountName,
+            planLabel = price.Label
+        });
     }
 
-    // Trang hiển thị mã VietQR để quét
-    [HttpGet]
+    // User xác nhận đã chuyển khoản (kèm mã GD ngân hàng tuỳ chọn)
+    [HttpPost]
     [Authorize]
-    public async Task<IActionResult> Checkout(string code)
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Confirm(string code, string? bankRef)
     {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         var payment = await _context.Payments
             .FirstOrDefaultAsync(p => p.Code == code && p.UserId == userId);
-        if (payment == null) return NotFound();
+        if (payment == null) return Json(new { ok = false, msg = "Không tìm thấy đơn." });
+        if (payment.Status == "paid")
+            return Json(new { ok = false, msg = "Đơn đã được duyệt rồi." });
 
-        var price = _pricing.For(payment.PlanType);
+        payment.Status = "confirming";
+        payment.TransactionId = bankRef?.Trim();
+        await _context.SaveChangesAsync();
 
-        // Ảnh VietQR miễn phí (nhồi sẵn số tiền + nội dung CK)
-        var qrUrl =
-            $"https://img.vietqr.io/image/{_sepay.BankCode}-{_sepay.AccountNumber}-compact2.png" +
-            $"?amount={(long)payment.Amount}" +
-            $"&addInfo={Uri.EscapeDataString(payment.Code!)}" +
-            $"&accountName={Uri.EscapeDataString(_sepay.AccountName)}";
-
-        ViewBag.QrUrl = qrUrl;
-        ViewBag.BankCode = _sepay.BankCode;
-        ViewBag.AccountNumber = _sepay.AccountNumber;
-        ViewBag.AccountName = _sepay.AccountName;
-        ViewBag.PlanLabel = price.Label;
-        return View(payment);
+        return Json(new { ok = true });
     }
 
-    // Frontend poll trạng thái đơn (đã trả chưa)
+    // Admin duyệt thanh toán thủ công
+    [HttpPost]
+    [Authorize(Roles = "Admin")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Approve(int id)
+    {
+        var payment = await _context.Payments.FindAsync(id);
+        if (payment == null) return NotFound();
+        if (payment.Status == "paid") return Json(new { ok = true, msg = "Đã duyệt trước đó." });
+
+        payment.Status = "paid";
+        payment.PaidAt = DateTime.UtcNow;
+        await _context.SaveChangesAsync();
+        await _proService.ActivateProAsync(payment.UserId, payment.PlanType);
+
+        return Json(new { ok = true });
+    }
+
+    // Admin từ chối thanh toán
+    [HttpPost]
+    [Authorize(Roles = "Admin")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Reject(int id)
+    {
+        var payment = await _context.Payments.FindAsync(id);
+        if (payment == null) return NotFound();
+
+        payment.Status = "cancelled";
+        await _context.SaveChangesAsync();
+
+        return Json(new { ok = true });
+    }
+
     [HttpGet]
     [Authorize]
     public async Task<IActionResult> Status(string code)
