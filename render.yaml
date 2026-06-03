@@ -3,6 +3,7 @@ services:
     name: cityscout
     runtime: docker
     dockerfilePath: ./MapHub/Dockerfile
+    dockerContext: ./MapHub
     plan: free
     envVars:
       - key: DB_PROVIDER
