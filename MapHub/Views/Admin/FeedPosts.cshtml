@@ -1,0 +1,97 @@
+@model IEnumerable<MapHub.Models.FeedPost>
+@{
+    ViewData["Title"] = "Admin – Tin tức / Bài viết";
+}
+
+<partial name="_AdminNav" />
+
+<div class="admin-page">
+    <div class="admin-section-header">
+        <h2 class="admin-section-title">📰 Quản lý Tin tức / Bài viết</h2>
+        <a href="/Admin/CreateFeedPost" class="btn-accent">＋ Tạo bài viết mới</a>
+    </div>
+
+    @if (!string.IsNullOrEmpty(TempData["Success"]?.ToString()))
+    {
+        <div class="admin-alert admin-alert-success">✅ @TempData["Success"]</div>
+    }
+
+    @if (!Model.Any())
+    {
+        <div class="plans-empty">
+            <div class="plans-empty-icon">📰</div>
+            <h5>Chưa có bài viết nào</h5>
+            <p><a href="/Admin/CreateFeedPost">Tạo bài viết đầu tiên</a></p>
+        </div>
+    }
+    else
+    {
+        <div class="admin-table-wrap">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>Ảnh</th>
+                        <th>Bài viết</th>
+                        <th>Loại</th>
+                        <th>Ngày đăng</th>
+                        <th>Hành động</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var post in Model)
+                    {
+                        <tr class="@(post.IsPinned ? "admin-row-warn" : "")">
+                            <td style="width:68px">
+                                @if (!string.IsNullOrEmpty(post.CoverImageUrl))
+                                {
+                                    <img src="@post.CoverImageUrl" alt="" style="width:56px;height:42px;object-fit:cover;border-radius:7px;">
+                                }
+                                else
+                                {
+                                    <div style="width:56px;height:42px;background:#f0f4f2;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:1.2rem">📷</div>
+                                }
+                            </td>
+                            <td>
+                                <div class="admin-place-link">
+                                    @if (post.IsPinned) { <span style="color:#92400e">📌 </span> }
+                                    @post.Title
+                                </div>
+                                @if (!string.IsNullOrEmpty(post.Summary))
+                                {
+                                    <div class="admin-sub">@(post.Summary.Length > 80 ? post.Summary[..80] + "…" : post.Summary)</div>
+                                }
+                            </td>
+                            <td>
+                                @switch (post.Type)
+                                {
+                                    case "guide": <span class="abadge abadge-green">📖 Cẩm nang</span> break;
+                                    case "tip":   <span class="abadge abadge-gold">💡 Mẹo hay</span>   break;
+                                    default:      <span class="abadge abadge-blue">📰 Tin tức</span>    break;
+                                }
+                            </td>
+                            <td><span class="admin-sub">@post.PublishedAt.ToString("dd/MM/yyyy")</span></td>
+                            <td>
+                                <div class="admin-actions">
+                                    <form method="post" action="/Admin/TogglePinFeedPost" class="d-inline">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@post.Id">
+                                        <button type="submit" class="aact-btn aact-pin @(post.IsPinned ? "aact-pin-on" : "")" title="@(post.IsPinned ? "Bỏ ghim" : "Ghim bài")">
+                                            <i class="bi bi-pin-angle-fill"></i>
+                                        </button>
+                                    </form>
+                                    <a href="/Admin/EditFeedPost/@post.Id" class="aact-btn aact-edit"><i class="bi bi-pencil-fill"></i> Sửa</a>
+                                    <form method="post" action="/Admin/DeleteFeedPost"
+                                          onsubmit="return confirm('Xóa bài viết này?')" class="d-inline">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@post.Id">
+                                        <button type="submit" class="aact-btn aact-del"><i class="bi bi-trash3-fill"></i></button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>

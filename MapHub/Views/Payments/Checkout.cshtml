@@ -1,0 +1,75 @@
+@model MapHub.Models.Payment
+@{
+    ViewData["Title"] = "Thanh toán Pro – CityScout";
+}
+
+<style>
+    .checkout-card {
+        max-width: 520px; margin: 2rem auto; background: #fff;
+        border: 1px solid var(--line, #e5e7eb); border-radius: 16px;
+        padding: 1.5rem; box-shadow: 0 8px 30px rgba(0,0,0,.06);
+    }
+    .checkout-qr { width: 260px; max-width: 100%; border-radius: 12px; border: 1px solid #eee; }
+    .checkout-info { margin-top: 1rem; border-top: 1px dashed #e5e7eb; }
+    .checkout-info > div {
+        display: flex; justify-content: space-between; gap: 1rem;
+        padding: .5rem 0; border-bottom: 1px dashed #f0f0f0; font-size: .92rem;
+    }
+    .checkout-info > div span { color: #64748b; }
+    .checkout-code { font-size: 1.05rem; letter-spacing: .5px; }
+</style>
+
+<div class="container">
+    <div class="checkout-card">
+        <h4 class="text-center mb-1">Quét mã để nâng cấp Pro</h4>
+        <p class="text-center text-muted mb-3">
+            Gói @ViewBag.PlanLabel · <strong>@Model.Amount.ToString("#,##0")đ</strong>
+        </p>
+
+        <div class="text-center my-2">
+            <img src="@ViewBag.QrUrl" alt="VietQR" class="checkout-qr"
+                 onerror="this.style.display='none'">
+        </div>
+
+        <div class="checkout-info">
+            <div><span>Ngân hàng</span><strong>@ViewBag.BankCode</strong></div>
+            <div><span>Số tài khoản</span><strong>@ViewBag.AccountNumber</strong></div>
+            <div><span>Chủ tài khoản</span><strong>@ViewBag.AccountName</strong></div>
+            <div><span>Số tiền</span><strong>@Model.Amount.ToString("#,##0")đ</strong></div>
+            <div><span>Nội dung CK</span><strong class="text-danger checkout-code">@Model.Code</strong></div>
+        </div>
+
+        <div class="alert alert-warning mt-3 small mb-0">
+            ⚠️ Vui lòng <strong>giữ nguyên nội dung chuyển khoản <span class="text-danger">@Model.Code</span></strong>
+            để hệ thống tự nhận đúng tài khoản của bạn và lên Pro tự động.
+        </div>
+
+        <div id="payStatus" class="text-center mt-3">
+            <div class="spinner-border spinner-border-sm text-secondary"></div>
+            <span class="text-muted ms-1">Đang chờ thanh toán…</span>
+        </div>
+
+        <div class="text-center mt-3">
+            <a href="/Payments/Premium" class="text-muted small">← Quay lại</a>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+const CODE = '@Model.Code';
+const timer = setInterval(async () => {
+    try {
+        const r = await fetch('/Payments/Status?code=' + encodeURIComponent(CODE));
+        if (!r.ok) return;
+        const d = await r.json();
+        if (d.paid) {
+            clearInterval(timer);
+            document.getElementById('payStatus').innerHTML =
+                '<div class="text-success fw-bold">✅ Thanh toán thành công! Đang chuyển hướng…</div>';
+            setTimeout(() => location.href = '/Payments/Premium', 1800);
+        }
+    } catch { /* bỏ qua lỗi mạng tạm thời */ }
+}, 3000);
+</script>
+}

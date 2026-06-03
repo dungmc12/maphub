@@ -1,0 +1,547 @@
+@model MapHub.Models.Plan
+@using System.Globalization
+@{
+    ViewData["Title"] = Model.Title;
+    bool isOwner = User.Identity?.IsAuthenticated == true &&
+                   User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value == Model.UserId;
+    int totalDays = Model.TotalDays;
+
+    // Group items by day
+    var byDay = Model.Items
+        .GroupBy(i => i.DayNumber ?? 0)
+        .OrderBy(g => g.Key)
+        .ToList();
+
+    string DayLabel(int dayNum) {
+        if (!Model.StartDate.HasValue || dayNum == 0) return dayNum == 0 ? "Chưa sắp xếp" : $"Ngày {dayNum}";
+        var d = Model.StartDate.Value.AddDays(dayNum - 1);
+        return $"Ngày {dayNum} — {d:ddd, dd/MM}";
+    }
+    string CatViLabel(string? cat) => cat?.ToLower() switch {
+        "restaurant" => "Nhà hàng", "cafe" => "Cà phê", "entertainment" => "Vui chơi",
+        "hotel" => "Lưu trú", "culture" => "Văn hóa", "temple" => "Tâm linh",
+        "nature" => "Thiên nhiên", "education" => "Giáo dục", _ => cat ?? "Khác"
+    };
+}
+
+<div class="container-xl py-4">
+
+    <!-- Back -->
+    <a href="/Plans" class="back-link">
+        <i class="bi bi-arrow-left-circle-fill" style="color:#8b5cf6"></i> Kế hoạch của tôi
+    </a>
+
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mt-3 mb-3">
+        <div>
+            <h2 class="mb-1">@Model.Title</h2>
+            <div class="plan-detail-meta">
+                @if (Model.StartDate.HasValue)
+                {
+                    <span><i class="bi bi-calendar3" style="color:#8b5cf6"></i>
+                        @Model.StartDate.Value.ToString("dd/MM/yyyy")
+                        @(Model.EndDate.HasValue ? " → " + Model.EndDate.Value.ToString("dd/MM/yyyy") : "")
+                        (@totalDays ngày)
+                    </span>
+                }
+                <span><i class="bi bi-geo-alt-fill" style="color:#ef4444"></i> @Model.Items.Count địa điểm</span>
+                @if (Model.IsPublic)
+                {
+                    <span class="abadge abadge-green"><i class="bi bi-share-fill"></i> Đang chia sẻ</span>
+                }
+            </div>
+        </div>
+        @if (isOwner)
+        {
+            <div class="d-flex gap-2 flex-wrap">
+                <form method="post" action="/Plans/ToggleShare">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="id" value="@Model.Id">
+                    <button type="submit" class="btn-ghost btn-sm-ghost">
+                        <i class="bi @(Model.IsPublic ? "bi-lock-fill" : "bi-share-fill")" style="color:#8b5cf6"></i>
+                        @(Model.IsPublic ? "Tắt chia sẻ" : "Chia sẻ")
+                    </button>
+                </form>
+            </div>
+        }
+    </div>
+
+    <!-- Share URL -->
+    @if (Model.IsPublic && !string.IsNullOrEmpty(Model.ShareToken))
+    {
+        <div class="share-url-bar mb-3">
+            <i class="bi bi-link-45deg" style="color:#8b5cf6;font-size:1.1rem"></i>
+            <span>Link chia sẻ:</span>
+            <input type="text" readonly class="share-url-input"
+                   value="@($"{Context.Request.Scheme}://{Context.Request.Host}/Plans/Shared/{Model.ShareToken}")"
+                   onclick="this.select();document.execCommand('copy');this.value='✅ Đã sao chép!';setTimeout(()=>location.reload(),1200)">
+            <small>(Click để sao chép)</small>
+        </div>
+    }
+
+    @if (isOwner)
+    {
+        <!-- Notes / Description panel -->
+        <div class="plan-notes-panel mb-4">
+            <button class="plan-notes-toggle" onclick="toggleNotes()" type="button">
+                <i class="bi bi-journal-text" style="color:#f59e0b"></i>
+                <span>Ghi chú kế hoạch</span>
+                @if (!string.IsNullOrEmpty(Model.Description))
+                {
+                    <span class="plan-notes-preview">@Model.Description[..Math.Min(60, Model.Description.Length)]@(Model.Description.Length > 60 ? "…" : "")</span>
+                }
+                <i class="bi bi-chevron-down ms-auto" id="notesChevron"></i>
+            </button>
+            <div id="notesBody" style="display:none;padding:.75rem 1rem;border-top:1px solid var(--line)">
+                <form method="post" action="/Plans/UpdateDescription">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="planId" value="@Model.Id">
+                    <textarea name="description" class="form-control mb-2" rows="4"
+                              placeholder="Ghi chú về kế hoạch: phương tiện, ngân sách, lưu ý chung...">@Model.Description</textarea>
+                    <button type="submit" class="aact-btn aact-approve">
+                        <i class="bi bi-floppy-fill"></i> Lưu ghi chú
+                    </button>
+                </form>
+            </div>
+        </div>
+    }
+
+    @if (Model.Items.Any() || isOwner)
+    {
+        <div class="row g-4">
+            <!-- ── LEFT: Timeline ── -->
+            <div class="col-lg-7">
+                @if (Model.Items.Any())
+                {
+                    @foreach (var group in byDay)
+                    {
+                        int dayKey = group.Key;
+                        <div class="plan-day-block">
+                            <div class="plan-day-header">
+                                <i class="bi bi-calendar-event-fill" style="color:#8b5cf6"></i>
+                                @DayLabel(dayKey)
+                                <span class="plan-day-count">@group.Count() địa điểm</span>
+                            </div>
+
+                            @foreach (var item in group.OrderBy(i => i.ArrivalTime).ThenBy(i => i.OrderIndex))
+                            {
+                                var place = item.Place;
+                                var img = place?.Images.FirstOrDefault()?.Url ?? "https://picsum.photos/seed/@(item.Id)/80/80";
+                                var openHrs = place?.Attributes
+                                    .Where(a => a.GroupName.ToLower().Contains("gi") || a.GroupName.ToLower().Contains("m") )
+                                    .Where(a => a.Label.Contains(":") || a.Label.Contains("–") || a.Label.Contains("-"))
+                                    .Take(3).ToList() ?? new();
+
+                                <div class="plan-item-card" id="item-@item.Id">
+                                    <!-- View mode -->
+                                    <div class="plan-item-view" id="view-@item.Id">
+                                        <img src="@img" class="plan-item-img" alt="@place?.Name"
+                                             onerror="this.src='https://picsum.photos/seed/@(item.Id)/80/80'">
+                                        <div class="plan-item-body">
+                                            <div class="plan-item-name">
+                                                <a href="/Map/Details/@item.PlaceId">@place?.Name</a>
+                                            </div>
+                                            <div class="plan-item-meta">
+                                                @if (!string.IsNullOrEmpty(place?.Category))
+                                                {
+                                                    <span class="plan-item-cat">@CatViLabel(place.Category)</span>
+                                                }
+                                                @if (!string.IsNullOrEmpty(item.ArrivalTime))
+                                                {
+                                                    <span class="plan-item-time">
+                                                        <i class="bi bi-clock-fill" style="color:#f59e0b"></i>
+                                                        @item.ArrivalTime
+                                                        @(!string.IsNullOrEmpty(item.LeaveTime) ? " → " + item.LeaveTime : "")
+                                                    </span>
+                                                }
+                                            </div>
+                                            @if (!string.IsNullOrEmpty(item.Note))
+                                            {
+                                                <div class="plan-item-note">
+                                                    <i class="bi bi-sticky-fill" style="color:#a78bfa"></i> @item.Note
+                                                </div>
+                                            }
+                                            @if (openHrs.Any())
+                                            {
+                                                <div class="plan-item-hours">
+                                                    <i class="bi bi-door-open-fill" style="color:#22c55e"></i>
+                                                    @string.Join(" · ", openHrs.Select(a => a.Label))
+                                                </div>
+                                            }
+                                        </div>
+                                        @if (isOwner)
+                                        {
+                                            <div class="plan-item-actions">
+                                                <button type="button" class="aact-btn aact-edit"
+                                                        onclick="showEdit(@item.Id)" title="Sửa">
+                                                    <i class="bi bi-pencil-fill"></i>
+                                                </button>
+                                                <form method="post" action="/Plans/RemoveItem">
+                                                    @Html.AntiForgeryToken()
+                                                    <input type="hidden" name="planId" value="@Model.Id">
+                                                    <input type="hidden" name="itemId"  value="@item.Id">
+                                                    <button type="submit" class="aact-btn aact-del"
+                                                            onclick="return confirm('Xóa địa điểm này khỏi kế hoạch?')">
+                                                        <i class="bi bi-trash3-fill"></i>
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        }
+                                    </div>
+
+                                    <!-- Edit mode -->
+                                    @if (isOwner)
+                                    {
+                                        <div class="plan-item-edit" id="edit-@item.Id" style="display:none">
+                                            <form method="post" action="/Plans/UpdateItem"
+                                                  onsubmit="return validateItemForm(this)">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="planId" value="@Model.Id">
+                                                <input type="hidden" name="itemId" value="@item.Id">
+                                                <div class="plan-edit-grid">
+                                                    <div>
+                                                        <label class="plan-edit-label">
+                                                            <i class="bi bi-calendar-event" style="color:#8b5cf6"></i> Ngày
+                                                        </label>
+                                                        <select name="dayNumber" class="plan-edit-input"
+                                                                onchange="onDayChange(this)">
+                                                            <option value="">-- Chưa sắp xếp --</option>
+                                                            @for (int d = 1; d <= Math.Max(totalDays, 7); d++)
+                                                            {
+                                                                <option value="@d" selected="@(item.DayNumber == d)">
+                                                                    Ngày @d@(Model.StartDate.HasValue ? " (" + Model.StartDate.Value.AddDays(d-1).ToString("dd/MM") + ")" : "")
+                                                                </option>
+                                                            }
+                                                        </select>
+                                                    </div>
+                                                    <div>
+                                                        <label class="plan-edit-label">
+                                                            <i class="bi bi-clock-fill" style="color:#f59e0b"></i> Giờ đến
+                                                        </label>
+                                                        <input type="time" name="arrivalTime"
+                                                               class="plan-edit-input arrival-input"
+                                                               value="@(item.ArrivalTime ?? "")"
+                                                               onchange="autoAdjustLeave(this)">
+                                                    </div>
+                                                    <div>
+                                                        <label class="plan-edit-label">
+                                                            <i class="bi bi-clock" style="color:#94a3b8"></i> Giờ rời
+                                                            <span class="plan-time-hint" id="hint-@item.Id"></span>
+                                                        </label>
+                                                        <input type="time" name="leaveTime"
+                                                               class="plan-edit-input leave-input"
+                                                               value="@(item.LeaveTime ?? "")"
+                                                               onchange="checkLeaveTime(this)">
+                                                    </div>
+                                                    <div class="plan-edit-full">
+                                                        <label class="plan-edit-label">
+                                                            <i class="bi bi-sticky-fill" style="color:#a78bfa"></i> Ghi chú địa điểm
+                                                        </label>
+                                                        <input type="text" name="note" class="plan-edit-input"
+                                                               value="@item.Note"
+                                                               placeholder="VD: Đặt bàn trước, mang ô, mặc trang phục kín...">
+                                                    </div>
+                                                </div>
+                                                @if (openHrs.Any())
+                                                {
+                                                    <div class="plan-edit-hours">
+                                                        <i class="bi bi-door-open-fill" style="color:#22c55e"></i>
+                                                        <strong>Giờ mở cửa:</strong>
+                                                        @foreach (var h in openHrs) { <span>@h.Label</span> }
+                                                    </div>
+                                                }
+                                                <div class="d-flex gap-2 mt-2">
+                                                    <button type="submit" class="aact-btn aact-approve">
+                                                        <i class="bi bi-floppy-fill"></i> Lưu
+                                                    </button>
+                                                    <button type="button" class="aact-btn" onclick="hideEdit(@item.Id)">
+                                                        Hủy
+                                                    </button>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    }
+                }
+                else if (isOwner)
+                {
+                    <div class="plan-empty-hero">
+                        <div class="plan-empty-icon-wrap">
+                            <i class="bi bi-geo-alt-fill"></i>
+                        </div>
+                        <h4>Kế hoạch chưa có địa điểm nào</h4>
+                        <p>Tìm và thêm địa điểm từ bảng bên cạnh, hoặc <a href="/Map">vào bản đồ</a>.</p>
+                    </div>
+                }
+            </div>
+
+            <!-- ── RIGHT: Add places panel ── -->
+            @if (isOwner)
+            {
+                <div class="col-lg-5">
+                    <div class="plan-add-panel">
+                        <h5 class="plan-section-heading">
+                            <i class="bi bi-plus-circle-fill" style="color:#e06d1b"></i> Thêm địa điểm
+                        </h5>
+                        <input id="planSearchInput" class="plan-search-input" placeholder="🔍 Tìm tên, địa chỉ...">
+                        <div class="plan-cat-chips">
+                            <button class="plan-cat-btn active" data-cat="">Tất cả</button>
+                            <button class="plan-cat-btn" data-cat="restaurant">🍽️</button>
+                            <button class="plan-cat-btn" data-cat="cafe">☕</button>
+                            <button class="plan-cat-btn" data-cat="entertainment">🎮</button>
+                            <button class="plan-cat-btn" data-cat="culture">🏛️</button>
+                            <button class="plan-cat-btn" data-cat="nature">🌿</button>
+                            <button class="plan-cat-btn" data-cat="temple">⛩️</button>
+                            <button class="plan-cat-btn" data-cat="education">🎓</button>
+                            <button class="plan-cat-btn" data-cat="hotel">🏨</button>
+                        </div>
+                        <div id="planPlaceGrid" class="plan-place-grid"></div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="plans-empty">
+            <div class="plans-empty-icon"><i class="bi bi-geo-alt" style="color:#94a3b8;font-size:3rem"></i></div>
+            <h5>Kế hoạch chưa có địa điểm nào</h5>
+        </div>
+    }
+</div>
+
+@if (isOwner)
+{
+    <form id="csrfHolder" style="display:none">@Html.AntiForgeryToken()</form>
+}
+
+@section Scripts {
+<script>
+const PLAN_ID = @Model.Id;
+
+// ── Dữ liệu tất cả địa điểm trong kế hoạch (để kiểm tra trùng giờ) ──
+const itemData = {
+@foreach (var it in Model.Items) {
+    <text>@it.Id: { name: '@Html.Raw((it.Place?.Name ?? "").Replace("\\", "\\\\").Replace("'", "\\'"))', day: @(it.DayNumber?.ToString() ?? "0"), arrival: '@(it.ArrivalTime ?? "")', leave: '@(it.LeaveTime ?? "")' },
+</text>
+}
+};
+
+// ── Phát hiện trùng giờ trong cùng ngày ──
+function getConflicts(currentId, dayNum, arrival, leave) {
+    if (!dayNum || !arrival) return [];
+    const newLeave = leave || '23:59';
+    return Object.entries(itemData)
+        .filter(([id, item]) => {
+            if (parseInt(id) === currentId) return false;
+            if (String(item.day) !== String(dayNum)) return false;
+            if (!item.arrival) return false;
+            const iLeave = item.leave || '23:59';
+            // Overlap: arrival < iLeave AND newLeave > item.arrival
+            return arrival < iLeave && newLeave > item.arrival;
+        })
+        .map(([, item]) => item);
+}
+
+// ── Hiển thị cảnh báo trùng giờ real-time ──
+function showConflictWarning(form, currentId, dayNum, arrival, leave) {
+    let warn = form.querySelector('.time-conflict-warn');
+    if (!warn) {
+        warn = document.createElement('div');
+        warn.className = 'time-conflict-warn';
+        form.querySelector('.plan-edit-grid').after(warn);
+    }
+    const conflicts = getConflicts(currentId, dayNum, arrival, leave);
+    if (conflicts.length > 0) {
+        warn.innerHTML = '⚠️ <strong>Trùng giờ với:</strong> '
+            + conflicts.map(c => `<em>${c.name}</em> (${c.arrival}${c.leave ? '→'+c.leave : ''})`).join(', ');
+        warn.style.display = 'block';
+    } else {
+        warn.style.display = 'none';
+    }
+}
+
+function showEdit(id) {
+    document.getElementById('view-' + id).style.display = 'none';
+    const editBox = document.getElementById('edit-' + id);
+    editBox.style.display = 'block';
+    // Kiểm tra trùng giờ ngay khi mở form (nếu địa điểm đã có giờ từ trước)
+    const form = editBox.querySelector('form');
+    if (form) {
+        const arrival = form.querySelector('.arrival-input')?.value || '';
+        const leave   = form.querySelector('.leave-input')?.value || '';
+        const dayNum  = form.querySelector('select[name="dayNumber"]')?.value || '';
+        showConflictWarning(form, id, dayNum, arrival, leave);
+    }
+}
+function hideEdit(id) {
+    document.getElementById('view-' + id).style.display = 'flex';
+    document.getElementById('edit-' + id).style.display = 'none';
+}
+
+// Tự động đề xuất giờ rời = giờ đến + 1 tiếng
+function autoAdjustLeave(arrivalInput) {
+    const form = arrivalInput.closest('form');
+    const leaveInput = form.querySelector('.leave-input');
+    if (!leaveInput.value && arrivalInput.value) {
+        const [h, m] = arrivalInput.value.split(':').map(Number);
+        const suggest = new Date(0, 0, 0, h + 1, m);
+        leaveInput.value = String(suggest.getHours()).padStart(2,'0') + ':' + String(suggest.getMinutes()).padStart(2,'0');
+    }
+    checkLeaveTime(leaveInput);
+}
+
+// Hiển thị cảnh báo giờ rời + kiểm tra trùng lịch
+function checkLeaveTime(leaveInput) {
+    const form    = leaveInput.closest('form');
+    const arrival = form.querySelector('.arrival-input').value;
+    const leave   = leaveInput.value;
+    const itemId  = parseInt(form.querySelector('input[name="itemId"]').value);
+    const dayNum  = form.querySelector('select[name="dayNumber"]').value;
+    const hint    = document.getElementById('hint-' + itemId);
+
+    if (arrival && leave) {
+        if (leave <= arrival) {
+            if (hint) { hint.textContent = '⚠️ Phải sau ' + arrival; hint.style.color = '#ef4444'; }
+            leaveInput.style.borderColor = '#ef4444';
+        } else {
+            const [ah, am] = arrival.split(':').map(Number);
+            const [lh, lm] = leave.split(':').map(Number);
+            const mins = (lh - ah) * 60 + (lm - am);
+            if (hint) {
+                hint.textContent = mins >= 60
+                    ? `✓ ${Math.floor(mins/60)}h${mins%60 ? mins%60+'p' : ''}`
+                    : `✓ ${mins} phút`;
+                hint.style.color = '#16a34a';
+            }
+            leaveInput.style.borderColor = '#a7f3d0';
+        }
+    } else {
+        if (hint) { hint.textContent = ''; leaveInput.style.borderColor = ''; }
+    }
+
+    showConflictWarning(form, itemId, dayNum, arrival, leave);
+}
+
+// Kiểm tra khi thay đổi ngày
+function onDayChange(select) {
+    const form    = select.closest('form');
+    const itemId  = parseInt(form.querySelector('input[name="itemId"]').value);
+    const arrival = form.querySelector('.arrival-input').value;
+    const leave   = form.querySelector('.leave-input').value;
+    showConflictWarning(form, itemId, select.value, arrival, leave);
+}
+
+// Validate trước khi submit
+function validateItemForm(form) {
+    const arrival = form.querySelector('.arrival-input')?.value;
+    const leave   = form.querySelector('.leave-input')?.value;
+    const itemId  = parseInt(form.querySelector('input[name="itemId"]').value);
+    const dayNum  = form.querySelector('select[name="dayNumber"]').value;
+
+    // Giờ rời phải sau giờ đến
+    if (arrival && leave && leave <= arrival) {
+        alert('⚠️ Giờ rời đi phải SAU giờ đến!\nVui lòng kiểm tra lại.');
+        return false;
+    }
+
+    // Kiểm tra trùng giờ
+    if (arrival && dayNum) {
+        const conflicts = getConflicts(itemId, dayNum, arrival, leave);
+        if (conflicts.length > 0) {
+            const list = conflicts.map(c =>
+                `  • ${c.name}: ${c.arrival}${c.leave ? ' → ' + c.leave : ''}`
+            ).join('\n');
+            const ok = confirm(
+                `⚠️ Trùng lịch với địa điểm khác trong Ngày ${dayNum}:\n${list}\n\nBạn vẫn muốn lưu?`
+            );
+            return ok;
+        }
+    }
+    return true;
+}
+
+function toggleNotes() {
+    const body = document.getElementById('notesBody');
+    const chev = document.getElementById('notesChevron');
+    if (body.style.display === 'none') {
+        body.style.display = 'block';
+        chev.className = 'bi bi-chevron-up ms-auto';
+    } else {
+        body.style.display = 'none';
+        chev.className = 'bi bi-chevron-down ms-auto';
+    }
+}
+
+// Open notes if already has content
+@if (!string.IsNullOrEmpty(Model.Description)) {
+    <text>document.addEventListener('DOMContentLoaded', () => toggleNotes());</text>
+}
+
+// Place browser
+async function loadPlanPlaces(cat, q) {
+    const grid = document.getElementById('planPlaceGrid');
+    if (!grid) return;
+    grid.innerHTML = '<div style="padding:1.5rem;text-align:center"><div class="spinner-border spinner-border-sm text-secondary"></div></div>';
+    let url = '/Map/GetPlaces';
+    const p = [];
+    if (cat) p.push('category=' + encodeURIComponent(cat));
+    if (q)   p.push('q=' + encodeURIComponent(q));
+    if (p.length) url += '?' + p.join('&');
+    try {
+        const places = await fetch(url).then(r => r.json());
+        renderPlanPlaces(places);
+    } catch {
+        grid.innerHTML = '<p class="text-muted p-3 text-center">Không tải được danh sách.</p>';
+    }
+}
+
+function renderPlanPlaces(places) {
+    const grid = document.getElementById('planPlaceGrid');
+    const token = document.querySelector('#csrfHolder input[name="__RequestVerificationToken"]')?.value ?? '';
+    if (!places.length) {
+        grid.innerHTML = '<p class="text-muted p-3 text-center">Không tìm thấy địa điểm nào.</p>';
+        return;
+    }
+    grid.innerHTML = places.map(p => `
+        <div class="plan-add-card">
+            <img src="${p.primaryImage}" class="plan-add-card-img" loading="lazy"
+                 onerror="this.src='https://picsum.photos/seed/${p.id}/80/80'">
+            <div class="plan-add-card-info">
+                <div class="plan-add-card-name">${p.name}</div>
+                ${p.address ? `<div class="plan-add-card-addr">${p.address}</div>` : ''}
+                ${p.rating > 0 ? `<div class="plan-add-card-rating">★ ${p.rating}</div>` : ''}
+            </div>
+            <form method="post" action="/Plans/AddItem" style="flex-shrink:0;margin-left:.5rem">
+                <input type="hidden" name="__RequestVerificationToken" value="${token}">
+                <input type="hidden" name="planId"  value="${PLAN_ID}">
+                <input type="hidden" name="placeId" value="${p.id}">
+                <button type="submit" class="plan-add-btn"><i class="bi bi-plus-lg"></i></button>
+            </form>
+        </div>`).join('');
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    loadPlanPlaces('', '');
+    const search = document.getElementById('planSearchInput');
+    if (search) {
+        search.addEventListener('input', function() {
+            clearTimeout(this._t);
+            const cat = document.querySelector('.plan-cat-btn.active')?.dataset.cat ?? '';
+            this._t = setTimeout(() => loadPlanPlaces(cat, this.value.trim()), 350);
+        });
+    }
+    document.querySelectorAll('.plan-cat-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('.plan-cat-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            const q = document.getElementById('planSearchInput')?.value.trim() ?? '';
+            loadPlanPlaces(this.dataset.cat, q);
+        });
+    });
+});
+</script>
+}

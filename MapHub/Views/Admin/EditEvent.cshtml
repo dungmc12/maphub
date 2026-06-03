@@ -1,0 +1,103 @@
+@model MapHub.Models.Event
+@{
+    ViewData["Title"] = "Admin – Sửa sự kiện";
+}
+
+<div class="container-xl py-4" style="max-width:760px">
+    <a href="/Admin/Events" class="back-link">← Quản lý sự kiện</a>
+    <h2 class="mt-3 mb-4">✏️ Sửa Sự Kiện <small class="text-muted fs-6">#@Model.Id</small></h2>
+
+    <form method="post" action="/Admin/EditEvent" enctype="multipart/form-data">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="Id" value="@Model.Id">
+
+        <div class="info-card mb-3">
+            <div class="row g-3">
+                <div class="col-12">
+                    <label class="form-label fw-semibold">Tên sự kiện *</label>
+                    <input type="text" name="Title" class="form-control" required value="@Model.Title">
+                </div>
+                <div class="col-12">
+                    <label class="form-label fw-semibold">Mô tả</label>
+                    <textarea name="Description" class="form-control" rows="3">@Model.Description</textarea>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">Bắt đầu *</label>
+                    <input type="datetime-local" name="StartAt" class="form-control" required
+                           value="@Model.StartAt.ToString("yyyy-MM-ddTHH:mm")">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">Kết thúc <small class="text-muted">(xóa trắng = không giới hạn)</small></label>
+                    <input type="datetime-local" name="EndAt" class="form-control"
+                           value="@(Model.EndAt?.ToString("yyyy-MM-ddTHH:mm") ?? "")">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">Trạng thái</label>
+                    <select name="Status" class="form-select">
+                        <option value="upcoming" selected="@(Model.Status == "upcoming")">⏳ Sắp diễn ra</option>
+                        <option value="ongoing"  selected="@(Model.Status == "ongoing")">🟢 Đang diễn ra</option>
+                        <option value="ended"    selected="@(Model.Status == "ended")">✓ Đã kết thúc</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">Địa điểm liên quan</label>
+                    <select name="PlaceId" class="form-select">
+                        <option value="">— Không liên kết địa điểm —</option>
+                        @if (ViewBag.Places != null)
+                        {
+                            foreach (var p in (dynamic)ViewBag.Places)
+                            {
+                                <option value="@p.Id" selected="@(Model.PlaceId == (int)p.Id)">@p.Name</option>
+                            }
+                        }
+                    </select>
+                    <div class="form-text">Chọn để nút "Xem địa điểm" hiển thị trên trang chủ</div>
+                </div>
+                <div class="col-12">
+                    <label class="form-label fw-semibold">Ảnh banner</label>
+                    @if (!string.IsNullOrEmpty(Model.BannerImageUrl))
+                    {
+                        <img id="bannerPreview" src="@Model.BannerImageUrl" alt="Banner hiện tại"
+                             style="max-height:120px;border-radius:8px;margin-bottom:8px;display:block">
+                    }
+                    else
+                    {
+                        <img id="bannerPreview" src="" alt="" style="display:none;max-height:120px;border-radius:8px;margin-bottom:8px">
+                    }
+                    <input type="file" name="BannerFile" class="form-control mb-2" accept="image/*"
+                           onchange="previewBanner(this)">
+                    <input type="url" name="BannerImageUrl" class="form-control"
+                           placeholder="Hoặc URL ảnh (để trống = giữ nguyên)"
+                           value="@Model.BannerImageUrl">
+                    <div class="form-text">Tải file mới lên, hoặc nhập URL mới, hoặc để trống để giữ nguyên ảnh cũ</div>
+                </div>
+                <div class="col-12">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="IsFeatured" value="true"
+                               id="isFeatured" @(Model.IsFeatured ? "checked" : "")>
+                        <label class="form-check-label fw-semibold" for="isFeatured">
+                            ⭐ Đánh dấu nổi bật (hiển thị trên trang chủ)
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn-accent">💾 Lưu thay đổi</button>
+            <a href="/Admin/Events" class="btn-ghost">Hủy</a>
+        </div>
+    </form>
+</div>
+@section Scripts {
+<script>
+function previewBanner(input) {
+    const preview = document.getElementById('bannerPreview');
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = e => { preview.src = e.target.result; preview.style.display = 'block'; };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+</script>
+}

@@ -1,0 +1,88 @@
+@model IEnumerable<MapHub.Models.Event>
+@{
+    ViewData["Title"] = "Admin – Sự kiện";
+}
+
+<partial name="_AdminNav" />
+
+<div class="admin-page">
+    <div class="admin-section-header">
+        <h2 class="admin-section-title">📅 Quản lý Sự kiện</h2>
+        <a href="/Admin/CreateEvent" class="btn-accent">＋ Tạo sự kiện mới</a>
+    </div>
+
+    @if (!string.IsNullOrEmpty(TempData["Success"]?.ToString()))
+    {
+        <div class="admin-alert admin-alert-success">✅ @TempData["Success"]</div>
+    }
+
+    @if (!Model.Any())
+    {
+        <div class="plans-empty">
+            <div class="plans-empty-icon">📅</div>
+            <h5>Chưa có sự kiện nào</h5>
+            <p><a href="/Admin/CreateEvent">Tạo sự kiện đầu tiên</a></p>
+        </div>
+    }
+    else
+    {
+        <div class="admin-table-wrap">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>Sự kiện</th>
+                        <th>Địa điểm</th>
+                        <th>Thời gian</th>
+                        <th>Trạng thái</th>
+                        <th>Hành động</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var ev in Model)
+                    {
+                        <tr>
+                            <td>
+                                <div class="admin-place-link">@ev.Title</div>
+                                @if (ev.IsFeatured) { <span class="abadge abadge-gold" style="margin-top:3px;display:inline-block">⭐ Nổi bật</span> }
+                                @if (!string.IsNullOrEmpty(ev.Description))
+                                {
+                                    <div class="admin-sub">@(ev.Description.Length > 70 ? ev.Description[..70] + "…" : ev.Description)</div>
+                                }
+                            </td>
+                            <td>
+                                @if (ev.Place != null)
+                                {
+                                    <a href="/Map/Details/@ev.PlaceId" class="admin-sub" style="color:var(--blue)">📍 @ev.Place.Name</a>
+                                }
+                                else { <span class="admin-sub">—</span> }
+                            </td>
+                            <td>
+                                <div class="admin-sub">@ev.StartAt.ToString("dd/MM/yyyy HH:mm")</div>
+                                @if (ev.EndAt.HasValue) { <div class="admin-sub">→ @ev.EndAt.Value.ToString("dd/MM/yyyy")</div> }
+                            </td>
+                            <td>
+                                @switch (ev.Status)
+                                {
+                                    case "ongoing":  <span class="abadge abadge-green">🟢 Đang diễn ra</span> break;
+                                    case "ended":    <span class="abadge abadge-gray">✓ Đã kết thúc</span>  break;
+                                    default:         <span class="abadge abadge-blue">⏳ Sắp diễn ra</span> break;
+                                }
+                            </td>
+                            <td>
+                                <div class="admin-actions">
+                                    <a href="/Admin/EditEvent/@ev.Id" class="aact-btn aact-edit"><i class="bi bi-pencil-fill"></i> Sửa</a>
+                                    <form method="post" action="/Admin/DeleteEvent"
+                                          onsubmit="return confirm('Xóa sự kiện này?')" class="d-inline">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@ev.Id">
+                                        <button type="submit" class="aact-btn aact-del"><i class="bi bi-trash3-fill"></i></button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>

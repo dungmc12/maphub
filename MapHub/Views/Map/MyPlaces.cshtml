@@ -1,0 +1,100 @@
+@model IEnumerable<MapHub.Models.Place>
+@{
+    ViewData["Title"] = "Địa điểm của tôi";
+    bool isPro     = User.IsInRole("Admin") || User.IsInRole("Pro") || (bool)(ViewBag.IsPro ?? false);
+    int  maxPlaces = isPro ? int.MaxValue : (int)(ViewBag.MaxPlaces ?? 3);
+    int  count     = (int)(ViewBag.PlaceCount ?? 0);
+}
+
+<div class="container-xl py-4">
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
+        <div>
+            <h2 class="mb-0">📍 Địa điểm của tôi</h2>
+            @if (!isPro)
+            {
+                <p class="text-muted mt-1">
+                    @count / @maxPlaces địa điểm —
+                    <a href="/Payments/Premium" class="text-warning fw-bold">Nâng cấp Pro</a> để thêm không giới hạn
+                </p>
+            }
+            else
+            {
+                <p class="text-muted mt-1">@count địa điểm</p>
+            }
+        </div>
+        <a href="/Map" class="btn-accent">＋ Thêm địa điểm mới</a>
+    </div>
+
+    @if (!string.IsNullOrEmpty(TempData["Success"]?.ToString()))
+    {
+        <div class="alert alert-success alert-dismissible fade show">
+            @TempData["Success"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    @if (!Model.Any())
+    {
+        <div class="plans-empty">
+            <div class="plans-empty-icon">📍</div>
+            <h5>Bạn chưa thêm địa điểm nào</h5>
+            <p>Mở bản đồ và nhấn <strong>+ Thêm địa điểm</strong> để bắt đầu!</p>
+            <a href="/Map" class="btn-accent mt-2">🗺️ Mở bản đồ</a>
+        </div>
+    }
+    else
+    {
+        <div class="row g-3">
+            @foreach (var p in Model)
+            {
+                var img = p.Images.FirstOrDefault()?.Url ?? "https://placehold.co/400x250?text=No+Image";
+                <div class="col-md-4 col-sm-6">
+                    <div class="plan-card" style="overflow:hidden">
+                        <img src="@img" alt="@p.Name"
+                             style="width:100%;height:160px;object-fit:cover;border-radius:10px 10px 0 0">
+                        <div style="padding:.85rem">
+                            <div class="fw-bold mb-1">@p.Name</div>
+                            <div class="text-muted small mb-1">
+                                @switch(p.Category?.ToLower())
+                                {
+                                    case "restaurant":    <text>🍽️ Nhà hàng</text>    break;
+                                    case "cafe":          <text>☕ Cà phê</text>         break;
+                                    case "entertainment": <text>🎯 Vui chơi</text>       break;
+                                    case "hotel":         <text>🏨 Lưu trú</text>        break;
+                                    case "culture":       <text>🏛️ Văn hóa</text>       break;
+                                    case "temple":        <text>🛕 Tâm linh</text>       break;
+                                    case "nature":        <text>🌿 Thiên nhiên</text>    break;
+                                    case "education":     <text>🎓 Giáo dục</text>       break;
+                                    default:              <text>📌 @p.Category</text>    break;
+                                }
+                            </div>
+                            @if (!string.IsNullOrEmpty(p.Address))
+                            {
+                                <div class="text-muted small">📍 @p.Address</div>
+                            }
+                            <div class="mt-2 mb-1">
+                                @if (p.IsApproved)
+                                { <span class="badge bg-success">✓ Đã duyệt</span> }
+                                else if (p.Visibility == "public")
+                                { <span class="badge bg-warning text-dark">⏳ Chờ duyệt</span> }
+                                else
+                                { <span class="badge bg-secondary">🔒 Cá nhân</span> }
+                            </div>
+                            <div class="d-flex gap-2 mt-2">
+                                <a href="/Map/Details/@p.Id" class="btn btn-sm btn-outline-secondary flex-grow-1">👁️ Xem</a>
+                                @{ var myDelMsg = $"Xóa địa điểm \"{p.Name}\"? Hành động này không thể hoàn tác."; }
+                                <form method="post" action="/Map/DeleteMyPlace"
+                                      onsubmit="return confirm(this.dataset.msg)" data-msg="@myDelMsg"
+                                      class="d-inline">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="id" value="@p.Id">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">🗑️</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>

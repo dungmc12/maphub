@@ -1,0 +1,258 @@
+@model IEnumerable<MapHub.Models.Plan>
+@{
+    ViewData["Title"] = "Kế hoạch của tôi";
+    bool isPro     = User.IsInRole("Admin") || User.IsInRole("Pro") || (bool)(ViewBag.IsPro ?? false);
+    int  maxPlans  = (int)(ViewBag.MaxPlans ?? 3);
+    int  planCount = Model?.Count() ?? 0;
+    bool atLimit   = !isPro && planCount >= maxPlans;
+}
+
+<div class="container-xl py-4">
+
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
+        <div>
+            <h2 class="mb-0"><i class="bi bi-calendar-week-fill" style="color:#8b5cf6"></i> Kế hoạch chuyến đi</h2>
+            @if (!isPro)
+            {
+                <p class="text-muted mt-1">Gói Free: @planCount / @maxPlans kế hoạch
+                    — <a href="/Payments/Premium" style="color:#e06d1b;font-weight:700">
+                        <i class="bi bi-lightning-charge-fill"></i> Nâng cấp Pro
+                    </a> để tạo không giới hạn</p>
+            }
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            @if (isPro)
+            {
+                <button class="btn-accent" onclick="openAiPlanModal()">
+                    <i class="bi bi-robot"></i> Tạo bằng AI
+                </button>
+            }
+            @if (!atLimit)
+            {
+                <button class="btn-ghost" onclick="document.getElementById('createPlanModal').style.display='flex'">
+                    ＋ Tạo kế hoạch mới
+                </button>
+            }
+            else
+            {
+                <a href="/Payments/Premium" class="btn-ghost">🔒 Nâng cấp để tạo thêm</a>
+            }
+        </div>
+    </div>
+
+    <!-- Plan cards -->
+    @if (Model != null && Model.Any())
+    {
+        <div class="plans-grid">
+            @foreach (var plan in Model)
+            {
+                <div class="plan-card">
+                    <div class="plan-card-header">
+                        <h5 class="plan-card-title">@plan.Title</h5>
+                        @if (plan.IsPublic)
+                        {
+                            <span class="badge bg-success ms-2">🔗 Đang chia sẻ</span>
+                        }
+                    </div>
+                    <div class="plan-card-body">
+                        @if (plan.StartDate.HasValue)
+                        {
+                            <p class="plan-date">
+                                📅 @plan.StartDate.Value.ToString("dd/MM/yyyy")
+                                @if (plan.EndDate.HasValue) { <span> → @plan.EndDate.Value.ToString("dd/MM/yyyy")</span> }
+                            </p>
+                        }
+                        <p class="plan-places">📍 @plan.Items.Count địa điểm</p>
+
+                        @if (plan.Items.Any())
+                        {
+                            <div class="plan-items-preview">
+                                @foreach (var item in plan.Items.Take(3))
+                                {
+                                    <span class="plan-item-chip">@item.Place?.Name</span>
+                                }
+                                @if (plan.Items.Count > 3)
+                                {
+                                    <span class="plan-item-chip plan-item-more">+@(plan.Items.Count - 3)</span>
+                                }
+                            </div>
+                        }
+                    </div>
+                    <div class="plan-card-footer">
+                        <a href="/Plans/Details/@plan.Id" class="btn-accent btn-sm-accent">Xem chi tiết</a>
+                        <form method="post" action="/Plans/ToggleShare" class="d-inline">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="id" value="@plan.Id">
+                            <button type="submit" class="btn-ghost btn-sm-ghost" title="@(plan.IsPublic ? "Tắt chia sẻ" : "Tạo link chia sẻ")">
+                                @(plan.IsPublic ? "🔗 Tắt chia sẻ" : "📤 Chia sẻ")
+                            </button>
+                        </form>
+                        <form method="post" action="/Plans/Delete" class="d-inline"
+                              onsubmit="return confirm('Xóa kế hoạch này?')">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="id" value="@plan.Id">
+                            <button type="submit" class="btn-danger-ghost btn-sm-ghost">🗑️</button>
+                        </form>
+                    </div>
+                    @if (plan.IsPublic && !string.IsNullOrEmpty(plan.ShareToken))
+                    {
+                        <div class="plan-share-url">
+                            <input type="text" readonly value="@($"{Context.Request.Scheme}://{Context.Request.Host}/Plans/Shared/{plan.ShareToken}")"
+                                   onclick="this.select();document.execCommand('copy');showCopyMsg(this)">
+                            <small class="text-muted">Click để sao chép link</small>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="plans-empty">
+            <div class="plans-empty-icon">🗺️</div>
+            <h4>Bạn chưa có kế hoạch nào</h4>
+            <p>Tạo kế hoạch để lưu các địa điểm muốn ghé thăm và chia sẻ với bạn bè!</p>
+            @if (!atLimit)
+            {
+                <button class="btn-accent" onclick="document.getElementById('createPlanModal').style.display='flex'">
+                    ＋ Tạo kế hoạch đầu tiên
+                </button>
+            }
+        </div>
+    }
+</div>
+
+<!-- ── Create Plan Modal ─────────────────────────────────────────────────── -->
+<div id="createPlanModal" class="custom-modal-overlay" style="display:none" onclick="if(event.target===this)this.style.display='none'">
+    <div class="custom-modal-box">
+        <div class="custom-modal-header">
+            <h5>📋 Tạo kế hoạch mới</h5>
+            <button onclick="document.getElementById('createPlanModal').style.display='none'">✕</button>
+        </div>
+        <form method="post" action="/Plans/Create" id="createPlanForm" onsubmit="return validatePlanDates()">
+            @Html.AntiForgeryToken()
+            <div class="custom-modal-body">
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Tên kế hoạch <span class="text-danger">*</span></label>
+                    <input type="text" name="title" class="form-control" required
+                           placeholder="VD: Hà Nội cuối tuần, Dã ngoại Hòa Lạc...">
+                </div>
+                <div class="row g-2">
+                    <div class="col-6">
+                        <label class="form-label">Ngày khởi hành</label>
+                        <input type="date" name="startDate" id="planStartDate" class="form-control"
+                               onchange="updateEndDateMin()">
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label">Ngày về</label>
+                        <input type="date" name="endDate" id="planEndDate" class="form-control">
+                    </div>
+                </div>
+                <div id="dateError" class="text-danger small mt-1" style="display:none">
+                    ⚠️ Ngày về phải sau hoặc bằng ngày khởi hành.
+                </div>
+            </div>
+            <div class="custom-modal-footer">
+                <button type="button" class="btn-ghost" onclick="document.getElementById('createPlanModal').style.display='none'">Hủy</button>
+                <button type="submit" class="btn-accent">Tạo kế hoạch</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ── AI Plan Modal (Pro only) ─────────────────────────────────────────── -->
+@if (isPro)
+{
+    <div id="aiPlanModal" class="custom-modal-overlay" style="display:none" onclick="if(event.target===this)this.style.display='none'">
+        <div class="custom-modal-box">
+            <div class="custom-modal-header">
+                <h5>🤖 AI tạo kế hoạch</h5>
+                <button onclick="document.getElementById('aiPlanModal').style.display='none'">✕</button>
+            </div>
+            <div class="custom-modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Địa điểm muốn đến</label>
+                    <input type="text" id="aiDest" class="form-control" placeholder="VD: Hòa Lạc, Hồ Tây, Đồng Mô...">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Số ngày</label>
+                    <input type="number" id="aiDays" class="form-control" value="1" min="1" max="7">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Sở thích / Mục đích</label>
+                    <input type="text" id="aiInterests" class="form-control"
+                           placeholder="VD: ăn uống, vui chơi, chụp ảnh, cắm trại...">
+                </div>
+                <div id="aiPlanResult" class="ai-plan-result" style="display:none"></div>
+            </div>
+            <div class="custom-modal-footer">
+                <button type="button" class="btn-ghost" onclick="document.getElementById('aiPlanModal').style.display='none'">Đóng</button>
+                <button type="button" class="btn-accent" onclick="generateAiPlan()">🤖 Tạo lịch trình</button>
+            </div>
+        </div>
+    </div>
+}
+
+@section Scripts {
+<script>
+function updateEndDateMin() {
+    const start = document.getElementById('planStartDate');
+    const end   = document.getElementById('planEndDate');
+    if (start.value) {
+        end.min = start.value;
+        if (end.value && end.value < start.value) end.value = start.value;
+    }
+}
+
+function validatePlanDates() {
+    const start = document.getElementById('planStartDate').value;
+    const end   = document.getElementById('planEndDate').value;
+    const err   = document.getElementById('dateError');
+    if (start && end && end < start) {
+        err.style.display = 'block';
+        return false;
+    }
+    err.style.display = 'none';
+    return true;
+}
+
+function openAiPlanModal() {
+    document.getElementById('aiPlanModal').style.display = 'flex';
+}
+
+async function generateAiPlan() {
+    const dest   = document.getElementById('aiDest').value.trim();
+    const days   = parseInt(document.getElementById('aiDays').value) || 1;
+    const inter  = document.getElementById('aiInterests').value.trim();
+    const result = document.getElementById('aiPlanResult');
+
+    if (!dest) { alert('Vui lòng nhập địa điểm muốn đến!'); return; }
+
+    result.style.display = 'block';
+    result.innerHTML = '<div class="text-muted"><em>🤖 AI đang lập kế hoạch…</em></div>';
+
+    try {
+        const r = await fetch('/Plans/AiGenerate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ destination: dest, days: days, interests: inter || 'ăn uống và vui chơi' })
+        });
+        const d = await r.json();
+        if (d.error) {
+            result.innerHTML = `<div class="text-danger">${d.error}</div>`;
+        } else {
+            result.innerHTML = `<div class="ai-plan-text">${d.plan.replace(/\n/g, '<br>')}</div>`;
+        }
+    } catch {
+        result.innerHTML = '<div class="text-danger">Lỗi kết nối AI. Vui lòng thử lại.</div>';
+    }
+}
+
+function showCopyMsg(input) {
+    const orig = input.value;
+    input.value = '✅ Đã sao chép!';
+    setTimeout(() => input.value = orig, 1500);
+}
+</script>
+}

@@ -1,0 +1,111 @@
+@model MapHub.Models.Place
+@{
+    ViewData["Title"] = "Admin – Sửa địa điểm";
+    var primary = Model.Images.FirstOrDefault(i => i.IsPrimary) ?? Model.Images.FirstOrDefault();
+}
+
+<div class="container-xl py-4" style="max-width:760px">
+    <a href="/Admin" class="back-link">← Admin Dashboard</a>
+    <h2 class="mt-3 mb-4">✏️ Sửa Địa Điểm <small class="text-muted fs-6">#@Model.Id</small></h2>
+
+    <form method="post" action="/Admin/EditPlace/@Model.Id" enctype="multipart/form-data">
+        @Html.AntiForgeryToken()
+
+        <div class="info-card mb-3">
+            <div class="row g-3">
+                <div class="col-md-8">
+                    <label class="form-label fw-semibold">Tên địa điểm *</label>
+                    <input type="text" name="name" class="form-control" required value="@Model.Name">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold">Danh mục</label>
+                    <select name="category" class="form-select">
+                        @foreach (var cat in new[] {
+                            ("restaurant","🍽️ Nhà hàng"), ("cafe","☕ Cà phê"), ("entertainment","🎯 Vui chơi"),
+                            ("hotel","🏨 Lưu trú"), ("culture","🏛️ Văn hóa"), ("temple","🛕 Tâm linh"),
+                            ("nature","🌿 Thiên nhiên"), ("education","🎓 Giáo dục"), ("other","📌 Khác")
+                        })
+                        {
+                            <option value="@cat.Item1" selected="@(Model.Category == cat.Item1)">@cat.Item2</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-12">
+                    <label class="form-label fw-semibold">Địa chỉ</label>
+                    <input type="text" name="address" class="form-control" value="@Model.Address">
+                </div>
+                <div class="col-12">
+                    <label class="form-label fw-semibold">Mô tả / Giới thiệu</label>
+                    <textarea name="about" class="form-control" rows="3">@Model.About</textarea>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold">Điện thoại</label>
+                    <input type="text" name="phone" class="form-control" value="@Model.Phone">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold">Giá từ (đ)</label>
+                    <input type="number" name="minPrice" class="form-control" value="@Model.MinPrice">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold">Giá đến (đ)</label>
+                    <input type="number" name="maxPrice" class="form-control" value="@Model.MaxPrice">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">Website</label>
+                    <input type="url" name="websiteUrl" class="form-control" value="@Model.WebsiteUrl">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">Quyền xem</label>
+                    <select name="visibility" class="form-select">
+                        <option value="public"  selected="@(Model.Visibility == "public")">🌐 Công khai</option>
+                        <option value="private" selected="@(Model.Visibility == "private")">🔒 Cá nhân</option>
+                    </select>
+                </div>
+                <div class="col-12">
+                    <label class="form-label fw-semibold">Ảnh đại diện</label>
+                    @if (primary != null)
+                    {
+                        <img id="imgPreview" src="@primary.Url" alt="Ảnh hiện tại"
+                             style="max-height:120px;border-radius:8px;margin-bottom:8px;display:block">
+                    }
+                    else
+                    {
+                        <img id="imgPreview" src="" alt="" style="display:none;max-height:120px;border-radius:8px;margin-bottom:8px">
+                    }
+                    <input type="file" name="imageFile" class="form-control mb-2" accept="image/*"
+                           onchange="previewImg(this)">
+                    <input type="url" name="newImageUrl" class="form-control"
+                           placeholder="Hoặc URL ảnh mới (để trống = giữ nguyên)">
+                    <div class="form-text">Tải file lên hoặc nhập URL — file được ưu tiên</div>
+                </div>
+                <div class="col-12">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="isFeatured" value="true"
+                               id="isFeatured" @(Model.IsFeatured ? "checked" : "")>
+                        <label class="form-check-label fw-semibold" for="isFeatured">
+                            ⭐ Địa điểm nổi bật (hiển thị trên trang chủ)
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn-accent">💾 Lưu thay đổi</button>
+            <a href="/Map/Details/@Model.Id" class="btn-ghost" target="_blank">👁️ Xem địa điểm</a>
+            <a href="/Admin" class="btn-ghost">Hủy</a>
+        </div>
+    </form>
+</div>
+@section Scripts {
+<script>
+function previewImg(input) {
+    const preview = document.getElementById('imgPreview');
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = e => { preview.src = e.target.result; preview.style.display = 'block'; };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+</script>
+}

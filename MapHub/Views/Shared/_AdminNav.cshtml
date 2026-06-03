@@ -1,0 +1,29 @@
+@{
+    var current = ViewContext.RouteData.Values["action"]?.ToString() ?? "";
+    int pendingCount = (int)(ViewBag.PendingCount ?? 0);
+}
+<div class="admin-subnav">
+    <div class="admin-subnav-inner">
+        <a href="/Admin"           class="admin-nav-tab @(current == "Index"     ? "active" : "")">
+            <i class="bi bi-speedometer2"></i> Dashboard
+        </a>
+        <a href="/Admin/Places"    class="admin-nav-tab @(current == "Places"    ? "active" : "")">
+            <i class="bi bi-geo-alt-fill"></i> Địa điểm
+            @if (pendingCount > 0 && current != "Places") {
+                <span class="admin-nav-badge">@pendingCount</span>
+            }
+        </a>
+        <a href="/Admin/Events"    class="admin-nav-tab @(current == "Events"    ? "active" : "")">
+            <i class="bi bi-calendar-event-fill"></i> Sự kiện
+        </a>
+        <a href="/Admin/FeedPosts" class="admin-nav-tab @(current == "FeedPosts" ? "active" : "")">
+            <i class="bi bi-newspaper"></i> Tin tức
+        </a>
+        <a href="/Admin/Tags"      class="admin-nav-tab @(current == "Tags"      ? "active" : "")">
+            <i class="bi bi-tags-fill"></i> Tags
+        </a>
+        <a href="/Admin/Users"     class="admin-nav-tab @(current == "Users"     ? "active" : "")">
+            <i class="bi bi-people-fill"></i> Người dùng
+        </a>
+    </div>
+</div>

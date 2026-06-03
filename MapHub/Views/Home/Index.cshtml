@@ -1,0 +1,274 @@
+@model IEnumerable<MapHub.Models.Place>
+@{
+    ViewData["Title"] = "Trang Chủ";
+    var events   = ViewBag.Events   as IEnumerable<MapHub.Models.Event>    ?? Enumerable.Empty<MapHub.Models.Event>();
+    var feedPosts= ViewBag.FeedPosts as IEnumerable<MapHub.Models.FeedPost> ?? Enumerable.Empty<MapHub.Models.FeedPost>();
+    var eventList = events.ToList();
+    var feedList  = feedPosts.ToList();
+}
+
+<!-- ── HERO: Event Carousel (Shopee-style) ───────────────────────────────── -->
+<div class="hero-banner">
+    @if (eventList.Any())
+    {
+        <div id="heroCarousel" class="carousel slide" data-bs-ride="carousel" data-bs-interval="4500" data-bs-touch="false">
+            <div class="carousel-indicators">
+                @for (int i = 0; i < eventList.Count; i++)
+                {
+                    <button type="button" data-bs-target="#heroCarousel" data-bs-slide-to="@i"
+                            class="@(i == 0 ? "active" : "")" aria-label="Slide @(i+1)"></button>
+                }
+            </div>
+            <div class="carousel-inner">
+                @for (int i = 0; i < eventList.Count; i++)
+                {
+                    var ev = eventList[i];
+                    <div class="carousel-item @(i == 0 ? "active" : "")">
+                        <div class="hero-slide"
+                             style="background-image: url('@(ev.BannerImageUrl ?? "https://picsum.photos/seed/event-default/1400/500")')">
+                            <div class="hero-slide-overlay">
+                                <span class="event-status-badge @(ev.Status == "ongoing" ? "badge-live" : ev.Status == "ended" ? "badge-ended" : "")">
+                                    @if (ev.Status == "ongoing") {
+                                        <i class="bi bi-broadcast-pin"></i><span> ĐANG DIỄN RA</span>
+                                    } else if (ev.Status == "upcoming") {
+                                        <i class="bi bi-calendar-event-fill"></i><span> SẮP DIỄN RA</span>
+                                    } else {
+                                        <i class="bi bi-check-circle-fill"></i><span> ĐÃ KẾT THÚC</span>
+                                    }
+                                </span>
+                                <h2 class="hero-event-title">@ev.Title</h2>
+                                @if (!string.IsNullOrEmpty(ev.Description))
+                                {
+                                    <p class="hero-event-desc">@ev.Description</p>
+                                }
+                                <div class="hero-event-meta">
+                                    <span><i class="bi bi-calendar3"></i> @ev.StartAt.ToString("dd/MM/yyyy")</span>
+                                    @if (ev.Place != null)
+                                    {
+                                        <span><i class="bi bi-geo-alt-fill" style="color:#ff6b6b"></i> @ev.Place.Name</span>
+                                    }
+                                </div>
+                                @if (ev.PlaceId.HasValue)
+                                {
+                                    <a href="/Map/Details/@ev.PlaceId" class="btn-hero-cta">
+                                        <i class="bi bi-arrow-right-circle-fill"></i> Xem địa điểm
+                                    </a>
+                                }
+                                else
+                                {
+                                    <span class="hero-no-place"><i class="bi bi-geo-alt"></i> Chưa liên kết địa điểm</span>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+            <button class="carousel-control-prev" type="button" data-bs-target="#heroCarousel" data-bs-slide="prev">
+                <span class="carousel-control-prev-icon"></span>
+            </button>
+            <button class="carousel-control-next" type="button" data-bs-target="#heroCarousel" data-bs-slide="next">
+                <span class="carousel-control-next-icon"></span>
+            </button>
+        </div>
+    }
+    else
+    {
+        <div class="hero-default">
+            <div class="hero-default-inner">
+                <p class="eyebrow">🗺️ KHÁM PHÁ HÀ NỘI</p>
+                <h1>Tìm địa điểm ăn uống,<br>vui chơi quanh bạn</h1>
+                <p class="subtitle">Từ trung tâm Hà Nội đến Láng &nbsp;·&nbsp; Hòa Lạc &nbsp;·&nbsp; ĐH FPT</p>
+                <div class="hero-cta-row">
+                    <a href="/Map" class="btn-accent">🗺️ Mở Bản Đồ</a>
+                    <a href="/Plans" class="btn-ghost">📋 Lên Kế Hoạch</a>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<!-- ── CATEGORY QUICK LINKS ───────────────────────────────────────────────── -->
+<div class="container-xl">
+    <div class="cat-section">
+        <h2 class="cat-section-title">Khám phá theo danh mục</h2>
+        @{
+            var tw = "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/";
+        }
+        <div class="cat-grid">
+            <a href="/Map?cat=restaurant" class="cat-card">
+                <div class="cat-icon-box cat-orange">
+                    <img src="@(tw)1f37d.svg" alt="Nhà hàng" class="cat-twemoji">
+                </div>
+                <span class="cat-card-label">Nhà hàng</span>
+            </a>
+            <a href="/Map?cat=cafe" class="cat-card">
+                <div class="cat-icon-box cat-amber">
+                    <img src="@(tw)2615.svg" alt="Cà phê" class="cat-twemoji">
+                </div>
+                <span class="cat-card-label">Cà phê</span>
+            </a>
+            <a href="/Map?cat=entertainment" class="cat-card">
+                <div class="cat-icon-box cat-purple">
+                    <img src="@(tw)1f3ae.svg" alt="Vui chơi" class="cat-twemoji">
+                </div>
+                <span class="cat-card-label">Vui chơi</span>
+            </a>
+            <a href="/Map?cat=culture" class="cat-card">
+                <div class="cat-icon-box cat-blue">
+                    <img src="@(tw)1f3db.svg" alt="Văn hóa" class="cat-twemoji">
+                </div>
+                <span class="cat-card-label">Văn hóa</span>
+            </a>
+            <a href="/Map?cat=temple" class="cat-card">
+                <div class="cat-icon-box cat-gold">
+                    <img src="@(tw)26e9.svg" alt="Tâm linh" class="cat-twemoji">
+                </div>
+                <span class="cat-card-label">Tâm linh</span>
+            </a>
+            <a href="/Map?cat=nature" class="cat-card">
+                <div class="cat-icon-box cat-green">
+                    <img src="@(tw)1f33f.svg" alt="Thiên nhiên" class="cat-twemoji">
+                </div>
+                <span class="cat-card-label">Thiên nhiên</span>
+            </a>
+            <a href="/Map?cat=education" class="cat-card">
+                <div class="cat-icon-box cat-teal">
+                    <img src="@(tw)1f393.svg" alt="Giáo dục" class="cat-twemoji">
+                </div>
+                <span class="cat-card-label">Giáo dục</span>
+            </a>
+            <a href="/Map?cat=hotel" class="cat-card">
+                <div class="cat-icon-box cat-pink">
+                    <img src="@(tw)1f3e8.svg" alt="Lưu trú" class="cat-twemoji">
+                </div>
+                <span class="cat-card-label">Lưu trú</span>
+            </a>
+            <a href="/Map" class="cat-card">
+                <div class="cat-icon-box cat-slate">
+                    <img src="@(tw)1f9ed.svg" alt="Tất cả" class="cat-twemoji">
+                </div>
+                <span class="cat-card-label">Tất cả</span>
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- ── HOT NEWS & GUIDES ─────────────────────────────────────────────────── -->
+@if (feedList.Any())
+{
+    <div class="container-xl pb-5">
+        <div class="section-header">
+            <div>
+                <h3 class="section-title">📰 Tin tức &amp; Cẩm nang</h3>
+                <p class="section-sub">Kinh nghiệm, điểm đến và hoạt động mới nhất</p>
+            </div>
+        </div>
+        <div class="news-grid">
+            @foreach (var post in feedList)
+            {
+                <div class="news-card">
+                    <div class="news-card-img">
+                        <img src="@(post.CoverImageUrl ?? "https://picsum.photos/seed/news-default/800/400")"
+                             alt="@post.Title" loading="lazy">
+                        <span class="news-type-badge @(post.Type == "guide" ? "badge-guide" : post.Type == "tip" ? "badge-tip" : "")">
+                            @(post.Type == "guide" ? "📖 Cẩm nang" : post.Type == "tip" ? "💡 Mẹo hay" : "📢 Tin tức")
+                        </span>
+                        @if (post.IsPinned)
+                        {
+                            <span class="news-pin-badge">📌</span>
+                        }
+                    </div>
+                    <div class="news-card-body">
+                        <h5 class="news-card-title">@post.Title</h5>
+                        @if (!string.IsNullOrEmpty(post.Summary))
+                        {
+                            <p class="news-card-summary">@post.Summary</p>
+                        }
+                        <div class="news-card-footer">
+                            <span class="news-date">@post.PublishedAt.ToString("dd/MM/yyyy")</span>
+                            <a href="/Map" class="news-read-more">Xem bản đồ →</a>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+<!-- ── FEATURED PLACES ───────────────────────────────────────────────────── -->
+@if (Model != null && Model.Any())
+{
+    <div class="container-xl pb-5">
+        <div class="section-header">
+            <div>
+                <h3 class="section-title">📍 Địa điểm nổi bật</h3>
+                <p class="section-sub">Những nơi được yêu thích nhất trên CityScout</p>
+            </div>
+            <a href="/Map" class="btn-ghost btn-sm-ghost">Xem tất cả →</a>
+        </div>
+        <div class="places-grid">
+            @foreach (var place in Model)
+            {
+                var img     = place.Images.FirstOrDefault()?.Url ?? "https://picsum.photos/seed/place-default/400/300";
+                var rating  = place.Reviews.Any() ? Math.Round(place.Reviews.Average(r => r.QualityRating), 1) : 0.0;
+                var reviews = place.Reviews.Count;
+                <div class="place-card">
+                    <a href="/Map/Details/@place.Id" class="place-card-img-link">
+                        <img src="@img" alt="@place.Name" loading="lazy">
+                        @{
+                            var catMap = new Dictionary<string,string>(StringComparer.OrdinalIgnoreCase){
+                                ["restaurant"]="🍽️ Nhà hàng",["cafe"]="☕ Cà phê",["entertainment"]="🎯 Vui chơi",
+                                ["hotel"]="🏨 Lưu trú",["culture"]="🏛️ Văn hóa",["temple"]="🛕 Tâm linh",
+                                ["nature"]="🌿 Thiên nhiên",["education"]="🎓 Giáo dục"
+                            };
+                            var catTxt = (place.Category != null && catMap.TryGetValue(place.Category, out var cl)) ? cl : ("📌 "+(place.Category??"Khác"));
+                        }
+                        <span class="place-card-category">@catTxt</span>
+                    </a>
+                    <div class="place-card-body">
+                        <h5 class="place-card-name">
+                            <a href="/Map/Details/@place.Id">@place.Name</a>
+                        </h5>
+                        @if (!string.IsNullOrEmpty(place.Address))
+                        {
+                            <p class="place-card-address">📍 @place.Address</p>
+                        }
+                        <div class="place-card-footer">
+                            <div class="place-rating">
+                                <span class="stars">★ @(rating > 0 ? rating.ToString("0.0") : "Chưa có")</span>
+                                @if (reviews > 0) { <span class="review-count">(@reviews đánh giá)</span> }
+                            </div>
+                            @if (place.MinPrice.HasValue)
+                            {
+                                <span class="place-price">@place.MinPrice!.Value.ToString("N0")đ+</span>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+<!-- ── DOWNLOAD / CTA BANNER ─────────────────────────────────────────────── -->
+<div class="cta-banner">
+    <div class="container-xl">
+        <div class="cta-inner">
+            <div>
+                <h3>Lên kế hoạch cùng AI CityScout</h3>
+                <p>Để trợ lý AI gợi ý lịch trình hoàn hảo cho chuyến đi tiếp theo của bạn.</p>
+            </div>
+            <div class="cta-actions">
+                @if (User.Identity?.IsAuthenticated == true)
+                {
+                    <a href="/Plans" class="btn-accent">📋 Kế hoạch của tôi</a>
+                }
+                else
+                {
+                    <a href="/Account/Register" class="btn-accent">Đăng ký miễn phí</a>
+                    <a href="/Account/Login" class="btn-ghost">Đăng nhập</a>
+                }
+            </div>
+        </div>
+    </div>
+</div>

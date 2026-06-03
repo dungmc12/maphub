@@ -1,0 +1,131 @@
+@model IEnumerable<MapHub.Models.Place>
+@{
+    ViewData["Title"] = "Admin – Địa điểm";
+    string? filter = ViewBag.Filter as string;
+    int total    = Model.Count();
+    int pending  = Model.Count(p => !p.IsApproved && p.Visibility == "public");
+    int pub      = Model.Count(p =>  p.Visibility == "public");
+    int priv     = Model.Count(p =>  p.Visibility == "private");
+}
+
+<partial name="_AdminNav" />
+
+<div class="admin-page">
+
+    <div class="admin-section-header">
+        <div>
+            <h2 class="admin-section-title">📍 Quản lý Địa điểm</h2>
+            <p class="admin-section-sub">@total địa điểm</p>
+        </div>
+        <a href="/Admin/AddPlace" class="btn-accent">＋ Thêm địa điểm</a>
+    </div>
+
+    @if (!string.IsNullOrEmpty(TempData["Success"]?.ToString()))
+    {
+        <div class="admin-alert admin-alert-success">✅ @TempData["Success"]</div>
+    }
+
+    <!-- Filter tabs -->
+    <div class="admin-filter-tabs">
+        <a href="/Admin/Places"                  class="admin-filter-tab @(filter == null     ? "active" : "")">Tất cả <span class="afc">@total</span></a>
+        <a href="/Admin/Places?filter=pending"   class="admin-filter-tab @(filter == "pending" ? "active" : "")">⏳ Chờ duyệt <span class="afc afc-warn">@pending</span></a>
+        <a href="/Admin/Places?filter=public"    class="admin-filter-tab @(filter == "public"  ? "active" : "")">🌐 Công khai <span class="afc">@pub</span></a>
+        <a href="/Admin/Places?filter=private"   class="admin-filter-tab @(filter == "private" ? "active" : "")">🔒 Cá nhân <span class="afc">@priv</span></a>
+    </div>
+
+    @if (!Model.Any())
+    {
+        <div class="plans-empty">
+            <div class="plans-empty-icon">📍</div>
+            <h5>Không có địa điểm nào</h5>
+        </div>
+    }
+    else
+    {
+        <div class="admin-table-wrap">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>Địa điểm</th>
+                        <th>Danh mục</th>
+                        <th>Người tạo</th>
+                        <th>Trạng thái</th>
+                        <th>Quyền xem</th>
+                        <th>Hành động</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @{
+                    var catVi = new Dictionary<string,(string L,string C)>(StringComparer.OrdinalIgnoreCase){
+                        ["restaurant"]=("Nhà hàng","acat-restaurant"),["cafe"]=("Cà phê","acat-cafe"),
+                        ["entertainment"]=("Vui chơi","acat-entertainment"),["culture"]=("Văn hóa","acat-culture"),
+                        ["temple"]=("Tâm linh","acat-temple"),["nature"]=("Thiên nhiên","acat-nature"),
+                        ["education"]=("Giáo dục","acat-education"),["hotel"]=("Lưu trú","acat-hotel")
+                    };
+                }
+                @foreach (var p in Model)
+                    {
+                        var (cL,cC) = catVi.TryGetValue(p.Category??"",out var cv2)?cv2:(p.Category??"Khác","");
+                        <tr class="@(!p.IsApproved && p.Visibility == "public" ? "admin-row-warn" : "")">
+                            <td>
+                                <div style="display:flex;align-items:center;gap:.6rem">
+                                    @{ var img = p.Images.FirstOrDefault()?.Url; }
+                                    @if (!string.IsNullOrEmpty(img))
+                                    { <img src="@img" style="width:40px;height:40px;border-radius:8px;object-fit:cover;flex-shrink:0"> }
+                                    <div>
+                                        <a href="/Map/Details/@p.Id" class="admin-place-link">@p.Name</a>
+                                        @if (!string.IsNullOrEmpty(p.Address))
+                                        { <div class="admin-sub"><i class="bi bi-geo-alt" style="color:#ef4444"></i> @p.Address</div> }
+                                    </div>
+                                </div>
+                            </td>
+                            <td><span class="admin-cat-badge @cC">@cL</span></td>
+                            <td><span class="admin-sub">@(p.CreatedByUserId?.Length > 8 ? p.CreatedByUserId[..8] + "…" : (p.CreatedByUserId ?? "—"))</span></td>
+                            <td>
+                                @if (p.IsApproved) { <span class="abadge abadge-green"><i class="bi bi-check-circle-fill"></i> Đã duyệt</span> }
+                                else               { <span class="abadge abadge-orange"><i class="bi bi-hourglass-split"></i> Chờ duyệt</span> }
+                            </td>
+                            <td>
+                                @if (p.Visibility == "public") { <span class="abadge abadge-blue"><i class="bi bi-globe2"></i> Công khai</span> }
+                                else                           { <span class="abadge abadge-gray"><i class="bi bi-lock-fill"></i> Cá nhân</span> }
+                            </td>
+                            <td>
+                                <div class="admin-actions">
+                                    <a href="/Map/Details/@p.Id"     class="aact-btn aact-view" title="Xem"><i class="bi bi-eye-fill"></i></a>
+                                    <a href="/Admin/EditPlace/@p.Id"  class="aact-btn aact-edit" title="Sửa"><i class="bi bi-pencil-fill"></i></a>
+                                    <form method="post" action="/Admin/ToggleFeaturedPlace" class="d-inline">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@p.Id">
+                                        <button type="submit" class="aact-btn aact-star @(p.IsFeatured?"aact-star-on":"")" title="Nổi bật">
+                                            <i class="bi @(p.IsFeatured?"bi-star-fill":"bi-star")"></i>
+                                        </button>
+                                    </form>
+                                    @if (!p.IsApproved && p.Visibility == "public")
+                                    {
+                                        <form method="post" action="/Admin/ApprovePlace" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="id" value="@p.Id">
+                                            <button type="submit" class="aact-btn aact-approve"><i class="bi bi-check-lg"></i> Duyệt</button>
+                                        </form>
+                                        <form method="post" action="/Admin/RejectPlace" class="d-inline"
+                                              onsubmit="return confirm('Từ chối và xóa địa điểm này?')">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="id" value="@p.Id">
+                                            <button type="submit" class="aact-btn aact-reject"><i class="bi bi-x-lg"></i> Từ chối</button>
+                                        </form>
+                                    }
+                                    <form method="post" action="/Admin/DeletePlace" class="d-inline"
+                                          onsubmit="return confirm('Xóa vĩnh viễn địa điểm &quot;@p.Name&quot;?')">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@p.Id">
+                                        <button type="submit" class="aact-btn aact-del" title="Xóa"><i class="bi bi-trash3-fill"></i></button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>

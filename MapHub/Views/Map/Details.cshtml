@@ -1,0 +1,418 @@
+@model MapHub.Models.Place
+@{
+    ViewData["Title"] = Model.Name;
+    var avgQuality = Model.Reviews.Any() ? Math.Round(Model.Reviews.Average(r => r.QualityRating), 1) : 0.0;
+    var avgService = Model.Reviews.Any() ? Math.Round(Model.Reviews.Average(r => r.ServiceRating), 1) : 0.0;
+    var avgFood    = Model.Reviews.Any(r => r.FoodRating.HasValue)
+                     ? Math.Round(Model.Reviews.Where(r => r.FoodRating.HasValue).Average(r => r.FoodRating!.Value), 1) : 0.0;
+    var attrGroups = Model.Attributes.GroupBy(a => a.GroupName).ToDictionary(g => g.Key, g => g.ToList());
+    bool isRestaurantLike = new[]{"restaurant","cafe","nhà hàng","cà phê"}.Contains(Model.Category?.ToLower());
+}
+
+<div class="container-xl py-4">
+    <div class="row g-4">
+
+        <!-- ── LEFT: Media + Reviews ───────────────────────────────────── -->
+        <div class="col-lg-8">
+
+            <!-- Back link -->
+            <a href="/Map" class="back-link"><i class="bi bi-arrow-left-circle-fill" style="color:#3b82f6"></i> Quay lại bản đồ</a>
+
+            <!-- Title -->
+            <div class="d-flex align-items-start gap-3 mt-2 mb-3 flex-wrap">
+                <div class="flex-grow-1">
+                    <h1 class="place-detail-title">@Model.Name</h1>
+                    <div class="place-detail-meta-row">
+                        @{
+            var catMeta = new Dictionary<string,(string Label,string Icon,string Color)>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["restaurant"]    = ("Nhà hàng",   "bi-shop-window",       "#e06d1b"),
+                ["cafe"]          = ("Cà phê",      "bi-cup-hot-fill",      "#d97706"),
+                ["entertainment"] = ("Vui chơi",    "bi-joystick",          "#7c3aed"),
+                ["hotel"]         = ("Lưu trú",     "bi-building-fill",     "#db2777"),
+                ["culture"]       = ("Văn hóa",     "bi-bank",              "#2563eb"),
+                ["temple"]        = ("Tâm linh",    "bi-moon-stars-fill",   "#a16207"),
+                ["nature"]        = ("Thiên nhiên", "bi-tree-fill",         "#16a34a"),
+                ["education"]     = ("Giáo dục",    "bi-mortarboard-fill",  "#0d9488")
+            };
+            var (catLabel2, catIcon2, catColor2) = (Model.Category != null && catMeta.TryGetValue(Model.Category, out var cm))
+                ? cm : ("Khác", "bi-geo-alt-fill", "#6b7280");
+        }
+        <span class="place-detail-cat" style="color:@catColor2">
+            <i class="bi @catIcon2"></i> @catLabel2
+        </span>
+                        @if (Model.Reviews.Any())
+                        {
+                            <span class="place-detail-rating">★ @avgQuality <small>(@Model.Reviews.Count đánh giá)</small></span>
+                        }
+                        @if (Model.Visibility == "public")
+                        {
+                            <span class="badge bg-info text-dark">Công khai</span>
+                        }
+                    </div>
+                    @if (!string.IsNullOrEmpty(Model.Address))
+                    {
+                        <p class="place-detail-address"><i class="bi bi-geo-alt-fill" style="color:#ef4444"></i> @Model.Address</p>
+                    }
+                </div>
+            </div>
+
+            <!-- Image Carousel -->
+            @if (Model.Images.Any())
+            {
+                <div class="place-gallery mb-4">
+                    <!-- Main slide -->
+                    <div id="placeCarousel" class="carousel slide" data-bs-ride="false" data-bs-touch="true">
+                        <!-- Dot indicators -->
+                        @if (Model.Images.Count > 1)
+                        {
+                            <div class="carousel-indicators">
+                                @for (int di = 0; di < Model.Images.Count; di++)
+                                {
+                                    <button type="button" data-bs-target="#placeCarousel" data-bs-slide-to="@di"
+                                            class="@(di == 0 ? "active" : "")" aria-label="Ảnh @(di+1)"></button>
+                                }
+                            </div>
+                        }
+                        <div class="carousel-inner rounded-3 overflow-hidden shadow-sm">
+                            @{ int ci = 0; }
+                            @foreach (var img in Model.Images)
+                            {
+                                <div class="carousel-item @(ci == 0 ? "active" : "")">
+                                    <img src="@img.Url" class="d-block w-100 gallery-main-img"
+                                         alt="@img.Caption" onclick="openLightbox(this.src)">
+                                    @if (!string.IsNullOrEmpty(img.Caption))
+                                    {
+                                        <div class="carousel-caption d-none d-md-block bg-dark bg-opacity-50 rounded p-1">
+                                            <small>@img.Caption</small>
+                                        </div>
+                                    }
+                                </div>
+                                ci++;
+                            }
+                        </div>
+                        @if (Model.Images.Count > 1)
+                        {
+                            <button class="carousel-control-prev" type="button" data-bs-target="#placeCarousel" data-bs-slide="prev">
+                                <span class="carousel-control-prev-icon"></span>
+                            </button>
+                            <button class="carousel-control-next" type="button" data-bs-target="#placeCarousel" data-bs-slide="next">
+                                <span class="carousel-control-next-icon"></span>
+                            </button>
+                        }
+                    </div>
+
+                    <!-- Thumbnail strip -->
+                    @if (Model.Images.Count > 1)
+                    {
+                        <div class="gallery-thumbs mt-2" id="galleryThumbs">
+                            @{ int ti = 0; }
+                            @foreach (var img in Model.Images)
+                            {
+                                <img src="@img.Url" alt="thumb"
+                                     class="gallery-thumb @(ti == 0 ? "active" : "")"
+                                     data-index="@ti"
+                                     onclick="goToSlide(@ti)">
+                                ti++;
+                            }
+                        </div>
+                    }
+                </div>
+
+                <!-- Lightbox overlay -->
+                <div id="lightbox" onclick="closeLightbox()"
+                     style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:9999;align-items:center;justify-content:center;cursor:zoom-out">
+                    <img id="lightboxImg" src="" alt="" style="max-width:92vw;max-height:92vh;border-radius:10px;object-fit:contain">
+                </div>
+            }
+            else
+            {
+                <div class="detail-no-img mb-4">
+                    <i class="bi bi-camera-fill" style="color:#94a3b8;font-size:1.5rem"></i>
+                    <span style="color:#94a3b8">Chưa có ảnh cho địa điểm này</span>
+                </div>
+            }
+
+            <!-- About -->
+            @if (!string.IsNullOrEmpty(Model.About))
+            {
+                <div class="detail-section">
+                    <h4 class="detail-section-title">Giới thiệu</h4>
+                    <p class="detail-about">@Model.About</p>
+                </div>
+            }
+
+            <!-- Tags -->
+            @if (Model.PlaceTags.Any())
+            {
+                <div class="detail-tags mb-4">
+                    @foreach (var pt in Model.PlaceTags.Where(pt => pt.Tag != null))
+                    {
+                        <span class="tag-chip-sm">@pt.Tag!.Name</span>
+                    }
+                </div>
+            }
+
+            <!-- Reviews -->
+            <div class="detail-section">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h4 class="detail-section-title mb-0">Đánh giá (@Model.Reviews.Count)</h4>
+                    @if (User.Identity?.IsAuthenticated == true)
+                    {
+                        <button class="btn-accent btn-sm-accent" onclick="document.getElementById('reviewForm').scrollIntoView({behavior:'smooth'})">
+                            <i class="bi bi-pencil-fill"></i> Viết đánh giá
+                        </button>
+                    }
+                </div>
+
+                <!-- Rating summary -->
+                @if (Model.Reviews.Any())
+                {
+                    <div class="rating-summary mb-3">
+                        <div class="rating-big">@avgQuality <span>/ 5</span></div>
+                        <div class="rating-breakdown">
+                            <div class="rating-row">
+                                <span>Chất lượng</span>
+                                <div class="rating-bar"><div style="width:@(avgQuality*20)%"></div></div>
+                                <span>@avgQuality</span>
+                            </div>
+                            <div class="rating-row">
+                                <span>Nhân viên</span>
+                                <div class="rating-bar"><div style="width:@(avgService*20)%"></div></div>
+                                <span>@avgService</span>
+                            </div>
+                            @if (isRestaurantLike && avgFood > 0)
+                            {
+                                <div class="rating-row">
+                                    <span>Đồ ăn/uống</span>
+                                    <div class="rating-bar"><div style="width:@(avgFood*20)%"></div></div>
+                                    <span>@avgFood</span>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+
+                <!-- Review list -->
+                @if (Model.Reviews.Any())
+                {
+                    @foreach (var rv in Model.Reviews.OrderByDescending(r => r.CreatedAt))
+                    {
+                        <div class="review-card">
+                            <div class="review-header">
+                                <div class="review-avatar"><i class="bi bi-person-fill" style="color:#6366f1"></i></div>
+                                <div>
+                                    <div class="review-user">Người dùng</div>
+                                    <div class="review-date">@rv.CreatedAt.ToString("dd/MM/yyyy")</div>
+                                </div>
+                                <div class="review-stars ms-auto">
+                                    ★ @((rv.QualityRating + rv.ServiceRating) / 2.0)
+                                </div>
+                            </div>
+                            <div class="review-ratings-row">
+                                <span>Chất lượng: <b>@rv.QualityRating/5</b></span>
+                                <span>Nhân viên: <b>@rv.ServiceRating/5</b></span>
+                                @if (rv.FoodRating.HasValue)
+                                {
+                                    <span>Đồ ăn: <b>@rv.FoodRating/5</b></span>
+                                }
+                            </div>
+                            @if (!string.IsNullOrEmpty(rv.Content))
+                            {
+                                <p class="review-content">@rv.Content</p>
+                            }
+                            @if (!string.IsNullOrEmpty(rv.FoodReview))
+                            {
+                                <p class="review-sub"><em><i class="bi bi-egg-fried" style="color:#f59e0b"></i> @rv.FoodReview</em></p>
+                            }
+                            @if (!string.IsNullOrEmpty(rv.StaffReview))
+                            {
+                                <p class="review-sub"><em><i class="bi bi-person-check-fill" style="color:#6366f1"></i> @rv.StaffReview</em></p>
+                            }
+                            @if (!string.IsNullOrEmpty(rv.PhotoUrl))
+                            {
+                                <img src="@rv.PhotoUrl" alt="Ảnh đánh giá"
+                                     style="max-width:100%;max-height:220px;border-radius:10px;margin-top:8px;object-fit:cover">
+                            }
+                        </div>
+                    }
+                }
+                else
+                {
+                    <p class="text-muted">Chưa có đánh giá nào. Hãy là người đầu tiên!</p>
+                }
+
+                <!-- Write review form -->
+                @if (User.Identity?.IsAuthenticated == true)
+                {
+                    <div id="reviewForm" class="review-form-box mt-4">
+                        <h5><i class="bi bi-pencil-square" style="color:#e06d1b"></i> Viết đánh giá của bạn</h5>
+                        <form method="post" action="/Map/AddReview" enctype="multipart/form-data">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="placeId" value="@Model.Id">
+                            <div class="row g-2 mb-2">
+                                <div class="col-md-4">
+                                    <label class="form-label">Chất lượng tổng thể</label>
+                                    <select name="qualityRating" class="form-select" required>
+                                        @for (int s = 5; s >= 1; s--)
+                                        { <option value="@s">@s ★</option> }
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Nhân viên phục vụ</label>
+                                    <select name="serviceRating" class="form-select" required>
+                                        @for (int s = 5; s >= 1; s--)
+                                        { <option value="@s">@s ★</option> }
+                                    </select>
+                                </div>
+                                @if (isRestaurantLike)
+                                {
+                                    <div class="col-md-4">
+                                        <label class="form-label">Đồ ăn / đồ uống</label>
+                                        <select name="foodRating" class="form-select">
+                                            <option value="">-- Bỏ qua --</option>
+                                            @for (int s = 5; s >= 1; s--)
+                                            { <option value="@s">@s ★</option> }
+                                        </select>
+                                    </div>
+                                }
+                            </div>
+                            <textarea name="content" class="form-control mb-2" rows="3"
+                                      placeholder="Chia sẻ trải nghiệm của bạn..."></textarea>
+                            @if (isRestaurantLike)
+                            {
+                                <input type="text" name="foodReview" class="form-control mb-2"
+                                       placeholder="Nhận xét về đồ ăn/uống (tùy chọn)">
+                                <input type="text" name="staffReview" class="form-control mb-2"
+                                       placeholder="Nhận xét về nhân viên (tùy chọn)">
+                            }
+                            <div class="mb-3">
+                                <label class="form-label"><i class="bi bi-camera-fill" style="color:#3b82f6"></i> Ảnh đính kèm <small class="text-muted">(tùy chọn, tối đa 5MB)</small></label>
+                                <input type="file" name="photo" class="form-control" accept="image/*">
+                            </div>
+                            <button type="submit" class="btn-accent">Gửi đánh giá</button>
+                        </form>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- ── RIGHT: Info Panel ───────────────────────────────────────── -->
+        <div class="col-lg-4">
+
+            <!-- Info Card -->
+            <div class="info-card mb-3">
+                <h5 class="info-card-title">Thông tin</h5>
+                <ul class="info-list">
+                    @if (!string.IsNullOrEmpty(Model.Phone))
+                    {
+                        <li>
+                            <i class="bi bi-telephone-fill" style="color:#22c55e;font-size:1rem"></i>
+                            <a href="tel:@Model.Phone">@Model.Phone</a>
+                        </li>
+                    }
+                    @if (!string.IsNullOrEmpty(Model.WebsiteUrl))
+                    {
+                        <li>
+                            <i class="bi bi-globe2" style="color:#3b82f6;font-size:1rem"></i>
+                            <a href="@Model.WebsiteUrl" target="_blank" rel="nofollow noopener">Trang web</a>
+                        </li>
+                    }
+                    @if (Model.MinPrice.HasValue)
+                    {
+                        var priceStr = Model.MaxPrice.HasValue
+                            ? $"{Model.MinPrice!.Value:N0}đ – {Model.MaxPrice!.Value:N0}đ"
+                            : $"Từ {Model.MinPrice!.Value:N0}đ";
+                        <li>
+                            <i class="bi bi-cash-coin" style="color:#f59e0b;font-size:1rem"></i>
+                            <span style="color:#16a34a;font-weight:700">@priceStr</span>
+                        </li>
+                    }
+                </ul>
+
+                <div class="info-actions mt-3">
+                    <button class="btn-accent w-100 mb-2"
+                            onclick="window.open('https://www.google.com/maps/dir/?api=1&destination=@Model.Latitude,@Model.Longitude','_blank')">
+                        <i class="bi bi-navigation-fill"></i> Chỉ đường
+                    </button>
+                    @if (User.Identity?.IsAuthenticated == true)
+                    {
+                        <a href="/Plans" class="btn-ghost w-100">
+                            <i class="bi bi-calendar-plus-fill" style="color:#8b5cf6"></i> Thêm vào kế hoạch
+                        </a>
+                    }
+                </div>
+            </div>
+
+            <!-- Attributes (Google Maps style) -->
+            @if (attrGroups.Any())
+            {
+                <div class="info-card mb-3">
+                    <h5 class="info-card-title">Tiện ích &amp; Dịch vụ</h5>
+                    @foreach (var group in attrGroups)
+                    {
+                        <div class="attr-group">
+                            <div class="attr-group-name">@group.Key</div>
+                            <div class="attr-list">
+                                @foreach (var attr in group.Value)
+                                {
+                                    <div class="attr-item @(attr.IsAvailable ? "" : "attr-unavailable")">
+                                        <i class="bi @(attr.IsAvailable ? "bi-check-circle-fill" : "bi-x-circle-fill")"
+                                           style="color:@(attr.IsAvailable ? "#22c55e" : "#d1d5db")"></i>
+                                        @attr.Label
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+
+            <!-- Mini map -->
+            <div class="info-card">
+                <h5 class="info-card-title">Vị trí</h5>
+                <div id="detailMiniMap" style="height:200px;border-radius:8px;overflow:hidden;"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const lat = @Model.Latitude, lng = @Model.Longitude;
+    const m = L.map('detailMiniMap', { zoomControl:false, dragging:false, scrollWheelZoom:false })
+               .setView([lat, lng], 15);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(m);
+    L.marker([lat, lng]).addTo(m)
+     .bindPopup('<b>@Html.Raw(Model.Name.Replace("'", "\\'"))</b>').openPopup();
+
+    // Sync carousel ↔ thumbnails
+    const carousel = document.getElementById('placeCarousel');
+    if (carousel) {
+        carousel.addEventListener('slid.bs.carousel', e => {
+            document.querySelectorAll('.gallery-thumb').forEach(t => t.classList.remove('active'));
+            const active = document.querySelector(`.gallery-thumb[data-index="${e.to}"]`);
+            if (active) { active.classList.add('active'); active.scrollIntoView({inline:'nearest',behavior:'smooth'}); }
+        });
+    }
+});
+
+function goToSlide(index) {
+    const c = bootstrap.Carousel.getOrCreateInstance(document.getElementById('placeCarousel'));
+    c.to(index);
+}
+
+function openLightbox(src) {
+    const lb = document.getElementById('lightbox');
+    document.getElementById('lightboxImg').src = src;
+    lb.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+}
+function closeLightbox() {
+    document.getElementById('lightbox').style.display = 'none';
+    document.body.style.overflow = '';
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
+</script>
+}

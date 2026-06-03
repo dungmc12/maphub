@@ -1,0 +1,256 @@
+@{
+    ViewData["Title"] = "Nâng cấp Pro – CityScout";
+    bool isPro = User.Identity?.IsAuthenticated == true && (User.IsInRole("Admin") || User.IsInRole("Pro") || (ViewBag.IsPro as bool? ?? false));
+    bool isLoggedIn = User.Identity?.IsAuthenticated == true;
+}
+
+<style>
+    .plan-pick {
+        display: flex; align-items: center; gap: .75rem; cursor: pointer;
+        border: 2px solid #e5e7eb; border-radius: 12px; padding: .8rem 1rem;
+        margin-bottom: .6rem; transition: all .15s;
+    }
+    .plan-pick:hover { border-color: #c4b5fd; }
+    .plan-pick.active { border-color: #8b5cf6; background: #faf5ff; }
+    .plan-pick-name { font-weight: 700; }
+    .plan-pick-desc { font-size: .78rem; color: #64748b; }
+    .plan-pick-price { margin-left: auto; font-weight: 800; color: #6d28d9; white-space: nowrap; }
+    .plan-pick-badge {
+        font-size: .65rem; background: #22c55e; color: #fff;
+        padding: .1rem .4rem; border-radius: 6px; vertical-align: middle;
+    }
+</style>
+
+<div class="premium-page">
+
+    <!-- Hero -->
+    <div class="premium-hero">
+        <div class="premium-hero-inner">
+            <div class="premium-badge"><i class="bi bi-stars"></i> CityScout Pro</div>
+            <h1 class="premium-title">Khám phá Hà Nội không giới hạn</h1>
+            <p class="premium-subtitle">
+                Lập kế hoạch hành trình thông minh, gợi ý địa điểm bằng AI<br>
+                và thêm không giới hạn địa điểm yêu thích.
+            </p>
+            @if (isPro)
+            {
+                <div class="premium-active-badge"><i class="bi bi-patch-check-fill"></i> Bạn đang là thành viên Pro</div>
+            }
+        </div>
+    </div>
+
+    <!-- Pricing cards -->
+    <div class="container py-5" style="max-width:900px">
+        <div class="row g-4 justify-content-center">
+
+            <!-- Free -->
+            <div class="col-md-5">
+                <div class="pricing-card">
+                    <div class="pricing-tier">Miễn phí</div>
+                    <div class="pricing-price">
+                        <span class="price-num">0đ</span>
+                        <span class="price-period">/ mãi mãi</span>
+                    </div>
+                    <ul class="pricing-features">
+                        <li class="feat-ok">✓ Xem bản đồ & địa điểm</li>
+                        <li class="feat-ok">✓ Thêm tối đa 3 địa điểm</li>
+                        <li class="feat-ok">✓ Tạo tối đa 3 kế hoạch</li>
+                        <li class="feat-ok">✓ Viết đánh giá địa điểm</li>
+                        <li class="feat-no">✗ Chat AI tư vấn hành trình</li>
+                        <li class="feat-no">✗ Tạo kế hoạch bằng AI</li>
+                        <li class="feat-no">✗ Không giới hạn địa điểm</li>
+                        <li class="feat-no">✗ Chia sẻ kế hoạch công khai</li>
+                    </ul>
+                    @if (!isLoggedIn)
+                    {
+                        <a href="/Account/Register" class="pricing-btn pricing-btn-ghost">Đăng ký miễn phí</a>
+                    }
+                    else if (!isPro)
+                    {
+                        <div class="pricing-btn pricing-btn-ghost pricing-current">Gói hiện tại</div>
+                    }
+                </div>
+            </div>
+
+            <!-- Pro -->
+            <div class="col-md-5">
+                <div class="pricing-card pricing-card-pro">
+                    <div class="pricing-popular">Phổ biến nhất</div>
+                    <div class="pricing-tier">Pro</div>
+                    <div class="pricing-price">
+                        <span class="price-num">99.000đ</span>
+                        <span class="price-period">/ tháng</span>
+                    </div>
+                    <ul class="pricing-features">
+                        <li class="feat-ok">✓ Tất cả tính năng miễn phí</li>
+                        <li class="feat-ok">✓ Không giới hạn địa điểm</li>
+                        <li class="feat-ok">✓ Không giới hạn kế hoạch</li>
+                        <li class="feat-ok">✓ Chat AI tư vấn hành trình</li>
+                        <li class="feat-ok">✓ Tạo kế hoạch tự động bằng AI</li>
+                        <li class="feat-ok">✓ Chia sẻ kế hoạch công khai</li>
+                        <li class="feat-ok">✓ Ưu tiên hiển thị địa điểm</li>
+                        <li class="feat-ok">✓ Hỗ trợ ưu tiên</li>
+                    </ul>
+                    @if (isPro)
+                    {
+                        <div class="pricing-btn pricing-btn-ghost pricing-current">
+                            <i class="bi bi-patch-check-fill" style="color:#22c55e"></i> Đang sử dụng
+                        </div>
+                    }
+                    else if (!isLoggedIn)
+                    {
+                        <a href="/Account/Login" class="pricing-btn pricing-btn-pro">Đăng nhập để nâng cấp</a>
+                    }
+                    else
+                    {
+                        <button class="pricing-btn pricing-btn-pro" onclick="showPayment()">
+                            <i class="bi bi-lightning-charge-fill"></i> Nâng cấp ngay
+                        </button>
+                    }
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Feature comparison -->
+        <div class="mt-5">
+            <h4 class="text-center mb-4 fw-bold">So sánh chi tiết</h4>
+            <div class="table-responsive">
+                <table class="table table-bordered align-middle text-center compare-table">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="text-start">Tính năng</th>
+                            <th>Miễn phí</th>
+                            <th class="table-warning"><i class="bi bi-stars" style="color:#e06d1b"></i> Pro</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="text-start">Xem bản đồ & địa điểm</td>
+                            <td>✓</td>
+                            <td>✓</td>
+                        </tr>
+                        <tr>
+                            <td class="text-start">Thêm địa điểm</td>
+                            <td>3 địa điểm</td>
+                            <td class="fw-semibold">Không giới hạn</td>
+                        </tr>
+                        <tr>
+                            <td class="text-start">Tạo kế hoạch hành trình</td>
+                            <td>3 kế hoạch</td>
+                            <td class="fw-semibold">Không giới hạn</td>
+                        </tr>
+                        <tr>
+                            <td class="text-start">Viết đánh giá & xếp hạng</td>
+                            <td>✓</td>
+                            <td>✓</td>
+                        </tr>
+                        <tr>
+                            <td class="text-start">Chat AI tư vấn (Gemini)</td>
+                            <td>✗</td>
+                            <td>✓</td>
+                        </tr>
+                        <tr>
+                            <td class="text-start">Tạo kế hoạch bằng AI</td>
+                            <td>✗</td>
+                            <td>✓</td>
+                        </tr>
+                        <tr>
+                            <td class="text-start">Chia sẻ kế hoạch qua link</td>
+                            <td>✗</td>
+                            <td>✓</td>
+                        </tr>
+                        <tr>
+                            <td class="text-start">Lọc địa điểm nâng cao</td>
+                            <td>✗</td>
+                            <td>✓</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- FAQ -->
+        <div class="mt-5 mb-3">
+            <h4 class="text-center mb-4 fw-bold">Câu hỏi thường gặp</h4>
+            <div class="faq-list">
+                <div class="faq-item">
+                    <div class="faq-q">AI trong CityScout Pro hoạt động thế nào?</div>
+                    <div class="faq-a">
+                        CityScout sử dụng Google Gemini AI để gợi ý địa điểm phù hợp,
+                        trả lời câu hỏi về Hà Nội và tự động tạo lịch trình hành trình theo sở thích của bạn.
+                    </div>
+                </div>
+                <div class="faq-item">
+                    <div class="faq-q">Tôi có thể hủy đăng ký bất cứ lúc nào không?</div>
+                    <div class="faq-a">
+                        Có. Bạn có thể hủy gói Pro bất kỳ lúc nào. Tính năng Pro vẫn hoạt động
+                        đến hết chu kỳ thanh toán hiện tại.
+                    </div>
+                </div>
+                <div class="faq-item">
+                    <div class="faq-q">Thanh toán qua phương thức nào?</div>
+                    <div class="faq-a">
+                        Hiện tại hỗ trợ thanh toán qua QR Code ngân hàng, MoMo và ZaloPay.
+                        Sẽ có thêm cổng thanh toán quốc tế trong tương lai.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Payment modal: chọn gói -> tạo mã QR -->
+<div id="paymentOverlay" class="modal-overlay" style="display:none" onclick="if(event.target===this)hidePayment()">
+    <div class="modal-panel" style="max-width:440px">
+        <div class="modal-panel-header">
+            <span>💳 Nâng cấp CityScout Pro</span>
+            <button class="modal-close" onclick="hidePayment()">✕</button>
+        </div>
+        <form method="post" action="/Payments/Create" style="padding:20px">
+            @Html.AntiForgeryToken()
+            <p class="text-muted mb-3">Chọn gói bạn muốn đăng ký:</p>
+
+            <label class="plan-pick active" id="plan-month-label">
+                <input type="radio" name="plan" value="month" checked onchange="pickPlan('month')" hidden>
+                <div>
+                    <div class="plan-pick-name">Gói tháng</div>
+                    <div class="plan-pick-desc">Gia hạn mỗi 30 ngày</div>
+                </div>
+                <div class="plan-pick-price">@(((decimal)ViewBag.MonthAmount).ToString("#,##0"))đ</div>
+            </label>
+
+            <label class="plan-pick" id="plan-year-label">
+                <input type="radio" name="plan" value="year" onchange="pickPlan('year')" hidden>
+                <div>
+                    <div class="plan-pick-name">Gói năm <span class="plan-pick-badge">Tiết kiệm</span></div>
+                    <div class="plan-pick-desc">Dùng trọn 1 năm</div>
+                </div>
+                <div class="plan-pick-price">@(((decimal)ViewBag.YearAmount).ToString("#,##0"))đ</div>
+            </label>
+
+            <button type="submit" class="btn-accent w-100 mt-3">
+                <i class="bi bi-qr-code-scan"></i> Tạo mã QR thanh toán
+            </button>
+            <p class="text-center mt-2"><small class="text-muted">Quét VietQR bằng app ngân hàng · Tự động lên Pro sau khi chuyển khoản</small></p>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+function showPayment() {
+    document.getElementById('paymentOverlay').style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+}
+function hidePayment() {
+    document.getElementById('paymentOverlay').style.display = 'none';
+    document.body.style.overflow = '';
+}
+function pickPlan(which) {
+    document.getElementById('plan-month-label').classList.toggle('active', which === 'month');
+    document.getElementById('plan-year-label').classList.toggle('active', which === 'year');
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') hidePayment(); });
+</script>
+}

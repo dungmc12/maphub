@@ -1,0 +1,40 @@
+@model MapHub.Models.RegisterInputModel
+@{
+    ViewData["Title"] = "Đăng ký";
+}
+
+<section class="auth-wrap">
+    <article class="auth-card">
+        <p class="eyebrow">Tạo tài khoản</p>
+        <h1>Tạo tài khoản mới</h1>
+        <p class="subtitle">Mỗi tài khoản sẽ có bộ dữ liệu địa điểm riêng, không đè lẫn với người khác.</p>
+
+        <form asp-action="Register" method="post" class="auth-form">
+            <input type="hidden" asp-for="ReturnUrl" />
+            <div asp-validation-summary="ModelOnly" class="validation"></div>
+
+            <label asp-for="Email"></label>
+            <input asp-for="Email" autocomplete="username" />
+            <span asp-validation-for="Email" class="validation"></span>
+
+            <label asp-for="Password"></label>
+            <input asp-for="Password" autocomplete="new-password" />
+            <span asp-validation-for="Password" class="validation"></span>
+
+            <label asp-for="ConfirmPassword"></label>
+            <input asp-for="ConfirmPassword" autocomplete="new-password" />
+            <span asp-validation-for="ConfirmPassword" class="validation"></span>
+
+            <button type="submit" class="btn-accent">Tạo tài khoản</button>
+        </form>
+
+        <p class="auth-switch">
+            Đã có tài khoản?
+            <a asp-action="Login" asp-route-returnUrl="@Model.ReturnUrl">Đăng nhập ngay</a>
+        </p>
+    </article>
+</section>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

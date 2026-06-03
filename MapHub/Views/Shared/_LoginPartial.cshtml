@@ -1,0 +1,26 @@
+@using MapHub.Data
+@using Microsoft.AspNetCore.Identity
+@inject SignInManager<ApplicationUser> SignInManager
+
+@if (SignInManager.IsSignedIn(User))
+{
+    <div class="nav-user-pill">
+        <i class="bi bi-person-circle"></i>
+        <span class="nav-user-name">@User.Identity?.Name</span>
+    </div>
+    <form class="inline-form" asp-controller="Account" asp-action="Logout"
+          asp-route-returnUrl="@Url.Action("Login", "Account")" method="post">
+        <button type="submit" class="nav-logout-btn">
+            <i class="bi bi-box-arrow-right"></i><span>Đăng xuất</span>
+        </button>
+    </form>
+}
+else
+{
+    <a asp-controller="Account" asp-action="Login" class="nav-item">
+        <i class="bi bi-box-arrow-in-right"></i><span>Đăng nhập</span>
+    </a>
+    <a asp-controller="Account" asp-action="Register" class="nav-item nav-item-register">
+        <i class="bi bi-person-plus-fill"></i><span>Đăng ký</span>
+    </a>
+}

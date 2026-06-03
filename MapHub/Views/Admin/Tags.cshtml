@@ -1,0 +1,72 @@
+@model IEnumerable<MapHub.Models.Tag>
+@{
+    ViewData["Title"] = "Admin – Quản lý Tags";
+}
+
+<partial name="_AdminNav" />
+
+<div class="admin-page" style="max-width:780px">
+
+    <div class="admin-section-header">
+        <h2 class="admin-section-title">🏷️ Quản lý Tags</h2>
+    </div>
+
+    @if (!string.IsNullOrEmpty(TempData["Success"]?.ToString()))
+    {
+        <div class="admin-alert admin-alert-success">✅ @TempData["Success"]</div>
+    }
+    @if (!string.IsNullOrEmpty(TempData["Error"]?.ToString()))
+    {
+        <div class="admin-alert admin-alert-error">⚠️ @TempData["Error"]</div>
+    }
+
+    <div class="info-card mb-4">
+        <h5 class="info-card-title">Thêm tag mới</h5>
+        <form method="post" action="/Admin/CreateTag" class="d-flex gap-2">
+            @Html.AntiForgeryToken()
+            <input type="text" name="name" class="admin-search-input" style="flex:1"
+                   placeholder="VD: pet-friendly, rooftop, view-đẹp…" required>
+            <button type="submit" class="btn-accent" style="white-space:nowrap">＋ Thêm tag</button>
+        </form>
+    </div>
+
+    @if (!Model.Any())
+    {
+        <p class="admin-sub">Chưa có tag nào. Hãy tạo tag đầu tiên!</p>
+    }
+    else
+    {
+        <div class="admin-table-wrap">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>Tag</th>
+                        <th>Số địa điểm</th>
+                        <th>Hành động</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var tag in Model)
+                    {
+                        <tr>
+                            <td>
+                                <span style="display:inline-block;padding:.25rem .75rem;border-radius:999px;background:var(--accent);color:#fff;font-size:.82rem;font-weight:700">
+                                    🏷️ @tag.Name
+                                </span>
+                            </td>
+                            <td><span class="admin-sub">@tag.PlaceTags.Count địa điểm</span></td>
+                            <td>
+                                <form method="post" action="/Admin/DeleteTag"
+                                      onsubmit="return confirm('Xóa tag &quot;@tag.Name&quot;?')" class="d-inline">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="id" value="@tag.Id">
+                                    <button type="submit" class="aact-btn aact-del">🗑️ Xóa</button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>

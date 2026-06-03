@@ -1,0 +1,129 @@
+@model IEnumerable<MapHub.Data.ApplicationUser>
+@{
+    ViewData["Title"] = "Admin – Người dùng";
+    var userRoles   = (Dictionary<string, IList<string>>)ViewBag.UserRoles;
+    var placeCounts = (Dictionary<string, int>)ViewBag.PlaceCounts;
+    string? q = ViewBag.Q as string;
+    string? currentUserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+}
+
+<partial name="_AdminNav" />
+
+<div class="admin-page">
+
+    <div class="admin-section-header">
+        <div>
+            <h2 class="admin-section-title">👥 Quản lý Người dùng</h2>
+            <p class="admin-section-sub">@Model.Count() tài khoản</p>
+        </div>
+        <form method="get" action="/Admin/Users" class="admin-search-form">
+            <input type="text" name="q" value="@q" class="admin-search-input" placeholder="🔍 Tìm theo email…">
+            <button type="submit" class="btn-accent btn-sm-accent">Tìm</button>
+            @if (!string.IsNullOrEmpty(q))
+            {
+                <a href="/Admin/Users" class="btn-ghost btn-sm-ghost">✕ Xóa lọc</a>
+            }
+        </form>
+    </div>
+
+    @if (!string.IsNullOrEmpty(TempData["Success"]?.ToString()))
+    {
+        <div class="admin-alert admin-alert-success">✅ @TempData["Success"]</div>
+    }
+    @if (!string.IsNullOrEmpty(TempData["Error"]?.ToString()))
+    {
+        <div class="admin-alert admin-alert-error">⚠️ @TempData["Error"]</div>
+    }
+
+    <div class="admin-table-wrap">
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>Tài khoản</th>
+                    <th>Vai trò</th>
+                    <th>Địa điểm</th>
+                    <th>Thao tác</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var u in Model)
+                {
+                    var roles = userRoles.TryGetValue(u.Id, out var r) ? r : new List<string>();
+                    var placeCount = placeCounts.TryGetValue(u.Id, out var c) ? c : 0;
+                    var isAdmin = roles.Contains("Admin");
+                    var isPro   = roles.Contains("Pro");
+                    var isSelf  = u.Id == currentUserId;
+
+                    <tr class="@(isSelf ? "admin-row-self" : "")">
+                        <td>
+                            <div class="admin-user-email">@u.Email @if (isSelf) { <span class="admin-self-tag">(bạn)</span> }</div>
+                            <div class="admin-sub">ID: @u.Id[..8]…</div>
+                        </td>
+                        <td>
+                            @if (isAdmin)
+                            {
+                                <span class="abadge abadge-red">👑 Admin</span>
+                            }
+                            else if (isPro)
+                            {
+                                <span class="abadge abadge-gold"><i class="bi bi-lightning-charge-fill"></i> Pro</span>
+                            }
+                            else
+                            {
+                                <span class="abadge abadge-gray"><i class="bi bi-person-fill"></i> Người dùng</span>
+                            }
+                        </td>
+                        <td>
+                            <span class="admin-place-count"><i class="bi bi-geo-alt" style="color:#94a3b8"></i> @placeCount địa điểm</span>
+                        </td>
+                        <td>
+                            <div class="admin-actions" style="flex-wrap:wrap">
+                                @if (!isSelf)
+                                {
+                                    @if (!isPro && !isAdmin)
+                                    {
+                                        <form method="post" action="/Admin/SetRole" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="userId" value="@u.Id">
+                                            <input type="hidden" name="role"   value="Pro">
+                                            <button type="submit" class="aact-btn aact-pro"><i class="bi bi-lightning-charge-fill"></i> Cấp Pro</button>
+                                        </form>
+                                    }
+                                    @if (isPro)
+                                    {
+                                        <form method="post" action="/Admin/SetRole" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="userId" value="@u.Id">
+                                            <input type="hidden" name="role"   value="User">
+                                            <button type="submit" class="aact-btn aact-reject"><i class="bi bi-lightning-slash"></i> Bỏ Pro</button>
+                                        </form>
+                                    }
+                                    @if (!isAdmin)
+                                    {
+                                        <form method="post" action="/Admin/SetRole" class="d-inline"
+                                              onsubmit="return confirm('Cấp quyền Admin cho @u.Email?')">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="userId" value="@u.Id">
+                                            <input type="hidden" name="role"   value="Admin">
+                                            <button type="submit" class="aact-btn aact-admin-grant"><i class="bi bi-shield-fill"></i> Admin</button>
+                                        </form>
+                                        <form method="post" action="/Admin/DeleteUser" class="d-inline"
+                                              onsubmit="return confirm('Xóa tài khoản @u.Email? Hành động này không thể hoàn tác.')">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="userId" value="@u.Id">
+                                            <button type="submit" class="aact-btn aact-del" title="Xóa tài khoản"><i class="bi bi-trash3-fill"></i></button>
+                                        </form>
+                                    }
+                                }
+                                @if (isSelf)
+                                {
+                                    <span class="admin-sub">—</span>
+                                }
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

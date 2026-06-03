@@ -1,0 +1,582 @@
+@{
+    ViewData["Title"] = "Bản Đồ";
+    ViewData["BodyClass"] = "map-view";
+    bool isAuth  = User.Identity?.IsAuthenticated == true;
+    bool isPro   = User.IsInRole("Pro") || User.IsInRole("Admin");
+    bool isAdmin = User.IsInRole("Admin");
+}
+
+<div class="map-shell-wrap d-flex flex-column" style="height: calc(100vh - 56px);">
+
+    <!-- ── MAP TAG BAR ────────────────────────────────────────────────────── -->
+    <div class="map-tagbar">
+        <button class="map-tag active" data-cat="" onclick="filterCat(this,'')">
+            <i class="bi bi-compass-fill"></i> Tất cả
+        </button>
+        <button class="map-tag map-tag-restaurant" data-cat="restaurant" onclick="filterCat(this,'restaurant')">
+            <i class="bi bi-shop-window"></i> Nhà hàng
+        </button>
+        <button class="map-tag map-tag-cafe" data-cat="cafe" onclick="filterCat(this,'cafe')">
+            <i class="bi bi-cup-hot-fill"></i> Cà phê
+        </button>
+        <button class="map-tag map-tag-entertainment" data-cat="entertainment" onclick="filterCat(this,'entertainment')">
+            <i class="bi bi-joystick"></i> Vui chơi
+        </button>
+        <button class="map-tag map-tag-culture" data-cat="culture" onclick="filterCat(this,'culture')">
+            <i class="bi bi-bank"></i> Văn hóa
+        </button>
+        <button class="map-tag map-tag-temple" data-cat="temple" onclick="filterCat(this,'temple')">
+            <i class="bi bi-moon-stars-fill"></i> Tâm linh
+        </button>
+        <button class="map-tag map-tag-nature" data-cat="nature" onclick="filterCat(this,'nature')">
+            <i class="bi bi-tree-fill"></i> Thiên nhiên
+        </button>
+        <button class="map-tag map-tag-education" data-cat="education" onclick="filterCat(this,'education')">
+            <i class="bi bi-mortarboard-fill"></i> Giáo dục
+        </button>
+        <button class="map-tag map-tag-hotel" data-cat="hotel" onclick="filterCat(this,'hotel')">
+            <i class="bi bi-building-fill"></i> Lưu trú
+        </button>
+    </div>
+
+    <!-- ── MAIN AREA: SIDEBAR + MAP ──────────────────────────────────────── -->
+    <div class="d-flex flex-grow-1" style="min-height:0;">
+
+        <!-- Sidebar -->
+        <div id="mapSidebar" class="map-sidebar-panel">
+
+            <!-- Search -->
+            <div class="sidebar-search-box">
+                <input type="text" id="searchInput" class="sidebar-search-input"
+                       placeholder="🔍  Tìm tên, địa chỉ...">
+            </div>
+
+            @if (!isAuth)
+            {
+                <div class="auth-nudge">
+                    <p>👋 <strong>Đăng nhập</strong> để thêm địa điểm và lập kế hoạch.</p>
+                    <div class="d-flex gap-2">
+                        <a href="/Account/Login?returnUrl=/Map" class="btn-accent btn-sm-accent">Đăng nhập</a>
+                        <a href="/Account/Register"            class="btn-ghost  btn-sm-ghost" >Đăng ký</a>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <button class="btn-accent w-100 mb-2" onclick="openAddPlace()">
+                    ＋ Thêm địa điểm
+                </button>
+            }
+
+            <!-- Place list -->
+            <div id="placeList" class="place-list-scroll">
+                <div class="text-center text-muted p-4">
+                    <div class="spinner-border spinner-border-sm me-1"></div> Đang tải…
+                </div>
+            </div>
+        </div>
+
+        <!-- Map -->
+        <div id="map" class="flex-grow-1"></div>
+    </div>
+</div>
+
+<!-- ── AI CHAT WIDGET ─────────────────────────────────────────────────────── -->
+@if (isPro)
+{
+    <div id="chatWidget" class="chat-widget collapsed">
+        <div class="chat-widget-header" onclick="toggleChat()">
+            <span>🤖 Trợ lý AI CityScout</span>
+            <i class="bi bi-chevron-up" id="chatChevron"></i>
+        </div>
+        <div id="chatBody" class="chat-widget-body">
+            <div class="chat-msg ai"><em>Xin chào! Tôi có thể giúp bạn tìm địa điểm ăn uống, vui chơi tại Hà Nội. Hỏi thử nhé!</em></div>
+        </div>
+        <div class="chat-widget-footer">
+            <input type="text" id="chatInput" class="chat-input-box" placeholder="Hỏi AI..."
+                   onkeydown="if(event.key==='Enter') sendChat()">
+            <button class="btn-accent btn-sm-accent" onclick="sendChat()"><i class="bi bi-send"></i></button>
+        </div>
+    </div>
+}
+else if (isAuth)
+{
+    <div class="chat-pro-teaser" onclick="window.location='/Payments/Premium'">
+        <span>🤖 AI CityScout — <strong>Nâng cấp Pro</strong> để dùng</span>
+        <i class="bi bi-lock"></i>
+    </div>
+}
+
+<!-- ── ADD PLACE MODAL ────────────────────────────────────────────────────── -->
+@if (isAuth)
+{
+    <div class="modal fade" id="addPlaceModal" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">📌 Thêm Địa Điểm Mới</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <!-- Tên & Danh mục -->
+                        <div class="col-md-7">
+                            <label class="form-label fw-semibold">Tên địa điểm <span class="text-danger">*</span></label>
+                            <input type="text" id="newName" class="form-control" placeholder="VD: Quán Phở Bắc" required>
+                        </div>
+                        <div class="col-md-5">
+                            <label class="form-label fw-semibold">Danh mục</label>
+                            <select id="newCategory" class="form-select">
+                                <option value="restaurant">🍽️ Nhà hàng</option>
+                                <option value="cafe">☕ Cà phê</option>
+                                <option value="entertainment">🎯 Vui chơi</option>
+                                <option value="hotel">🏨 Lưu trú</option>
+                                <option value="culture">🏛️ Văn hóa / Bảo tàng</option>
+                                <option value="temple">🛕 Tâm linh</option>
+                                <option value="nature">🌿 Thiên nhiên</option>
+                                <option value="education">🎓 Giáo dục</option>
+                                <option value="other">📌 Khác</option>
+                            </select>
+                        </div>
+                        <!-- Địa chỉ & Điện thoại -->
+                        <div class="col-md-8">
+                            <label class="form-label fw-semibold">Địa chỉ</label>
+                            <input type="text" id="newAddress" class="form-control" placeholder="Số nhà, đường, quận…">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Điện thoại</label>
+                            <input type="text" id="newPhone" class="form-control" placeholder="024 xxxx xxxx">
+                        </div>
+                        <!-- Giới thiệu -->
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Giới thiệu / Mô tả</label>
+                            <textarea id="newAbout" class="form-control" rows="2"
+                                      placeholder="Không gian, món đặc trưng, lưu ý khi đến..."></textarea>
+                        </div>
+                        <!-- Giá -->
+                        <div class="col-md-3">
+                            <label class="form-label fw-semibold">Giá từ (đ)</label>
+                            <input type="number" id="newMinPrice" class="form-control" placeholder="30000">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-semibold">Giá đến (đ)</label>
+                            <input type="number" id="newMaxPrice" class="form-control" placeholder="150000">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Website</label>
+                            <input type="url" id="newWebsite" class="form-control" placeholder="https://...">
+                        </div>
+                        <!-- Ảnh -->
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Ảnh đại diện (URL)</label>
+                            <input type="url" id="newImageUrl" class="form-control"
+                                   placeholder="https://... (paste link ảnh từ internet)">
+                        </div>
+                        <!-- Quyền riêng tư -->
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Quyền xem</label>
+                            <select id="newVisibility" class="form-select">
+                                <option value="private">🔒 Cá nhân (Chỉ tôi thấy)</option>
+                                <option value="public">🌍 Công khai (Cần admin duyệt)</option>
+                            </select>
+                        </div>
+                        <!-- Tọa độ -->
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Tọa độ (click bản đồ bên dưới)</label>
+                            <div class="input-group">
+                                <input type="text" id="newLat" class="form-control" placeholder="Vĩ độ" readonly required>
+                                <input type="text" id="newLng" class="form-control" placeholder="Kinh độ" readonly required>
+                            </div>
+                            <small class="text-muted">Hoặc nhập thủ công nếu biết tọa độ</small>
+                        </div>
+                        <!-- Mini map -->
+                        <div class="col-12">
+                            <div id="miniMap" style="height:240px; border-radius:10px; overflow:hidden;"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-ghost" data-bs-dismiss="modal">Hủy</button>
+                    <button type="button" class="btn-accent" onclick="submitPlace()">💾 Lưu địa điểm</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@section Scripts {
+<script>
+let map, allPlaces = [], markers = [], miniMap, miniMarker, routingControl;
+let currentCat = '';
+let currentWeather = null;
+let weatherFetchTimeout = null;
+
+document.addEventListener('DOMContentLoaded', () => {
+    map = L.map('map').setView([21.0285, 105.8542], 12);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© <a href="https://openstreetmap.org">OpenStreetMap</a> contributors',
+        maxZoom: 19
+    }).addTo(map);
+
+    addWeatherControl();
+    fetchWeatherForCenter();
+
+    map.on('moveend', () => {
+        clearTimeout(weatherFetchTimeout);
+        weatherFetchTimeout = setTimeout(fetchWeatherForCenter, 1500);
+    });
+
+    setInterval(fetchWeatherForCenter, 15 * 60 * 1000);
+
+    // Read ?cat= from URL (links from home page category chips)
+    const urlCat = new URLSearchParams(window.location.search).get('cat') || '';
+    if (urlCat) {
+        currentCat = urlCat;
+        const btn = document.querySelector(`.map-tag[data-cat="${urlCat}"]`);
+        if (btn) {
+            document.querySelectorAll('.map-tag').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+        }
+    }
+    loadPlaces(currentCat);
+});
+
+// ── Weather ───────────────────────────────────────────────────────────────
+function addWeatherControl() {
+    const WeatherCtrl = L.Control.extend({
+        options: { position: 'topright' },
+        onAdd: function () {
+            const div = L.DomUtil.create('div', 'weather-map-panel');
+            div.id = 'weatherPanel';
+            div.innerHTML = `
+                <div class="weather-panel-row">
+                    <div class="weather-panel-icon" id="weatherIcon">⏳</div>
+                    <div>
+                        <div class="weather-panel-temp" id="weatherTemp">--°C</div>
+                        <div class="weather-panel-desc" id="weatherDesc">Đang tải thời tiết…</div>
+                        <div class="weather-panel-wind" id="weatherWind"></div>
+                    </div>
+                </div>
+                <div class="weather-legend">
+                    <span class="wleg wleg-good">Phù hợp</span>
+                    <span class="wleg wleg-mid">Trung bình</span>
+                    <span class="wleg wleg-bad">Không phù hợp</span>
+                </div>`;
+            L.DomEvent.disableClickPropagation(div);
+            L.DomEvent.disableScrollPropagation(div);
+            return div;
+        }
+    });
+    map.addControl(new WeatherCtrl());
+}
+
+async function fetchWeatherForCenter() {
+    const panel = document.getElementById('weatherPanel');
+    if (panel) panel.classList.add('weather-updating');
+    const center = map.getCenter();
+    try {
+        const res = await fetch(`/Weather/At?lat=${center.lat.toFixed(4)}&lng=${center.lng.toFixed(4)}`);
+        if (!res.ok) return;
+        const w = await res.json();
+        currentWeather = w;
+        document.getElementById('weatherIcon').textContent = weatherCodeIcon(w.weatherCode);
+        document.getElementById('weatherTemp').textContent = `${Math.round(w.temperatureC)}°C`;
+        document.getElementById('weatherDesc').textContent = w.summary;
+        document.getElementById('weatherWind').textContent = `💨 ${Math.round(w.windKph)} km/h`;
+        if (allPlaces.length > 0) renderPlaces(allPlaces);
+    } catch {
+        const desc = document.getElementById('weatherDesc');
+        if (desc) desc.textContent = 'Không tải được thời tiết';
+    } finally {
+        if (panel) panel.classList.remove('weather-updating');
+    }
+}
+
+function weatherCodeIcon(code) {
+    if (code === 0)  return '☀️';
+    if (code <= 2)   return '🌤️';
+    if (code === 3)  return '☁️';
+    if (code <= 48)  return '🌫️';
+    if (code <= 55)  return '🌦️';
+    if (code <= 65)  return '🌧️';
+    if (code <= 75)  return '🌨️';
+    return '⛈️';
+}
+
+function getWeatherSuitability(weatherCode, category) {
+    if (weatherCode == null) return 'good';
+    const cat = (category || '').toLowerCase();
+    const indoor = ['restaurant', 'cafe', 'hotel', 'culture', 'education'].includes(cat);
+    const semiOutdoor = ['entertainment', 'temple'].includes(cat);
+
+    if (weatherCode <= 2) return 'good';
+    if (weatherCode === 3 || weatherCode === 45 || weatherCode === 48)
+        return indoor ? 'good' : 'mid';
+    if (weatherCode <= 55)   // light drizzle
+        return indoor ? 'good' : 'mid';
+    if (weatherCode <= 65)   // moderate rain
+        return indoor ? 'mid' : 'bad';
+    // heavy rain / storm
+    return indoor ? 'mid' : 'bad';
+}
+
+function createWeatherMarker(suitability) {
+    const palette = {
+        good: { fill: '#22c55e', ring: '#16a34a' },
+        mid:  { fill: '#f59e0b', ring: '#d97706' },
+        bad:  { fill: '#ef4444', ring: '#dc2626' }
+    };
+    const c = palette[suitability] || palette.good;
+    return L.divIcon({
+        className: '',
+        html: `<svg xmlns="http://www.w3.org/2000/svg" width="26" height="36" viewBox="0 0 26 36">
+            <path d="M13 0C5.82 0 0 5.82 0 13c0 8.58 13 23 13 23s13-14.42 13-23C26 5.82 20.18 0 13 0z"
+                  fill="${c.fill}" stroke="${c.ring}" stroke-width="1.5"/>
+            <circle cx="13" cy="13" r="5.5" fill="white" opacity="0.85"/>
+        </svg>`,
+        iconSize:    [26, 36],
+        iconAnchor:  [13, 36],
+        popupAnchor: [0, -36]
+    });
+}
+
+// ── Data ──────────────────────────────────────────────────────────────────
+function loadPlaces(cat, q) {
+    let url = '/Map/GetPlaces';
+    const params = [];
+    if (cat) params.push('category=' + encodeURIComponent(cat));
+    if (q)   params.push('q=' + encodeURIComponent(q));
+    if (params.length) url += '?' + params.join('&');
+
+    fetch(url).then(r => r.json()).then(data => {
+        allPlaces = data;
+        renderPlaces(data);
+    });
+}
+
+function suitLabel(s) {
+    if (s === 'good') return { text: '✅ Thời tiết phù hợp', cls: 'suit-good' };
+    if (s === 'mid')  return { text: '🌤️ Trung bình',        cls: 'suit-mid'  };
+    return                   { text: '⚠️ Không thuận lợi',   cls: 'suit-bad'  };
+}
+
+function renderPlaces(list) {
+    markers.forEach(m => map.removeLayer(m));
+    markers = [];
+    const container = document.getElementById('placeList');
+
+    if (!list.length) {
+        container.innerHTML = '<p class="text-muted text-center p-3">Không tìm thấy địa điểm nào.</p>';
+        return;
+    }
+
+    container.innerHTML = '';
+    list.forEach(p => {
+        const suit = currentWeather
+            ? getWeatherSuitability(currentWeather.weatherCode, p.category)
+            : 'good';
+        const sl = suitLabel(suit);
+
+        // Weather-coloured marker
+        const icon = createWeatherMarker(suit);
+        const weatherPopupLine = currentWeather
+            ? `<br><span style="font-size:12px;font-weight:700;color:${suit==='good'?'#16a34a':suit==='mid'?'#d97706':'#dc2626'}">${sl.text}</span>`
+            : '';
+
+        const m = L.marker([p.latitude, p.longitude], { icon }).addTo(map)
+            .bindPopup(`<b>${p.name}</b><br><small>${p.address || ''}</small>${weatherPopupLine}<br>
+                        <a href="/Map/Details/${p.id}" style="display:inline-block;margin-top:6px;padding:4px 12px;background:#e06d1b;color:#fff;border-radius:8px;text-decoration:none;font-size:13px;font-weight:600">Xem chi tiết →</a>`);
+        markers.push(m);
+
+        // Sidebar card
+        const card = document.createElement('div');
+        card.className = 'place-list-card';
+        card.innerHTML = `
+            <img src="${p.primaryImage}" alt="${p.name}" class="place-list-img" loading="lazy">
+            <div class="place-list-info">
+                <div class="place-list-name">${p.name}</div>
+                <div class="place-list-cat">${categoryLabel(p.category)}</div>
+                ${p.address ? `<div class="place-list-addr">📍 ${p.address}</div>` : ''}
+                <div class="place-list-footer">
+                    <span class="place-list-rating">${p.rating > 0 ? '★ ' + p.rating : 'Chưa có đánh giá'}</span>
+                    <div class="place-list-actions">
+                        <button class="btn-list-action" onclick="routeTo(${p.latitude},${p.longitude});event.stopPropagation();" title="Chỉ đường">🧭</button>
+                        <a href="/Map/Details/${p.id}" class="btn-list-action" title="Chi tiết" onclick="event.stopPropagation();">ℹ️</a>
+                    </div>
+                </div>
+                ${currentWeather ? `<div class="place-weather-badge ${sl.cls}">${sl.text}</div>` : ''}
+            </div>`;
+        card.onclick = () => { map.setView([p.latitude, p.longitude], 16); m.openPopup(); };
+        container.appendChild(card);
+    });
+}
+
+function categoryLabel(cat) {
+    const map = { restaurant:'🍽️ Nhà hàng', cafe:'☕ Cà phê', entertainment:'🎯 Vui chơi',
+                  hotel:'🏨 Lưu trú', culture:'🏛️ Văn hóa', temple:'🛕 Tâm linh',
+                  nature:'🌿 Thiên nhiên', education:'🎓 Giáo dục' };
+    return map[cat?.toLowerCase()] || ('📌 ' + (cat || 'Khác'));
+}
+
+// ── Filters ───────────────────────────────────────────────────────────────
+function filterCat(btn, cat) {
+    document.querySelectorAll('.map-tag').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentCat = cat;
+    loadPlaces(cat, document.getElementById('searchInput').value.trim());
+}
+
+document.getElementById('searchInput').addEventListener('input', function() {
+    clearTimeout(this._t);
+    this._t = setTimeout(() => loadPlaces(currentCat, this.value.trim()), 350);
+});
+
+// ── Routing ───────────────────────────────────────────────────────────────
+function routeTo(lat, lng) {
+    const fallback = () => drawRoute(21.0285, 105.8542, lat, lng);
+    if (!navigator.geolocation) { fallback(); return; }
+    navigator.geolocation.getCurrentPosition(
+        pos => drawRoute(pos.coords.latitude, pos.coords.longitude, lat, lng),
+        fallback
+    );
+}
+
+function drawRoute(slat, slng, dlat, dlng) {
+    if (routingControl) map.removeControl(routingControl);
+    routingControl = L.Routing.control({
+        waypoints: [L.latLng(slat, slng), L.latLng(dlat, dlng)],
+        routeWhileDragging: false, showAlternatives: false, fitSelectedRoutes: true,
+        lineOptions: { styles: [{ color:'#e06d1b', opacity:0.85, weight:6 }] },
+        createMarker: () => null
+    }).on('routingerror', () => {
+        map.removeControl(routingControl);
+        window.open(`https://www.google.com/maps/dir/?api=1&destination=${dlat},${dlng}&origin=${slat},${slng}`, '_blank');
+    }).addTo(map);
+}
+
+// ── Add Place Modal ───────────────────────────────────────────────────────
+function openAddPlace() {
+    const modal = new bootstrap.Modal(document.getElementById('addPlaceModal'));
+    modal.show();
+    document.getElementById('addPlaceModal').addEventListener('shown.bs.modal', () => {
+        if (!miniMap) {
+            miniMap = L.map('miniMap').setView([21.0285, 105.8542], 13);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(miniMap);
+            miniMap.on('click', e => {
+                document.getElementById('newLat').value = e.latlng.lat.toFixed(6);
+                document.getElementById('newLng').value = e.latlng.lng.toFixed(6);
+                if (miniMarker) miniMap.removeLayer(miniMarker);
+                miniMarker = L.marker(e.latlng).addTo(miniMap);
+            });
+            if (navigator.geolocation)
+                navigator.geolocation.getCurrentPosition(p => miniMap.setView([p.coords.latitude, p.coords.longitude], 15));
+        } else {
+            miniMap.invalidateSize();
+        }
+    }, { once: true });
+}
+
+async function submitPlace() {
+    const lat = parseFloat(document.getElementById('newLat').value);
+    const lng = parseFloat(document.getElementById('newLng').value);
+    const name = document.getElementById('newName').value.trim();
+
+    if (!name) { alert('Vui lòng nhập tên địa điểm!'); return; }
+    if (isNaN(lat) || isNaN(lng)) { alert('Vui lòng chọn vị trí trên bản đồ!'); return; }
+
+    const data = {
+        Name:       name,
+        Category:   document.getElementById('newCategory').value,
+        About:      document.getElementById('newAbout').value,
+        Address:    document.getElementById('newAddress').value,
+        Phone:      document.getElementById('newPhone').value,
+        WebsiteUrl: document.getElementById('newWebsite').value,
+        MinPrice:   parseFloat(document.getElementById('newMinPrice').value) || null,
+        MaxPrice:   parseFloat(document.getElementById('newMaxPrice').value) || null,
+        ImageUrl:   document.getElementById('newImageUrl').value,
+        Visibility: document.getElementById('newVisibility').value,
+        Latitude:   lat,
+        Longitude:  lng
+    };
+
+    const res = await fetch('/Map/AddPlace', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    });
+    const json = await res.json();
+
+    if (res.ok && json.success) {
+        bootstrap.Modal.getInstance(document.getElementById('addPlaceModal')).hide();
+        const msg = data.Visibility === 'public'
+            ? `✅ Đã gửi duyệt địa điểm "${data.Name}". Admin sẽ xét duyệt sớm!`
+            : `✅ Đã lưu địa điểm cá nhân "${data.Name}".`;
+        showToast(msg, 'success');
+        loadPlaces(currentCat);
+    } else if (json.error === 'limit') {
+        alert(json.message);
+    } else {
+        alert('Lỗi khi lưu địa điểm. Vui lòng thử lại.');
+    }
+}
+
+// ── AI Chat ───────────────────────────────────────────────────────────────
+function toggleChat() {
+    const w = document.getElementById('chatWidget');
+    const c = document.getElementById('chatChevron');
+    if (w.classList.contains('collapsed')) {
+        w.classList.replace('collapsed', 'expanded');
+        c.className = 'bi bi-chevron-down';
+    } else {
+        w.classList.replace('expanded', 'collapsed');
+        c.className = 'bi bi-chevron-up';
+    }
+}
+
+async function sendChat() {
+    const input = document.getElementById('chatInput');
+    const body  = document.getElementById('chatBody');
+    const val   = input.value.trim();
+    if (!val) return;
+
+    body.innerHTML += `<div class="chat-msg user"><b>Bạn:</b> ${escHtml(val)}</div>`;
+    input.value = '';
+    const loadId = 'ai-' + Date.now();
+    body.innerHTML += `<div id="${loadId}" class="chat-msg ai"><em>Đang suy nghĩ…</em></div>`;
+    body.scrollTop = body.scrollHeight;
+
+    try {
+        const r = await fetch('/Ai/Chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prompt: val })
+        });
+        document.getElementById(loadId)?.remove();
+        if (r.ok) {
+            const d = await r.json();
+            body.innerHTML += `<div class="chat-msg ai"><b>AI:</b> ${escHtml(d.answer)}</div>`;
+        } else {
+            body.innerHTML += `<div class="chat-msg err">⚠️ Không kết nối được AI.</div>`;
+        }
+    } catch {
+        document.getElementById(loadId)?.remove();
+        body.innerHTML += `<div class="chat-msg err">⚠️ Lỗi hệ thống.</div>`;
+    }
+    body.scrollTop = body.scrollHeight;
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────
+function showToast(msg, type) {
+    const t = document.createElement('div');
+    t.className = `map-toast map-toast-${type}`;
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(() => t.classList.add('show'), 50);
+    setTimeout(() => { t.classList.remove('show'); setTimeout(() => t.remove(), 300); }, 4000);
+}
+
+function escHtml(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+</script>
+}
