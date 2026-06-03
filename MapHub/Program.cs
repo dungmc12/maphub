@@ -5,8 +5,21 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+var rawConn = builder.Configuration.GetConnectionString("DefaultConnection")
     ?? throw new InvalidOperationException("DefaultConnection is not configured.");
+
+// Render provides PostgreSQL URI (postgresql://user:pass@host:5432/db).
+// Npgsql EF Core requires keyword=value format — convert if needed.
+var connectionString = rawConn;
+if (rawConn.StartsWith("postgresql://") || rawConn.StartsWith("postgres://"))
+{
+    var uri = new Uri(rawConn);
+    var parts = uri.UserInfo.Split(':', 2);
+    connectionString = $"Host={uri.Host};Port={uri.Port};Database={uri.AbsolutePath.TrimStart('/')};" +
+                       $"Username={Uri.UnescapeDataString(parts[0])};Password={Uri.UnescapeDataString(parts[1])};" +
+                       "SSL Mode=Require;Trust Server Certificate=true;";
+}
+
 var disableHttpsRedirection = builder.Configuration.GetValue<bool>("DisableHttpsRedirection");
 
 builder.Services.AddControllersWithViews();
