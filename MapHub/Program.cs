@@ -15,7 +15,8 @@ if (rawConn.StartsWith("postgresql://") || rawConn.StartsWith("postgres://"))
 {
     var uri = new Uri(rawConn);
     var parts = uri.UserInfo.Split(':', 2);
-    connectionString = $"Host={uri.Host};Port={uri.Port};Database={uri.AbsolutePath.TrimStart('/')};" +
+    var port = uri.Port > 0 ? uri.Port : 5432;
+    connectionString = $"Host={uri.Host};Port={port};Database={uri.AbsolutePath.TrimStart('/')};" +
                        $"Username={Uri.UnescapeDataString(parts[0])};Password={Uri.UnescapeDataString(parts[1])};" +
                        "SSL Mode=Require;Trust Server Certificate=true;";
 }
