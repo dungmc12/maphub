@@ -200,164 +200,70 @@
     </div>
 </div>
 
-<!-- Payment modal: 2 bước (chọn gói → QR + xác nhận) -->
-<div id="paymentOverlay" class="modal-overlay" style="display:none" onclick="if(event.target===this)closePayModal()">
-    <div class="modal-panel" style="max-width:460px;max-height:90vh;overflow-y:auto">
+<!-- Payment modal: chọn gói rồi POST thường sang trang Checkout -->
+<div id="paymentOverlay" class="modal-overlay" style="display:none" onclick="if(event.target===this)hidePayment()">
+    <div class="modal-panel" style="max-width:440px">
         <div class="modal-panel-header">
-            <span id="modalTitle">💳 Nâng cấp CityScout Pro</span>
-            <button class="modal-close" onclick="closePayModal()">✕</button>
+            <span>💳 Nâng cấp CityScout Pro</span>
+            <button class="modal-close" onclick="hidePayment()">✕</button>
         </div>
-
-        <!-- Bước 1: Chọn gói -->
-        <div id="step1" style="padding:20px">
+        <form id="payForm" method="post" action="/Payments/Create" style="padding:20px">
+            @Html.AntiForgeryToken()
             <p class="text-muted mb-3">Chọn gói bạn muốn đăng ký:</p>
-            <label class="plan-pick active" id="plan-month-label" onclick="pickPlan('month')">
+
+            <label class="plan-pick active" id="plan-month-label">
+                <input type="radio" name="plan" value="month" checked onchange="pickPlan('month')" hidden>
                 <div>
                     <div class="plan-pick-name">Gói tháng</div>
                     <div class="plan-pick-desc">Gia hạn mỗi 30 ngày</div>
                 </div>
                 <div class="plan-pick-price">@(((decimal)ViewBag.MonthAmount).ToString("#,##0"))đ</div>
             </label>
-            <label class="plan-pick" id="plan-year-label" onclick="pickPlan('year')">
+
+            <label class="plan-pick" id="plan-year-label">
+                <input type="radio" name="plan" value="year" onchange="pickPlan('year')" hidden>
                 <div>
                     <div class="plan-pick-name">Gói năm <span class="plan-pick-badge">Tiết kiệm</span></div>
                     <div class="plan-pick-desc">Dùng trọn 1 năm</div>
                 </div>
                 <div class="plan-pick-price">@(((decimal)ViewBag.YearAmount).ToString("#,##0"))đ</div>
             </label>
-            <button id="btnGetQr" class="btn-accent w-100 mt-3" onclick="createPayment()">
-                <i class="bi bi-qr-code-scan"></i> Lấy mã QR chuyển khoản
+
+            <button type="submit" id="btnSubmitPay" class="btn-accent w-100 mt-3">
+                <i class="bi bi-qr-code-scan"></i> Xem mã QR chuyển khoản
             </button>
-        </div>
-
-        <!-- Bước 2: QR + xác nhận -->
-        <div id="step2" style="display:none;padding:20px">
-            <div class="text-center mb-3">
-                <div id="qrSpinner"><div class="spinner-border text-secondary"></div><div class="text-muted small mt-1">Đang tải QR…</div></div>
-                <img id="qrImg" src="" style="display:none;width:220px;border-radius:12px;border:1px solid #eee">
-                <div id="qrErr" style="display:none" class="alert alert-info small mt-2">Không tải được QR — dùng thông tin bên dưới để CK thủ công.</div>
-            </div>
-
-            <div style="background:#f8fafc;border-radius:10px;padding:.75rem 1rem;font-size:.9rem;margin-bottom:1rem">
-                <div class="d-flex justify-content-between py-1 border-bottom"><span class="text-muted">Ngân hàng</span><strong id="s2Bank"></strong></div>
-                <div class="d-flex justify-content-between py-1 border-bottom"><span class="text-muted">Số TK</span><strong id="s2Acc"></strong></div>
-                <div class="d-flex justify-content-between py-1 border-bottom"><span class="text-muted">Chủ TK</span><strong id="s2Name"></strong></div>
-                <div class="d-flex justify-content-between py-1 border-bottom"><span class="text-muted">Số tiền</span><strong id="s2Amount" class="text-primary"></strong></div>
-                <div class="d-flex justify-content-between py-1 align-items-center">
-                    <span class="text-muted">Nội dung CK</span>
-                    <span>
-                        <strong id="s2Code" class="text-danger" style="letter-spacing:.5px"></strong>
-                        <button onclick="copyCode()" style="background:none;border:1px solid #e2e8f0;border-radius:5px;padding:.1rem .4rem;font-size:.75rem;cursor:pointer;margin-left:.3rem">📋</button>
-                    </span>
-                </div>
-            </div>
-
-            <div class="alert alert-warning small py-2">⚠️ <strong>Bắt buộc ghi đúng nội dung</strong> để hệ thống nhận đúng đơn của bạn.</div>
-
-            <!-- Xác nhận đã CK -->
-            <div id="confirmSection">
-                <p class="fw-semibold mt-3 mb-1">Sau khi chuyển khoản xong:</p>
-                <input id="bankRef" type="text" class="form-control form-control-sm mb-2" placeholder="Mã giao dịch ngân hàng (tuỳ chọn)" maxlength="100">
-                <button class="btn-accent w-100" onclick="confirmTransfer()">
-                    <i class="bi bi-check-circle"></i> Tôi đã chuyển khoản
-                </button>
-            </div>
-
-            <div id="confirmDone" style="display:none" class="alert alert-success text-center mt-3">
-                ✅ Yêu cầu đã gửi! Admin sẽ duyệt và tài khoản bạn lên Pro trong vòng 24 giờ.
-            </div>
-
-            <div class="text-center mt-2">
-                <button onclick="backToStep1()" class="text-muted small" style="background:none;border:none;cursor:pointer">← Chọn lại gói</button>
-            </div>
-        </div>
+            <p class="text-center mt-2">
+                <small class="text-muted">Quét VietQR bằng app ngân hàng bất kỳ</small>
+            </p>
+        </form>
     </div>
+</div>
+
+<!-- Loading overlay khi đang chuyển trang -->
+<div id="loadingOverlay" style="display:none;position:fixed;inset:0;background:rgba(255,255,255,.85);z-index:9999;align-items:center;justify-content:center;flex-direction:column">
+    <div class="spinner-border text-primary mb-3" style="width:3rem;height:3rem"></div>
+    <div class="fw-semibold">Đang tạo mã thanh toán…</div>
 </div>
 
 @section Scripts {
 <script>
-let _selectedPlan = 'month';
-let _currentCode = '';
-const _token = document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
-
 function showPayment() {
     document.getElementById('paymentOverlay').style.display = 'flex';
     document.body.style.overflow = 'hidden';
 }
-function closePayModal() {
+function hidePayment() {
     document.getElementById('paymentOverlay').style.display = 'none';
     document.body.style.overflow = '';
-    backToStep1();
 }
 function pickPlan(which) {
-    _selectedPlan = which;
     document.getElementById('plan-month-label').classList.toggle('active', which === 'month');
     document.getElementById('plan-year-label').classList.toggle('active', which === 'year');
 }
-function backToStep1() {
-    document.getElementById('step1').style.display = 'block';
-    document.getElementById('step2').style.display = 'none';
-    document.getElementById('confirmSection').style.display = 'block';
-    document.getElementById('confirmDone').style.display = 'none';
-    document.getElementById('bankRef').value = '';
-}
-async function createPayment() {
-    const btn = document.getElementById('btnGetQr');
-    btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Đang tạo…';
-    try {
-        const fd = new FormData();
-        fd.append('plan', _selectedPlan);
-        fd.append('__RequestVerificationToken', _token);
-        const r = await fetch('/Payments/Create', { method:'POST', body: fd });
-        const d = await r.json();
-        if (!d.ok) throw new Error(d.msg || 'Lỗi tạo đơn');
-        _currentCode = d.code;
-        showStep2(d);
-    } catch(e) {
-        alert('Có lỗi: ' + e.message);
-    } finally {
-        btn.disabled = false; btn.innerHTML = '<i class="bi bi-qr-code-scan"></i> Lấy mã QR chuyển khoản';
-    }
-}
-function showStep2(d) {
-    document.getElementById('step1').style.display = 'none';
-    document.getElementById('step2').style.display = 'block';
-    document.getElementById('s2Bank').textContent = d.bankCode;
-    document.getElementById('s2Acc').textContent = d.accountNumber;
-    document.getElementById('s2Name').textContent = d.accountName;
-    document.getElementById('s2Amount').textContent = d.amount + 'đ';
-    document.getElementById('s2Code').textContent = d.code;
-    const img = document.getElementById('qrImg');
-    img.onload = () => { document.getElementById('qrSpinner').style.display='none'; img.style.display='inline'; };
-    img.onerror = () => { document.getElementById('qrSpinner').style.display='none'; document.getElementById('qrErr').style.display='block'; };
-    img.src = d.qrUrl;
-}
-function copyCode() {
-    navigator.clipboard.writeText(document.getElementById('s2Code').textContent.trim())
-        .then(() => { const b = event.target; b.textContent='✅'; setTimeout(()=>b.textContent='📋',1500); });
-}
-async function confirmTransfer() {
-    const btn = event.target.closest('button');
-    btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Đang gửi…';
-    try {
-        const fd = new FormData();
-        fd.append('code', _currentCode);
-        fd.append('bankRef', document.getElementById('bankRef').value);
-        fd.append('__RequestVerificationToken', _token);
-        const r = await fetch('/Payments/Confirm', { method:'POST', body: fd });
-        const d = await r.json();
-        if (d.ok) {
-            document.getElementById('confirmSection').style.display = 'none';
-            document.getElementById('confirmDone').style.display = 'block';
-        } else { alert(d.msg || 'Lỗi xác nhận'); }
-    } catch { alert('Lỗi kết nối'); }
-    finally { btn.disabled = false; }
-}
-document.addEventListener('keydown', e => { if (e.key === 'Escape') closePayModal(); });
-function startLoading() {
-    document.getElementById('btnText').style.display = 'none';
-    document.getElementById('btnLoading').style.display = 'inline';
-    document.getElementById('btnCreateQr').disabled = true;
-}
+document.getElementById('payForm').addEventListener('submit', function() {
+    document.getElementById('paymentOverlay').style.display = 'none';
+    document.body.style.overflow = '';
+    document.getElementById('loadingOverlay').style.display = 'flex';
+});
+document.addEventListener('keydown', function(e) { if (e.key === 'Escape') hidePayment(); });
 </script>
 }

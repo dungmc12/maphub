@@ -1,109 +1,164 @@
 @model MapHub.Models.Payment
 @{
     ViewData["Title"] = "Thanh toán Pro – CityScout";
+    bool confirmed = Model.Status == "confirming" || Model.Status == "paid";
 }
 
 <style>
-    .checkout-card {
-        max-width: 520px; margin: 2rem auto; background: #fff;
-        border: 1px solid var(--line, #e5e7eb); border-radius: 16px;
-        padding: 1.5rem; box-shadow: 0 8px 30px rgba(0,0,0,.06);
-    }
-    .checkout-qr { width: 260px; max-width: 100%; border-radius: 12px; border: 1px solid #eee; }
-    .checkout-info { margin-top: 1rem; border-top: 1px dashed #e5e7eb; }
-    .checkout-info > div {
-        display: flex; justify-content: space-between; gap: 1rem;
-        padding: .5rem 0; border-bottom: 1px dashed #f0f0f0; font-size: .92rem;
-    }
-    .checkout-info > div span { color: #64748b; }
-    .checkout-code { font-size: 1.05rem; letter-spacing: .5px; }
-    .qr-box { min-height: 270px; display:flex; align-items:center; justify-content:center; }
-    .copy-btn { cursor:pointer; background:none; border:1px solid #e2e8f0; border-radius:6px;
-                padding:.15rem .5rem; font-size:.8rem; color:#6d28d9; margin-left:.4rem; }
-    .copy-btn:hover { background:#faf5ff; }
+    .ck-wrap { max-width:480px; margin:1.5rem auto; }
+    .ck-card { background:#fff; border:1px solid #e5e7eb; border-radius:18px;
+               box-shadow:0 8px 32px rgba(0,0,0,.07); overflow:hidden; }
+    .ck-header { background:linear-gradient(135deg,#7c3aed,#a855f7);
+                 color:#fff; padding:1.2rem 1.5rem; text-align:center; }
+    .ck-header h5 { margin:0; font-weight:800; font-size:1.1rem; }
+    .ck-header small { opacity:.85; }
+    .ck-qr { background:#f8f5ff; padding:1.2rem; text-align:center; border-bottom:1px dashed #e5e7eb; }
+    .ck-qr img { width:240px; max-width:100%; border-radius:14px;
+                 border:3px solid #fff; box-shadow:0 4px 16px rgba(124,58,237,.15); }
+    .ck-qr-spinner { height:270px; display:flex; flex-direction:column;
+                     align-items:center; justify-content:center; color:#7c3aed; }
+    .ck-info { padding:1rem 1.5rem; }
+    .ck-row { display:flex; justify-content:space-between; align-items:center;
+              padding:.45rem 0; border-bottom:1px dashed #f0f0f0; font-size:.91rem; }
+    .ck-row:last-child { border-bottom:none; }
+    .ck-row span { color:#64748b; }
+    .ck-code { font-size:1.1rem; font-weight:800; color:#e11d48; letter-spacing:.8px; }
+    .ck-copy { background:none; border:1px solid #e2e8f0; border-radius:6px;
+               padding:.15rem .5rem; font-size:.78rem; cursor:pointer; margin-left:.4rem; color:#7c3aed; }
+    .ck-copy:hover { background:#faf5ff; }
+    .ck-warn { background:#fffbeb; border:1px solid #fcd34d; border-radius:10px;
+               padding:.65rem 1rem; margin:1rem 1.5rem 0; font-size:.85rem; }
+    .ck-confirm { padding:1rem 1.5rem 1.5rem; }
+    .ck-done { margin:1rem 1.5rem 1.5rem; background:#f0fdf4; border:1px solid #86efac;
+               border-radius:10px; padding:1rem; text-align:center; font-size:.9rem; }
 </style>
 
-<div class="container">
-    <div class="checkout-card">
-        <h4 class="text-center mb-1">Quét mã để nâng cấp Pro</h4>
-        <p class="text-center text-muted mb-3">
-            Gói @ViewBag.PlanLabel · <strong>@Model.Amount.ToString("#,##0")đ</strong>
-        </p>
+<div class="ck-wrap">
+    <div class="ck-card">
 
-        <!-- QR area -->
-        <div class="text-center my-2 qr-box" id="qrBox">
-            <div id="qrLoading">
-                <div class="spinner-border text-secondary mb-2"></div>
-                <div class="text-muted small">Đang tải mã QR…</div>
-            </div>
-            <img id="qrImg" src="@ViewBag.QrUrl" alt="VietQR" class="checkout-qr" style="display:none"
-                 onload="qrLoaded()" onerror="qrFailed()">
-            <div id="qrFallback" style="display:none"
-                 class="alert alert-info small text-start">
-                Không tải được mã QR.<br>
-                Vui lòng chuyển khoản thủ công theo thông tin bên dưới.
-            </div>
+        <!-- Header -->
+        <div class="ck-header">
+            <h5><i class="bi bi-qr-code-scan me-1"></i> Thanh toán qua chuyển khoản</h5>
+            <small>Gói @ViewBag.PlanLabel · <strong>@Model.Amount.ToString("#,##0")đ</strong></small>
         </div>
 
-        <div class="checkout-info">
-            <div><span>Ngân hàng</span><strong>@ViewBag.BankCode</strong></div>
-            <div><span>Số tài khoản</span><strong>@ViewBag.AccountNumber</strong></div>
-            <div><span>Chủ tài khoản</span><strong>@ViewBag.AccountName</strong></div>
-            <div><span>Số tiền</span><strong>@Model.Amount.ToString("#,##0")đ</strong></div>
-            <div>
+        <!-- QR code -->
+        <div class="ck-qr">
+            <div id="qrLoader" class="ck-qr-spinner">
+                <div class="spinner-border mb-2"></div>
+                <small>Đang tải mã QR…</small>
+            </div>
+            <img id="qrImg" src="@ViewBag.QrUrl" alt="VietQR"
+                 style="display:none"
+                 onload="this.style.display='block';document.getElementById('qrLoader').style.display='none'"
+                 onerror="document.getElementById('qrLoader').innerHTML='<div class=\'text-muted small\'>Không tải được QR — dùng thông tin bên dưới</div>'">
+            <p class="text-muted small mt-2 mb-0">Mở app ngân hàng → Quét mã QR</p>
+        </div>
+
+        <!-- Thông tin CK -->
+        <div class="ck-info">
+            <div class="ck-row"><span>Ngân hàng</span><strong>@ViewBag.BankCode</strong></div>
+            <div class="ck-row"><span>Số tài khoản</span><strong>@ViewBag.AccountNumber</strong></div>
+            <div class="ck-row"><span>Chủ tài khoản</span><strong>@ViewBag.AccountName</strong></div>
+            <div class="ck-row"><span>Số tiền</span><strong class="text-primary">@Model.Amount.ToString("#,##0")đ</strong></div>
+            <div class="ck-row">
                 <span>Nội dung CK</span>
-                <strong class="text-danger checkout-code" id="payCode">@Model.Code</strong>
-                <button class="copy-btn" onclick="copyCode()" title="Sao chép">📋</button>
+                <span>
+                    <span class="ck-code" id="ckCode">@Model.Code</span>
+                    <button class="ck-copy" id="copyBtn" onclick="copyCode()">📋 Copy</button>
+                </span>
             </div>
         </div>
 
-        <div class="alert alert-warning mt-3 small mb-0">
-            ⚠️ <strong>Bắt buộc ghi đúng nội dung: <span class="text-danger">@Model.Code</span></strong>
-            — hệ thống tự nhận và lên Pro ngay sau khi chuyển khoản.
+        <div class="ck-warn">
+            ⚠️ <strong>Bắt buộc ghi đúng nội dung: @Model.Code</strong><br>
+            Sai nội dung hệ thống sẽ không nhận được đơn của bạn.
         </div>
 
-        <div id="payStatus" class="text-center mt-3">
-            <div class="spinner-border spinner-border-sm text-secondary"></div>
-            <span class="text-muted ms-1">Đang chờ thanh toán…</span>
-        </div>
+        @if (confirmed)
+        {
+            <div class="ck-done">
+                @if (Model.Status == "paid")
+                {
+                    <div class="text-success fw-bold fs-5">✅ Đã kích hoạt Pro!</div>
+                    <div class="mt-1">Tài khoản của bạn đã được nâng cấp thành công.</div>
+                }
+                else
+                {
+                    <div class="text-success fw-bold">✅ Đã gửi xác nhận!</div>
+                    <div class="mt-1">Admin sẽ duyệt và tài khoản bạn lên Pro trong vòng 24 giờ.</div>
+                }
+                <a href="/Payments/Premium" class="btn btn-sm btn-outline-secondary mt-2">← Quay lại</a>
+            </div>
+        }
+        else
+        {
+            <!-- Form xác nhận sau khi CK -->
+            <div class="ck-confirm">
+                <p class="fw-semibold mb-2">Sau khi chuyển khoản xong, bấm xác nhận:</p>
+                <form id="confirmForm">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="code" value="@Model.Code">
+                    <input type="text" name="bankRef" id="bankRef"
+                           class="form-control form-control-sm mb-2"
+                           placeholder="Mã giao dịch ngân hàng (tuỳ chọn)"
+                           maxlength="100">
+                    <button type="button" id="btnConfirm" class="btn-accent w-100" onclick="submitConfirm()">
+                        <i class="bi bi-check-circle-fill"></i> Tôi đã chuyển khoản xong
+                    </button>
+                </form>
+                <div id="confirmMsg" style="display:none"></div>
+            </div>
+        }
 
-        <div class="text-center mt-3">
-            <a href="/Payments/Premium" class="text-muted small">← Quay lại</a>
-        </div>
+    </div>
+    <div class="text-center mt-3">
+        <a href="/Payments/Premium" class="text-muted small">← Quay lại trang gói</a>
     </div>
 </div>
 
 @section Scripts {
 <script>
-function qrLoaded() {
-    document.getElementById('qrLoading').style.display = 'none';
-    document.getElementById('qrImg').style.display = 'inline';
-}
-function qrFailed() {
-    document.getElementById('qrLoading').style.display = 'none';
-    document.getElementById('qrFallback').style.display = 'block';
-    document.getElementById('qrBox').style.minHeight = 'auto';
-}
 function copyCode() {
-    const code = document.getElementById('payCode').textContent.trim();
-    navigator.clipboard.writeText(code).then(() => {
-        const btn = document.querySelector('.copy-btn');
-        btn.textContent = '✅'; setTimeout(() => btn.textContent = '📋', 1500);
+    const code = document.getElementById('ckCode').textContent.trim();
+    const btn = document.getElementById('copyBtn');
+    navigator.clipboard.writeText(code).then(function() {
+        btn.textContent = '✅ Đã copy';
+        setTimeout(function() { btn.innerHTML = '📋 Copy'; }, 2000);
+    }).catch(function() {
+        btn.textContent = '📋 Copy';
     });
 }
-const CODE = '@Model.Code';
-const timer = setInterval(async () => {
+
+async function submitConfirm() {
+    const btn = document.getElementById('btnConfirm');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Đang gửi…';
+
+    const form = document.getElementById('confirmForm');
+    const fd = new FormData(form);
+
     try {
-        const r = await fetch('/Payments/Status?code=' + encodeURIComponent(CODE));
-        if (!r.ok) return;
-        const d = await r.json();
-        if (d.paid) {
-            clearInterval(timer);
-            document.getElementById('payStatus').innerHTML =
-                '<div class="text-success fw-bold">✅ Thanh toán thành công! Đang chuyển hướng…</div>';
-            setTimeout(() => location.href = '/Payments/Premium', 1800);
+        const resp = await fetch('/Payments/Confirm', { method: 'POST', body: fd });
+        const data = await resp.json();
+        if (data.ok) {
+            document.getElementById('confirmForm').style.display = 'none';
+            const msg = document.getElementById('confirmMsg');
+            msg.style.display = 'block';
+            msg.innerHTML = '<div class="alert alert-success mt-2 text-center">'
+                + '<div class="fw-bold">✅ Đã gửi xác nhận!</div>'
+                + '<div class="small mt-1">Admin sẽ duyệt và tài khoản bạn lên Pro trong vòng 24 giờ.</div>'
+                + '</div>';
+        } else {
+            alert(data.msg || 'Có lỗi, vui lòng thử lại.');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-check-circle-fill"></i> Tôi đã chuyển khoản xong';
         }
-    } catch { }
-}, 3000);
+    } catch (e) {
+        alert('Lỗi kết nối, vui lòng thử lại.');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-check-circle-fill"></i> Tôi đã chuyển khoản xong';
+    }
+}
 </script>
 }

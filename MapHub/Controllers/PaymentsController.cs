@@ -78,23 +78,7 @@ public class PaymentsController : Controller
         payment.Code = $"CSPRO{payment.Id}";
         await _context.SaveChangesAsync();
 
-        var qrUrl =
-            $"https://img.vietqr.io/image/{_sepay.BankCode}-{_sepay.AccountNumber}-compact2.png" +
-            $"?amount={(long)payment.Amount}" +
-            $"&addInfo={Uri.EscapeDataString(payment.Code)}" +
-            $"&accountName={Uri.EscapeDataString(_sepay.AccountName)}";
-
-        return Json(new
-        {
-            ok = true,
-            code = payment.Code,
-            qrUrl,
-            amount = payment.Amount.ToString("#,##0"),
-            bankCode = _sepay.BankCode,
-            accountNumber = _sepay.AccountNumber,
-            accountName = _sepay.AccountName,
-            planLabel = price.Label
-        });
+        return RedirectToAction("Checkout", new { code = payment.Code });
     }
 
     // User xác nhận đã chuyển khoản (kèm mã GD ngân hàng tuỳ chọn)
