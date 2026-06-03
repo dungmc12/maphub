@@ -25,8 +25,16 @@ namespace MapHub.Migrations
             migrationBuilder.AddColumn<string>(
                 name: "ShareToken",
                 table: "Plans",
-                type: "nvarchar(max)",
+                type: "nvarchar(450)",
                 nullable: true);
+
+            migrationBuilder.Sql(@"
+                IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name='IX_Plans_ShareToken')
+                BEGIN
+                    CREATE UNIQUE INDEX IX_Plans_ShareToken ON Plans(ShareToken)
+                    WHERE ShareToken IS NOT NULL;
+                END
+            ");
 
             migrationBuilder.AddColumn<bool>(
                 name: "IsPublic",

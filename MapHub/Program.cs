@@ -8,6 +8,7 @@ var builder = WebApplication.CreateBuilder(args);
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
     ?? throw new InvalidOperationException("DefaultConnection is not configured.");
 var disableHttpsRedirection = builder.Configuration.GetValue<bool>("DisableHttpsRedirection");
+var dbProvider = Environment.GetEnvironmentVariable("DB_PROVIDER") ?? "sqlserver";
 
 builder.Services.AddControllersWithViews();
 builder.Services.AddRazorPages();
@@ -28,7 +29,12 @@ builder.Services.PostConfigure<AiAssistantOptions>(options =>
 });
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(connectionString));
+{
+    if (dbProvider == "postgres")
+        options.UseNpgsql(connectionString);
+    else
+        options.UseSqlServer(connectionString);
+});
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
 builder.Services
@@ -92,7 +98,10 @@ using (var scope = app.Services.CreateScope())
     var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
     var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
 
-    context.Database.Migrate();
+    if (dbProvider == "postgres")
+        context.Database.EnsureCreated();
+    else
+        context.Database.Migrate();
 
     // Tạo roles
     string[] roles = ["Admin", "Pro", "User"];

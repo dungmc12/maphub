@@ -1,0 +1,58 @@
+services:
+  - type: web
+    name: cityscout
+    runtime: docker
+    dockerfilePath: ./MapHub/Dockerfile
+    plan: free
+    envVars:
+      - key: DB_PROVIDER
+        value: postgres
+      - key: ConnectionStrings__DefaultConnection
+        fromDatabase:
+          name: cityscout-db
+          property: connectionString
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: DisableHttpsRedirection
+        value: "true"
+      - key: AI__Model
+        value: gemini-2.0-flash
+      - key: AI__EnableExternalProvider
+        value: "true"
+      - key: GoogleMaps__DefaultLatitude
+        value: "21.0285"
+      - key: GoogleMaps__DefaultLongitude
+        value: "105.8542"
+      - key: GoogleMaps__DefaultZoom
+        value: "13"
+      - key: Pricing__Month__Amount
+        value: "5000"
+      - key: Pricing__Month__Days
+        value: "30"
+      - key: Pricing__Month__Label
+        value: "1 thang"
+      - key: Pricing__Year__Amount
+        value: "990000"
+      - key: Pricing__Year__Days
+        value: "365"
+      - key: Pricing__Year__Label
+        value: "1 nam"
+      # Set these manually in Render dashboard after deploy:
+      - key: GoogleMaps__ApiKey
+        sync: false
+      - key: AI__ApiKey
+        sync: false
+      - key: SePay__ApiKey
+        sync: false
+      - key: SePay__BankCode
+        sync: false
+      - key: SePay__AccountNumber
+        sync: false
+      - key: SePay__AccountName
+        sync: false
+
+databases:
+  - name: cityscout-db
+    plan: free
+    databaseName: cityscout
+    user: cityscout

@@ -14,4 +14,4 @@ ENV ASPNETCORE_URLS=http://+:8080
 EXPOSE 8080
 
 COPY --from=build /app/publish .
-ENTRYPOINT ["dotnet", "MapHub.dll"]
+ENTRYPOINT ["dotnet", "MapHubApp.dll"]

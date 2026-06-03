@@ -34,9 +34,14 @@ namespace MapHub.Migrations
             ");
 
             migrationBuilder.Sql(@"
-                IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name='IX_Plans_ShareToken')
-                    CREATE UNIQUE INDEX IX_Plans_ShareToken ON Plans(ShareToken)
-                    WHERE ShareToken IS NOT NULL;
+                IF EXISTS (
+                    SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+                    WHERE TABLE_NAME='Plans' AND COLUMN_NAME='ShareToken'
+                )
+                BEGIN
+                    IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name='IX_Plans_ShareToken')
+                        EXEC('CREATE UNIQUE INDEX IX_Plans_ShareToken ON Plans(ShareToken) WHERE ShareToken IS NOT NULL');
+                END
             ");
         }
 
