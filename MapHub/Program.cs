@@ -74,9 +74,11 @@ builder.Services.AddHttpClient<IAiSuggestionService, AiSuggestionService>();
 builder.Services.AddHttpClient<IAiChatService, AiChatService>();
 builder.Services.AddHttpClient<IWeatherService, WeatherService>();
 
-// Thanh toán Pro: VietQR + SePay
+// Thanh toán Pro: PayOS + VietQR fallback
 builder.Services.Configure<SePayOptions>(builder.Configuration.GetSection("SePay"));
 builder.Services.Configure<PricingOptions>(builder.Configuration.GetSection("Pricing"));
+builder.Services.Configure<PayOSOptions>(builder.Configuration.GetSection("PayOS"));
+builder.Services.AddHttpClient<PayOSService>();
 builder.Services.AddScoped<IProService, ProService>();
 builder.Services.AddHostedService<ProExpiryService>();   // tự hạ Pro hết hạn về Free
 

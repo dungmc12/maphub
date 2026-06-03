@@ -15,17 +15,23 @@ public class PaymentsController : Controller
     private readonly PricingOptions _pricing;
     private readonly SePayOptions _sepay;
     private readonly IProService _proService;
+    private readonly PayOSService? _payos;
+    private readonly ILogger<PaymentsController> _logger;
 
     public PaymentsController(
         ApplicationDbContext context,
         IOptions<PricingOptions> pricing,
         IOptions<SePayOptions> sepay,
-        IProService proService)
+        IProService proService,
+        PayOSService? payos,
+        ILogger<PaymentsController> logger)
     {
         _context = context;
         _pricing = pricing.Value;
         _sepay = sepay.Value;
         _proService = proService;
+        _payos = payos;
+        _logger = logger;
     }
 
     [HttpGet]
@@ -50,7 +56,6 @@ public class PaymentsController : Controller
         return View("Premium");
     }
 
-    // AJAX: tạo đơn, trả về thông tin QR ngay trong modal
     [HttpPost]
     [Authorize]
     [ValidateAntiForgeryToken]
@@ -66,7 +71,7 @@ public class PaymentsController : Controller
         {
             UserId = userId,
             Amount = price.Amount,
-            Provider = "manual",
+            Provider = "payos",
             Status = "pending",
             PlanType = plan,
             Description = $"CityScout Pro {price.Label}",
@@ -74,9 +79,30 @@ public class PaymentsController : Controller
         };
         _context.Payments.Add(payment);
         await _context.SaveChangesAsync();
-
         payment.Code = $"CSPRO{payment.Id}";
         await _context.SaveChangesAsync();
+
+        // Tạo link thanh toán PayOS → redirect trực tiếp
+        if (_payos != null)
+        {
+            try
+            {
+                var baseUrl = $"{Request.Scheme}://{Request.Host}";
+                var result = await _payos.CreatePaymentLinkAsync(
+                    orderCode:   payment.Id,
+                    amount:      (int)payment.Amount,
+                    description: payment.Code,
+                    returnUrl:   $"{baseUrl}/Payments/Checkout?code={payment.Code}",
+                    cancelUrl:   $"{baseUrl}/Payments/Premium"
+                );
+                return Redirect(result.CheckoutUrl);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "PayOS tạo link lỗi cho đơn {Id}", payment.Id);
+                // Fallback: hiển thị trang Checkout thủ công
+            }
+        }
 
         return RedirectToAction("Checkout", new { code = payment.Code });
     }

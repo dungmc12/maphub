@@ -42,6 +42,12 @@ services:
         sync: false
       - key: AI__ApiKey
         sync: false
+      - key: PayOS__ClientId
+        sync: false
+      - key: PayOS__ApiKey
+        sync: false
+      - key: PayOS__ChecksumKey
+        sync: false
       - key: SePay__ApiKey
         sync: false
       - key: SePay__BankCode
