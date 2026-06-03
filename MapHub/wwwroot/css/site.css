@@ -625,6 +625,27 @@ body.map-view { overflow: hidden; height: 100vh; }
   padding: .35rem .65rem; font-size: .82rem; cursor: pointer; background: #fff;
 }
 
+/* ── Modal overlay (shared) ───────────────────────────────────────────── */
+.modal-overlay {
+  position: fixed; inset: 0; z-index: 9000;
+  background: rgba(0,0,0,.45); backdrop-filter: blur(3px);
+  display: flex; align-items: center; justify-content: center; padding: 1rem;
+}
+.modal-panel {
+  background: #fff; border-radius: 16px; width: min(480px,100%);
+  box-shadow: 0 20px 60px rgba(0,0,0,.25); max-height: 90vh; overflow-y: auto;
+}
+.modal-panel-header {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 1rem 1.25rem; border-bottom: 1px solid #e5e7eb;
+  font-weight: 700; font-size: 1rem;
+}
+.modal-close {
+  border: none; background: none; font-size: 1.1rem; cursor: pointer;
+  color: #64748b; padding: .2rem .4rem; border-radius: 6px;
+}
+.modal-close:hover { background: #f1f5f9; }
+
 /* ── Custom Modal ─────────────────────────────────────────────────────── */
 .custom-modal-overlay {
   position: fixed; inset: 0; z-index: 9000;

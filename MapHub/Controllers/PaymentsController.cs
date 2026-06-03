@@ -81,6 +81,27 @@ public class PaymentsController : Controller
         return RedirectToAction("Checkout", new { code = payment.Code });
     }
 
+    [HttpGet]
+    [Authorize]
+    public async Task<IActionResult> Checkout(string code)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var payment = await _context.Payments
+            .FirstOrDefaultAsync(p => p.Code == code && p.UserId == userId);
+        if (payment == null) return NotFound();
+
+        var price = _pricing.For(payment.PlanType);
+        var addInfo = Uri.EscapeDataString(payment.Code);
+        var accountName = Uri.EscapeDataString(_sepay.AccountName ?? "");
+        ViewBag.QrUrl = $"https://img.vietqr.io/image/{_sepay.BankCode}-{_sepay.AccountNumber}-compact2.png" +
+                        $"?amount={payment.Amount}&addInfo={addInfo}&accountName={accountName}";
+        ViewBag.PlanLabel = price.Label;
+        ViewBag.BankCode = _sepay.BankCode;
+        ViewBag.AccountNumber = _sepay.AccountNumber;
+        ViewBag.AccountName = _sepay.AccountName;
+        return View(payment);
+    }
+
     // User xác nhận đã chuyển khoản (kèm mã GD ngân hàng tuỳ chọn)
     [HttpPost]
     [Authorize]
