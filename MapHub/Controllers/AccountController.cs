@@ -87,6 +87,13 @@ public class AccountController : Controller
             return View(model);
         }
 
+        // Chỉ cho phép Gmail
+        if (!model.Email.EndsWith("@gmail.com", StringComparison.OrdinalIgnoreCase))
+        {
+            ModelState.AddModelError(string.Empty, "Chỉ chấp nhận đăng ký bằng tài khoản Gmail (@gmail.com).");
+            return View(model);
+        }
+
         var user = new ApplicationUser
         {
             UserName = model.Email,
