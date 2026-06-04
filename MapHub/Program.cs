@@ -140,9 +140,6 @@ app.MapControllerRoute(
     pattern: "{controller=Home}/{action=Index}/{id?}");
 app.MapRazorPages();
 
-// Health-check siêu nhẹ (không chạm DB) — dùng để ping giữ cho Render free khỏi "ngủ"
-app.MapGet("/health", () => Results.Ok(new { status = "ok", time = DateTime.UtcNow }));
-
 // Ensure upload folders exist
 Directory.CreateDirectory(Path.Combine(app.Environment.WebRootPath, "uploads", "places"));
 Directory.CreateDirectory(Path.Combine(app.Environment.WebRootPath, "uploads", "reviews"));
