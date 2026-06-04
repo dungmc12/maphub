@@ -521,6 +521,16 @@ async function submitPlace() {
 }
 
 // ── AI Chat ───────────────────────────────────────────────────────────────
+function formatAiMsg(text) {
+    // Convert [text](/url) markdown links → clickable <a>
+    let html = text
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+        .replace(/\[([^\]]+)\]\((\/[^)]+)\)/g,
+            '<a href="$2" style="color:#7c3aed;font-weight:600;text-decoration:underline" target="_self">$1</a>')
+        .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+        .replace(/\n/g, '<br>');
+    return html;
+}
 function toggleChat() {
     const w = document.getElementById('chatWidget');
     const c = document.getElementById('chatChevron');
@@ -554,7 +564,7 @@ async function sendChat() {
         document.getElementById(loadId)?.remove();
         if (r.ok) {
             const d = await r.json();
-            body.innerHTML += `<div class="chat-msg ai"><b>AI:</b> ${escHtml(d.answer)}</div>`;
+            body.innerHTML += `<div class="chat-msg ai"><b>AI:</b> ${formatAiMsg(d.answer)}</div>`;
         } else {
             body.innerHTML += `<div class="chat-msg err">⚠️ Không kết nối được AI.</div>`;
         }
