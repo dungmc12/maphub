@@ -45,8 +45,8 @@ public class AiChatService : IAiChatService
         if (string.IsNullOrWhiteSpace(options.ApiKey))
             return "AI chưa được cấu hình. Vui lòng liên hệ quản trị viên.";
 
-        // Thử các model theo thứ tự ưu tiên
-        var modelsToTry = new[] { "gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-flash-latest" };
+        // Thử các model theo thứ tự ưu tiên (chỉ dùng model còn hoạt động)
+        var modelsToTry = new[] { "gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-1.5-pro" };
         if (!string.IsNullOrWhiteSpace(options.Model))
             modelsToTry = new[] { options.Model.Trim() }.Concat(modelsToTry).Distinct().ToArray();
 
