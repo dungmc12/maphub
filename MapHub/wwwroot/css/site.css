@@ -481,6 +481,13 @@ body.map-view { overflow: hidden; height: 100vh; }
 }
 .chat-pro-teaser:hover { background: var(--mint); }
 
+/* Màn hình nhỏ/thấp: thu gọn chat để không đè lên bảng thời tiết (góc trên-phải) */
+@media (max-width: 640px), (max-height: 720px) {
+  .chat-widget { width: min(86vw, 300px); right: 12px; bottom: 12px; }
+  .chat-widget.expanded { height: min(58vh, 440px); }
+  .chat-pro-teaser { right: 12px; bottom: 12px; }
+}
+
 /* ── Map toast ────────────────────────────────────────────────────────── */
 .map-toast {
   position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(8px);

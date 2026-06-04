@@ -484,8 +484,8 @@ public class AdminController : Controller
         profile.UpdatedAt = DateTime.UtcNow;
         await _context.SaveChangesAsync();
 
-        // Vô hiệu hoá phiên đăng nhập cũ để role mới có hiệu lực (không phải đợi 30 phút)
-        await _userManager.UpdateSecurityStampAsync(user);
+        // KHÔNG đổi security stamp (sẽ ép user đăng xuất). Cookie tự làm mới claims trong ~1 phút
+        // (SecurityStampValidatorOptions.ValidationInterval) nên role mới có hiệu lực mà không bị logout.
 
         TempData["Success"] = $"Đã cập nhật vai trò cho {user.Email}.";
         return RedirectToAction(nameof(Users));

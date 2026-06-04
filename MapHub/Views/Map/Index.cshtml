@@ -1,10 +1,12 @@
 @{
-    ViewData["Title"] = "Bản Đồ";
+    ViewData["Title"] ??= "Bản đồ";   // tiêu đề SEO do MapController.Index đặt theo danh mục
     ViewData["BodyClass"] = "map-view";
     bool isAuth  = User.Identity?.IsAuthenticated == true;
     bool isPro   = User.IsInRole("Pro") || User.IsInRole("Admin");
     bool isAdmin = User.IsInRole("Admin");
 }
+
+<h1 class="visually-hidden">@(ViewBag.H1 ?? "Bản đồ địa điểm tại Hà Nội — CityScout")</h1>
 
 <div class="map-shell-wrap d-flex flex-column" style="height: calc(100vh - 56px);">
 

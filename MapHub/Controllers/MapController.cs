@@ -17,7 +17,30 @@ public class MapController : Controller
         _env = env;
     }
 
-    public IActionResult Index() => View();
+    public IActionResult Index(string? cat = null)
+    {
+        // SEO: mỗi danh mục có tiêu đề + mô tả + H1 + canonical riêng (tránh trùng nội dung)
+        var (label, desc) = (cat ?? "").ToLower() switch
+        {
+            "restaurant"    => ("Nhà hàng", "Khám phá nhà hàng ngon tại Hà Nội trên bản đồ CityScout — lọc theo ngân sách, giờ mở cửa và thời tiết."),
+            "cafe"          => ("Quán cà phê", "Tìm quán cà phê đẹp ở Hà Nội — view, không gian làm việc, cà phê trứng — trên bản đồ CityScout."),
+            "entertainment" => ("Địa điểm vui chơi", "Địa điểm vui chơi giải trí tại Hà Nội: khu vui chơi, giải trí, trải nghiệm — bản đồ CityScout."),
+            "culture"       => ("Địa điểm văn hóa", "Di tích, bảo tàng, địa điểm văn hóa lịch sử tại Hà Nội trên bản đồ CityScout."),
+            "temple"        => ("Địa điểm tâm linh", "Chùa, đền, địa điểm tâm linh tại Hà Nội — bản đồ CityScout."),
+            "nature"        => ("Địa điểm thiên nhiên", "Hồ, công viên, không gian xanh tại Hà Nội — bản đồ CityScout."),
+            "education"     => ("Địa điểm giáo dục", "Trường học, thư viện, địa điểm học tập tại Hà Nội — bản đồ CityScout."),
+            "hotel"         => ("Khách sạn & lưu trú", "Khách sạn, homestay, nơi lưu trú tại Hà Nội trên bản đồ CityScout."),
+            _               => ("Bản đồ địa điểm", "Khám phá địa điểm ăn uống, cà phê, vui chơi, văn hóa tại Hà Nội trên bản đồ CityScout. Lọc theo ngân sách, giờ mở cửa, thời tiết.")
+        };
+
+        ViewData["Title"] = $"{label} tại Hà Nội";
+        ViewData["MetaDescription"] = desc;
+        ViewBag.H1 = $"{label} tại Hà Nội — CityScout";
+        ViewData["Canonical"] = string.IsNullOrWhiteSpace(cat)
+            ? $"{Request.Scheme}://{Request.Host}/Map"
+            : $"{Request.Scheme}://{Request.Host}/Map?cat={cat}";
+        return View();
+    }
 
     [HttpGet]
     public async Task<IActionResult> GetPlaces(string? category = null, string? q = null, decimal? maxPrice = null)
