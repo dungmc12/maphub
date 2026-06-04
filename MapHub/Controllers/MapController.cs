@@ -20,7 +20,7 @@ public class MapController : Controller
     public IActionResult Index() => View();
 
     [HttpGet]
-    public async Task<IActionResult> GetPlaces(string? category = null, string? q = null)
+    public async Task<IActionResult> GetPlaces(string? category = null, string? q = null, decimal? maxPrice = null)
     {
         var currentUserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
         var query = _context.Places
@@ -36,10 +36,14 @@ public class MapController : Controller
         if (!string.IsNullOrWhiteSpace(q))
             query = query.Where(p => p.Name.Contains(q) || (p.Address != null && p.Address.Contains(q)));
 
+        // Lọc theo ngân sách: giá khởi điểm trong tầm tiền (địa điểm miễn phí/chưa rõ giá vẫn hiện)
+        if (maxPrice.HasValue)
+            query = query.Where(p => p.MinPrice == null || p.MinPrice <= maxPrice.Value);
+
         var places = await query.Select(p => new
         {
             p.Id, p.Name, p.Description, p.Latitude, p.Longitude,
-            p.Address, p.Category, p.Phone,
+            p.Address, p.Category, p.Phone, p.MinPrice, p.MaxPrice,
             Rating = p.Reviews.Any() ? Math.Round(p.Reviews.Average(r => r.QualityRating), 1) : 0.0,
             ReviewCount = p.Reviews.Count,
             PrimaryImage = p.Images.Any()

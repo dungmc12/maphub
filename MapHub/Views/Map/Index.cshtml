@@ -51,6 +51,18 @@
                        placeholder="🔍  Tìm tên, địa chỉ...">
             </div>
 
+            <!-- Budget filter (Ngân sách) -->
+            <div class="sidebar-search-box" style="margin-top:.45rem">
+                <select id="budgetFilter" class="sidebar-search-input"
+                        style="cursor:pointer;appearance:auto" onchange="filterBudget(this.value)">
+                    <option value="">💰 Mọi mức giá</option>
+                    <option value="50000">Dưới 50.000đ</option>
+                    <option value="100000">Dưới 100.000đ</option>
+                    <option value="200000">Dưới 200.000đ</option>
+                    <option value="500000">Dưới 500.000đ</option>
+                </select>
+            </div>
+
             @if (!isAuth)
             {
                 <div class="auth-nudge">
@@ -378,17 +390,32 @@ function createWeatherMarker(suitability) {
 }
 
 // ── Data ──────────────────────────────────────────────────────────────────
+let currentBudget = '';
+
+function filterBudget(v) {
+    currentBudget = v;
+    loadPlaces(currentCat, document.getElementById('searchInput').value.trim());
+}
+
 function loadPlaces(cat, q) {
     let url = '/Map/GetPlaces';
     const params = [];
     if (cat) params.push('category=' + encodeURIComponent(cat));
     if (q)   params.push('q=' + encodeURIComponent(q));
+    if (currentBudget) params.push('maxPrice=' + encodeURIComponent(currentBudget));
     if (params.length) url += '?' + params.join('&');
 
     fetch(url).then(r => r.json()).then(data => {
         allPlaces = data;
         renderPlaces(data);
     });
+}
+
+function priceLabel(min, max) {
+    if (min == null && max == null) return 'Miễn phí / chưa rõ';
+    const k = n => Math.round(n / 1000) + 'k';
+    if (min != null && max != null && min !== max) return `${k(min)}–${k(max)}đ`;
+    return k(max ?? min) + 'đ';
 }
 
 function suitLabel(s) {
@@ -432,7 +459,7 @@ function renderPlaces(list) {
             <img src="${p.primaryImage}" alt="${p.name}" class="place-list-img" loading="lazy">
             <div class="place-list-info">
                 <div class="place-list-name">${p.name}</div>
-                <div class="place-list-cat">${categoryLabel(p.category)}</div>
+                <div class="place-list-cat">${categoryLabel(p.category)} · 💰 ${priceLabel(p.minPrice, p.maxPrice)}</div>
                 ${p.address ? `<div class="place-list-addr">📍 ${p.address}</div>` : ''}
                 <div class="place-list-footer">
                     <span class="place-list-rating">${p.rating > 0 ? '★ ' + p.rating : 'Chưa có đánh giá'}</span>
