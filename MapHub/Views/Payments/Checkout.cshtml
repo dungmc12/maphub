@@ -1,4 +1,5 @@
 @model MapHub.Models.Payment
+@inject Microsoft.AspNetCore.Hosting.IWebHostEnvironment Env
 @{
     ViewData["Title"] = "Thanh toán Pro – CityScout";
     bool alreadyPaid = Model.Status == "paid";
@@ -126,6 +127,20 @@
                     Không cần bấm gì thêm sau khi chuyển khoản.
                 </div>
             </div>
+
+            @if (Env.IsDevelopment())
+            {
+                @Html.AntiForgeryToken()
+                <div style="margin:0 1.4rem 1.5rem; text-align:center">
+                    <button type="button" onclick="devConfirm()"
+                            style="font-size:.8rem;padding:.45rem .9rem;border:1px dashed #cbd5e1;border-radius:8px;background:#fff;cursor:pointer;color:#64748b">
+                        🧪 Giả lập đã thanh toán (chỉ DEV)
+                    </button>
+                    <div style="font-size:.72rem;color:#94a3b8;margin-top:.35rem">
+                        Webhook không gọi được localhost — nút này test luồng lên Pro tại máy.
+                    </div>
+                </div>
+            }
         }
 
     </div>
@@ -142,6 +157,25 @@ function copyCode() {
         event.target.textContent = '✅ Đã copy';
         setTimeout(() => event.target.innerHTML = '📋 Copy', 2000);
     });
+}
+
+// DEV only: giả lập webhook báo đã trả → lên Pro ngay tại localhost
+function devConfirm() {
+    const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
+    fetch('/Payments/DevConfirm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'RequestVerificationToken': token },
+        body: 'code=' + encodeURIComponent('@Model.Code')
+    })
+    .then(r => r.json())
+    .then(d => {
+        if (d.ok) {
+            window.location.reload();
+        } else {
+            alert(d.msg || 'Lỗi giả lập thanh toán');
+        }
+    })
+    .catch(() => alert('Không gọi được DevConfirm (app đang chạy chưa?)'));
 }
 
 // Auto-poll trạng thái mỗi 5 giây — khi webhook VCB báo về sẽ tự redirect thành công

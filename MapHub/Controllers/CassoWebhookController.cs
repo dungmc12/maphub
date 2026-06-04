@@ -40,17 +40,33 @@ public class CassoWebhookController : ControllerBase
         _config = config.Value; _logger = logger;
     }
 
+    // GET để test nhanh bằng trình duyệt: endpoint có sống & reachable không
+    [HttpGet("webhook")]
+    public IActionResult WebhookPing() =>
+        Ok(new { ok = true, message = "Casso webhook endpoint is alive" });
+
     // Casso gọi đây khi có tiền vào — data có thể là object hoặc array
     [HttpPost("webhook")]
     public async Task<IActionResult> Webhook([FromBody] JsonElement body)
     {
         try
         {
-            // Xác thực API key
-            var apiKey = Request.Headers["apikey"].ToString();
-            if (!string.IsNullOrWhiteSpace(_config.ApiKey) && apiKey != _config.ApiKey)
+            // Log toàn bộ payload + header để soi chính xác Casso gửi gì (xem Render logs)
+            _logger.LogInformation("Casso webhook RAW: headers=[{Headers}] body={Body}",
+                string.Join(", ", Request.Headers.Keys), body.GetRawText());
+
+            // Casso Flow có thể gửi token bảo mật qua nhiều tên header khác nhau tuỳ cấu hình
+            var token = FirstNonEmpty(
+                Request.Headers["apikey"].ToString(),
+                Request.Headers["secure-token"].ToString(),
+                Request.Headers["Secure-Token"].ToString(),
+                StripAuthPrefix(Request.Headers["Authorization"].ToString()));
+
+            if (!string.IsNullOrWhiteSpace(_config.ApiKey) && token != _config.ApiKey)
             {
-                _logger.LogWarning("Casso webhook: sai apikey (nhận: {Got})", apiKey);
+                // Log header nhận được để soi đúng tên header Casso dùng (xem trên Render logs)
+                _logger.LogWarning("Casso webhook: token không khớp. Các header nhận được: {Headers}",
+                    string.Join(", ", Request.Headers.Keys));
                 return Ok(new { error = 0 });
             }
 
@@ -88,6 +104,19 @@ public class CassoWebhookController : ControllerBase
         }
 
         return Ok(new { error = 0 });
+    }
+
+    private static string FirstNonEmpty(params string?[] values) =>
+        values.FirstOrDefault(v => !string.IsNullOrWhiteSpace(v))?.Trim() ?? "";
+
+    private static string StripAuthPrefix(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw)) return "";
+        raw = raw.Trim();
+        foreach (var prefix in new[] { "Apikey ", "Bearer " })
+            if (raw.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                return raw[prefix.Length..].Trim();
+        return raw;
     }
 
     private async Task ProcessTransaction(CassoTransaction tx)

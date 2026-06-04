@@ -33,13 +33,15 @@ public class AiChatService : IAiChatService
     public async Task<string> AskAsync(string prompt, CancellationToken cancellationToken = default)
     {
         var options = _options.CurrentValue;
-        if (string.IsNullOrWhiteSpace(options.ApiKey))
+        var apiKeys = options.AllKeys();
+        if (apiKeys.Count == 0)
             return "AI chưa được cấu hình. Vui lòng liên hệ quản trị viên.";
 
-        // Model ưu tiên: 2.5-flash (hoạt động với free tier mới)
-        var modelsToTry = new[] { "gemini-2.5-flash", "gemini-2.0-flash", "gemini-2.0-flash-lite" };
+        // Model ưu tiên: alias "-latest" có quota free tier riêng, ổn định cho cả key AIza lẫn AQ
+        var modelsToTry = new[] { "gemini-flash-latest", "gemini-flash-lite-latest" };
         if (!string.IsNullOrWhiteSpace(options.Model))
-            modelsToTry = new[] { options.Model.Trim(), "gemini-2.5-flash", "gemini-2.0-flash" };
+            modelsToTry = new[] { options.Model.Trim(), "gemini-flash-latest", "gemini-flash-lite-latest" }
+                .Distinct().ToArray();
 
         var requestBody = new
         {
@@ -63,56 +65,73 @@ public class AiChatService : IAiChatService
 
         string? lastError = null;
 
-        foreach (var model in modelsToTry)
+        // Thử lần lượt từng key × từng model. Key hết quota (429) → tự xoay sang key tiếp theo.
+        for (int ki = 0; ki < apiKeys.Count; ki++)
         {
-            var endpoint = $"https://generativelanguage.googleapis.com/v1beta/models/{Uri.EscapeDataString(model)}:generateContent?key={Uri.EscapeDataString(options.ApiKey)}";
+            var apiKey = apiKeys[ki];
+            bool keyQuotaExhausted = false;
 
-            try
+            foreach (var model in modelsToTry)
             {
-                using var response = await _httpClient.PostAsync(endpoint, json, cancellationToken);
+                var endpoint = $"https://generativelanguage.googleapis.com/v1beta/models/{Uri.EscapeDataString(model)}:generateContent?key={Uri.EscapeDataString(apiKey)}";
 
-                if (!response.IsSuccessStatusCode)
+                try
                 {
-                    var err = await response.Content.ReadAsStringAsync(cancellationToken);
-                    _logger.LogWarning("Gemini [{Model}] HTTP {Status}: {Error}", model, (int)response.StatusCode, err);
+                    using var response = await _httpClient.PostAsync(endpoint, json, cancellationToken);
 
-                    // Trích message từ JSON lỗi Gemini
-                    try
+                    if (!response.IsSuccessStatusCode)
                     {
-                        using var errDoc = JsonDocument.Parse(err);
-                        lastError = errDoc.RootElement
-                            .GetProperty("error").GetProperty("message").GetString();
+                        var err = await response.Content.ReadAsStringAsync(cancellationToken);
+                        _logger.LogWarning("Gemini key#{Key} [{Model}] HTTP {Status}: {Error}",
+                            ki + 1, model, (int)response.StatusCode, err);
+
+                        // Trích message từ JSON lỗi Gemini
+                        try
+                        {
+                            using var errDoc = JsonDocument.Parse(err);
+                            lastError = errDoc.RootElement
+                                .GetProperty("error").GetProperty("message").GetString();
+                        }
+                        catch { lastError = $"HTTP {(int)response.StatusCode}"; }
+
+                        // 429 = hết quota cho key này → bỏ các model còn lại, nhảy sang key sau
+                        if ((int)response.StatusCode == 429)
+                        {
+                            keyQuotaExhausted = true;
+                            break;
+                        }
+                        continue;
                     }
-                    catch { lastError = $"HTTP {(int)response.StatusCode}"; }
 
-                    continue;
+                    var payload = await response.Content.ReadAsStringAsync(cancellationToken);
+                    using var document = JsonDocument.Parse(payload);
+
+                    var root = document.RootElement;
+                    if (!root.TryGetProperty("candidates", out var candidates) || candidates.GetArrayLength() == 0)
+                    {
+                        _logger.LogWarning("Gemini key#{Key} [{Model}] trả về không có candidates", ki + 1, model);
+                        continue;
+                    }
+
+                    var text = candidates[0]
+                        .GetProperty("content")
+                        .GetProperty("parts")[0]
+                        .GetProperty("text")
+                        .GetString();
+
+                    return string.IsNullOrWhiteSpace(text)
+                        ? "AI không trả lời được. Vui lòng thử câu hỏi khác."
+                        : text.Trim();
                 }
-
-                var payload = await response.Content.ReadAsStringAsync(cancellationToken);
-                using var document = JsonDocument.Parse(payload);
-
-                var root = document.RootElement;
-                if (!root.TryGetProperty("candidates", out var candidates) || candidates.GetArrayLength() == 0)
+                catch (Exception ex)
                 {
-                    _logger.LogWarning("Gemini [{Model}] trả về không có candidates", model);
-                    continue;
+                    _logger.LogError(ex, "Gemini key#{Key} [{Model}] exception", ki + 1, model);
+                    lastError = ex.Message;
                 }
-
-                var text = candidates[0]
-                    .GetProperty("content")
-                    .GetProperty("parts")[0]
-                    .GetProperty("text")
-                    .GetString();
-
-                return string.IsNullOrWhiteSpace(text)
-                    ? "AI không trả lời được. Vui lòng thử câu hỏi khác."
-                    : text.Trim();
             }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Gemini [{Model}] exception", model);
-                lastError = ex.Message;
-            }
+
+            if (keyQuotaExhausted && ki + 1 < apiKeys.Count)
+                _logger.LogInformation("Key#{Key} hết quota, chuyển sang key#{Next}", ki + 1, ki + 2);
         }
 
         return string.IsNullOrEmpty(lastError)

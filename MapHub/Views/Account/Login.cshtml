@@ -8,6 +8,11 @@
         <p class="eyebrow">Chào mừng quay lại</p>
         <h1>Đăng nhập CityScout</h1>
 
+        @if (TempData["LoginError"] is string loginError)
+        {
+            <div class="alert alert-warning py-2" style="font-size:.88rem">@loginError</div>
+        }
+
         <!-- Đăng nhập bằng Google -->
         <form asp-action="GoogleLogin" method="post" class="mb-3">
             @Html.AntiForgeryToken()

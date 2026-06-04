@@ -1,6 +1,7 @@
 using MapHub.Data;
 using MapHub.Models;
 using MapHub.Services;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
@@ -24,6 +25,15 @@ if (rawConn.StartsWith("postgresql://") || rawConn.StartsWith("postgres://"))
 
 var disableHttpsRedirection = builder.Configuration.GetValue<bool>("DisableHttpsRedirection");
 
+// Render/Heroku... đứng trước app: tin X-Forwarded-Proto để Request.Scheme = https
+// → Google OAuth redirect_uri dùng đúng https, không bị lệch khi đăng nhập trên server
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.KnownNetworks.Clear();
+    options.KnownProxies.Clear();
+});
+
 builder.Services.AddControllersWithViews();
 builder.Services.AddRazorPages();
 builder.Services.Configure<GoogleMapsOptions>(builder.Configuration.GetSection("GoogleMaps"));
@@ -39,7 +49,7 @@ builder.Services.PostConfigure<AiAssistantOptions>(options =>
     if (string.IsNullOrWhiteSpace(options.ApiKey))
         options.ApiKey = Environment.GetEnvironmentVariable("AI__ApiKey") ?? string.Empty;
     if (string.IsNullOrWhiteSpace(options.Model))
-        options.Model = "gemini-2.0-flash";
+        options.Model = "gemini-flash-latest";
 });
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
@@ -100,6 +110,9 @@ builder.Services.AddHostedService<ProExpiryService>();   // tự hạ Pro hết 
 
 var app = builder.Build();
 
+// Phải đặt TRƯỚC mọi middleware dùng tới scheme (https redirect, auth, OAuth callback)
+app.UseForwardedHeaders();
+
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");
@@ -118,6 +131,9 @@ app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
 app.MapRazorPages();
+
+// Health-check siêu nhẹ (không chạm DB) — dùng để ping giữ cho Render free khỏi "ngủ"
+app.MapGet("/health", () => Results.Ok(new { status = "ok", time = DateTime.UtcNow }));
 
 // Ensure upload folders exist
 Directory.CreateDirectory(Path.Combine(app.Environment.WebRootPath, "uploads", "places"));

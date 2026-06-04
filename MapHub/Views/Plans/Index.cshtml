@@ -288,38 +288,49 @@ function parseAiPlaces(text) {
     const result = [];
     const lines = text.split('\n');
     let currentDay = 1;
+    let lastArr = null, lastLeave = null;   // khung giờ gần nhất, để kế thừa cho dòng con không có giờ riêng
 
     const dayPat   = /ngày\s*(\d+)/i;
-    // Match "8:30 - 12:00" or "8:30 – 12:00" (arrival - leave)
-    const rangePat = /(\d{1,2})[:\.](\d{2})\s*[-–]\s*(\d{1,2})[:\.](\d{2})/;
-    const timePat  = /(\d{1,2})[:\.](\d{2})/;
-    const linkPat  = /\[([^\]]+)\]\(\/Map\/Details\/(\d+)\)/g;
+    // Giờ chỉ dùng dấu ':' (tránh khớp giá tiền như "30.000"); validate 0-23 / 0-59 bên dưới
+    const rangePat = /(\d{1,2}):(\d{2})\s*[-–]\s*(\d{1,2}):(\d{2})/;
+    const timePat  = /(\d{1,2}):(\d{2})/;
+    const costPat  = /ước tính chi phí|tổng chi phí|chi phí ước tính/i;
+
+    const valid = (h, m) => h >= 0 && h <= 23 && m >= 0 && m <= 59;
+    const hhmm  = (h, m) => `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
 
     for (const line of lines) {
+        // Tới mục chi phí thì dừng — các số phía sau là TIỀN, không phải giờ
+        if (costPat.test(line)) break;
+
         const dayMatch = line.match(dayPat);
         if (dayMatch) currentDay = parseInt(dayMatch[1]);
 
-        // Only process lines that contain a time — skip intro/outro
-        const rangeMatch = line.match(rangePat);
-        const timeMatch  = !rangeMatch ? line.match(timePat) : null;
-        if (!rangeMatch && !timeMatch) continue;
+        // Lấy khung giờ từ dòng này nếu có và hợp lệ
+        let arrTime = null, leaveTime = null;
+        const rm = line.match(rangePat);
+        if (rm && valid(+rm[1], +rm[2]) && valid(+rm[3], +rm[4])) {
+            arrTime   = hhmm(+rm[1], +rm[2]);
+            leaveTime = hhmm(+rm[3], +rm[4]);
+        } else {
+            const tm = line.match(timePat);
+            if (tm && valid(+tm[1], +tm[2])) arrTime = hhmm(+tm[1], +tm[2]);
+        }
+        if (arrTime) { lastArr = arrTime; lastLeave = leaveTime; }
 
-        const arrTime  = rangeMatch
-            ? `${rangeMatch[1].padStart(2,'0')}:${rangeMatch[2]}`
-            : `${timeMatch[1].padStart(2,'0')}:${timeMatch[2]}`;
-        const leaveTime = rangeMatch
-            ? `${rangeMatch[3].padStart(2,'0')}:${rangeMatch[4]}`
-            : null;
-
+        // Gắn địa điểm với giờ của chính dòng, hoặc khung giờ gần nhất (dòng con)
         const localLink = /\[([^\]]+)\]\(\/Map\/Details\/(\d+)\)/g;
         let m;
         while ((m = localLink.exec(line)) !== null) {
             const pid = parseInt(m[2]);
-            // Allow same place multiple times if different time slot
-            const dup = result.find(r => r.placeId === pid && r.arrivalTime === arrTime);
+            const slotArr   = arrTime || lastArr;
+            const slotLeave = arrTime ? leaveTime : lastLeave;
+            if (!slotArr) continue;   // chưa có khung giờ nào (phần intro) → bỏ qua
+            // Cho phép cùng địa điểm nhiều lần nếu khác khung giờ
+            const dup = result.find(r => r.placeId === pid && r.arrivalTime === slotArr);
             if (!dup) {
                 result.push({ placeId: pid, dayNumber: currentDay,
-                    arrivalTime: arrTime, leaveTime, note: null });
+                    arrivalTime: slotArr, leaveTime: slotLeave, note: null });
             }
         }
     }

@@ -119,8 +119,16 @@ public class AccountController : Controller
     // Đăng nhập bằng Google
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public IActionResult GoogleLogin(string? returnUrl = null)
+    public async Task<IActionResult> GoogleLogin(string? returnUrl = null)
     {
+        // Nếu chưa cấu hình Google OAuth (thiếu ClientId/Secret) thì báo thân thiện, không để crash 500
+        var schemes = await _signInManager.GetExternalAuthenticationSchemesAsync();
+        if (schemes.All(s => s.Name != "Google"))
+        {
+            TempData["LoginError"] = "Đăng nhập Google chưa được cấu hình. Vui lòng dùng email/mật khẩu, hoặc liên hệ quản trị viên.";
+            return RedirectToAction(nameof(Login), new { returnUrl });
+        }
+
         var redirectUrl = Url.Action(nameof(GoogleCallback), "Account", new { returnUrl });
         var props = _signInManager.ConfigureExternalAuthenticationProperties("Google", redirectUrl);
         return Challenge(props, "Google");

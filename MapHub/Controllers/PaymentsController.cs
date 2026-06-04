@@ -16,6 +16,7 @@ public class PaymentsController : Controller
     private readonly SePayOptions _sepay;
     private readonly IProService _proService;
     private readonly PayOSService? _payos;
+    private readonly IWebHostEnvironment _env;
     private readonly ILogger<PaymentsController> _logger;
 
     public PaymentsController(
@@ -24,6 +25,7 @@ public class PaymentsController : Controller
         IOptions<SePayOptions> sepay,
         IProService proService,
         PayOSService? payos,
+        IWebHostEnvironment env,
         ILogger<PaymentsController> logger)
     {
         _context = context;
@@ -31,6 +33,7 @@ public class PaymentsController : Controller
         _sepay = sepay.Value;
         _proService = proService;
         _payos = payos;
+        _env = env;
         _logger = logger;
     }
 
@@ -178,6 +181,33 @@ public class PaymentsController : Controller
         payment.Status = "cancelled";
         await _context.SaveChangesAsync();
 
+        return Json(new { ok = true });
+    }
+
+    // CHỈ Development: giả lập webhook báo đã thanh toán, để test luồng lên Pro trên localhost
+    // (Casso/SePay không gọi được vào localhost nên không test webhook thật ở máy được)
+    [HttpPost]
+    [Authorize]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> DevConfirm(string code)
+    {
+        if (!_env.IsDevelopment())
+            return NotFound();
+
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var payment = await _context.Payments
+            .FirstOrDefaultAsync(p => p.Code == code && p.UserId == userId);
+        if (payment == null) return Json(new { ok = false, msg = "Không tìm thấy đơn." });
+
+        if (payment.Status != "paid")
+        {
+            payment.Status = "paid";
+            payment.PaidAt = DateTime.UtcNow;
+            payment.TransactionId = "DEV-SIMULATED";
+            await _context.SaveChangesAsync();
+            await _proService.ActivateProAsync(payment.UserId, payment.PlanType);
+            _logger.LogInformation("DEV: giả lập thanh toán + lên Pro cho đơn {Code}", code);
+        }
         return Json(new { ok = true });
     }
 
