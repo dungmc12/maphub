@@ -208,6 +208,18 @@
 
 @section Scripts {
 <script>
+// Mặc định ngày = hôm nay (giờ máy người dùng), không cho chọn quá khứ
+(function initPlanDates() {
+    const t = new Date();
+    const today = t.getFullYear() + '-' +
+        String(t.getMonth() + 1).padStart(2, '0') + '-' +
+        String(t.getDate()).padStart(2, '0');
+    const s = document.getElementById('planStartDate');
+    const e = document.getElementById('planEndDate');
+    if (s) { s.min = today; if (!s.value) s.value = today; }
+    if (e) { e.min = today; if (!e.value) e.value = today; }
+})();
+
 function updateEndDateMin() {
     const start = document.getElementById('planStartDate');
     const end   = document.getElementById('planEndDate');
@@ -218,10 +230,17 @@ function updateEndDateMin() {
 }
 
 function validatePlanDates() {
-    const start = document.getElementById('planStartDate').value;
+    const startEl = document.getElementById('planStartDate');
+    const start = startEl.value;
     const end   = document.getElementById('planEndDate').value;
     const err   = document.getElementById('dateError');
+    if (start && startEl.min && start < startEl.min) {
+        err.textContent = '⚠️ Ngày khởi hành phải từ hôm nay trở đi.';
+        err.style.display = 'block';
+        return false;
+    }
     if (start && end && end < start) {
+        err.textContent = '⚠️ Ngày về phải sau hoặc bằng ngày khởi hành.';
         err.style.display = 'block';
         return false;
     }

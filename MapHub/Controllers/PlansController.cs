@@ -114,6 +114,13 @@ public class PlansController : Controller
             return RedirectToAction(nameof(Index));
         }
 
+        // Không cho chọn ngày khởi hành trong quá khứ
+        if (startDate.HasValue && startDate.Value.Date < DateTime.UtcNow.Date)
+        {
+            TempData["Error"] = "Ngày khởi hành phải từ hôm nay trở đi.";
+            return RedirectToAction(nameof(Index));
+        }
+
         var currentUserId = UserId();
         var isPro = User.IsInRole("Pro") || User.IsInRole("Admin");
 
@@ -131,9 +138,10 @@ public class PlansController : Controller
         var plan = new Plan
         {
             UserId = currentUserId,
-            Title = title,
-            StartDate = startDate,
-            EndDate = endDate
+            Title = title.Trim(),
+            // Ép Kind=Utc để ghi được vào cột timestamptz của Postgres (nếu không sẽ lỗi 500)
+            StartDate = startDate.HasValue ? DateTime.SpecifyKind(startDate.Value.Date, DateTimeKind.Utc) : null,
+            EndDate   = endDate.HasValue   ? DateTime.SpecifyKind(endDate.Value.Date,   DateTimeKind.Utc) : null
         };
         _context.Plans.Add(plan);
         await _context.SaveChangesAsync();
