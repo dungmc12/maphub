@@ -543,16 +543,23 @@ function toggleChat() {
     }
 }
 
+let _chatBusy = false;
 async function sendChat() {
+    if (_chatBusy) return;
     const input = document.getElementById('chatInput');
+    const sendBtn = document.querySelector('.btn-sm-accent');
     const body  = document.getElementById('chatBody');
     const val   = input.value.trim();
     if (!val) return;
 
+    _chatBusy = true;
+    input.disabled = true;
+    if (sendBtn) sendBtn.disabled = true;
+
     body.innerHTML += `<div class="chat-msg user"><b>Bạn:</b> ${escHtml(val)}</div>`;
     input.value = '';
     const loadId = 'ai-' + Date.now();
-    body.innerHTML += `<div id="${loadId}" class="chat-msg ai"><em>Đang suy nghĩ…</em></div>`;
+    body.innerHTML += `<div id="${loadId}" class="chat-msg ai"><em>⏳ Đang suy nghĩ…</em></div>`;
     body.scrollTop = body.scrollHeight;
 
     try {
@@ -571,6 +578,11 @@ async function sendChat() {
     } catch {
         document.getElementById(loadId)?.remove();
         body.innerHTML += `<div class="chat-msg err">⚠️ Lỗi hệ thống.</div>`;
+    } finally {
+        _chatBusy = false;
+        input.disabled = false;
+        if (sendBtn) sendBtn.disabled = false;
+        input.focus();
     }
     body.scrollTop = body.scrollHeight;
 }

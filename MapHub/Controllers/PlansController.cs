@@ -225,12 +225,16 @@ public class PlansController : Controller
         var placesCtx = string.Join("\n", places.Select(p =>
             $"- ID={p.Id} | {p.Name} | {p.Category} | {p.Address}"));
 
+        var people = request.People > 0 ? request.People : 2;
         var prompt = $"[DỮ LIỆU ĐỊA ĐIỂM TRONG APP]\n{placesCtx}\n\n" +
                      $"Hãy lập kế hoạch {request.Days} ngày tại/gần {request.Destination} " +
-                     $"với sở thích: {request.Interests}.\n" +
-                     $"Chia rõ từng ngày, từng buổi (Sáng/Trưa/Chiều/Tối).\n" +
-                     $"Với mỗi địa điểm PHẢI dùng link: [Tên](/Map/Details/ID)\n" +
-                     $"Nếu không có địa điểm phù hợp trong danh sách, gợi ý địa điểm gần nhất có thể.";
+                     $"cho {people} người, sở thích: {request.Interests}.\n" +
+                     $"Chia rõ từng ngày, từng buổi (Sáng/Trưa/Chiều/Tối) với giờ cụ thể.\n" +
+                     $"Với mỗi địa điểm PHẢI dùng link: [Tên địa điểm](/Map/Details/ID)\n" +
+                     $"Cuối kế hoạch, thêm mục **Ước tính chi phí cho {people} người:**\n" +
+                     $"- Liệt kê chi phí từng hạng mục (ăn uống, vé, di chuyển...)\n" +
+                     $"- Tổng chi phí ước tính (ghi rõ đơn vị VNĐ)\n" +
+                     $"Nếu không có địa điểm phù hợp, gợi ý địa điểm gần nhất.";
 
         var result = await _aiChat.AskAsync(prompt, ct);
         return Json(new { plan = result });
@@ -240,4 +244,4 @@ public class PlansController : Controller
         User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value!;
 }
 
-public record AiPlanRequest(string Destination, int Days, string Interests);
+public record AiPlanRequest(string Destination, int Days, string Interests, int People = 2);
