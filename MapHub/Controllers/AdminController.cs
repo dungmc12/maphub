@@ -525,6 +525,27 @@ public class AdminController : Controller
         return RedirectToAction(nameof(Users));
     }
 
+    // ── Doanh thu ─────────────────────────────────────────────────────────────
+    [HttpGet]
+    public async Task<IActionResult> Revenue()
+    {
+        var paid = await _context.Payments
+            .Where(p => p.Status == "paid")
+            .OrderByDescending(p => p.PaidAt)
+            .Select(p => new RevenueRow(
+                p.Id, p.Amount, p.PlanType, p.Code, p.Provider, p.PaidAt,
+                _context.Users.Where(u => u.Id == p.UserId).Select(u => u.Email).FirstOrDefault()))
+            .ToListAsync();
+
+        var now = DateTime.UtcNow;
+        var monthStart = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+        ViewBag.Total      = paid.Sum(p => p.Amount);
+        ViewBag.Count      = paid.Count;
+        ViewBag.MonthTotal = paid.Where(p => p.PaidAt >= monthStart).Sum(p => p.Amount);
+        ViewBag.MonthCount = paid.Count(p => p.PaidAt >= monthStart);
+        return View(paid);
+    }
+
     // ── Helper ───────────────────────────────────────────────────────────────
     private async Task<string> SaveUploadAsync(IFormFile file, string folder)
     {
@@ -541,3 +562,5 @@ public class AdminController : Controller
         return $"/uploads/{folder}/{fileName}";
     }
 }
+
+public record RevenueRow(int Id, decimal Amount, string PlanType, string? Code, string? Provider, DateTime? PaidAt, string? Email);

@@ -1,0 +1,69 @@
+@model List<MapHub.Controllers.RevenueRow>
+@{
+    ViewData["Title"] = "Admin – Doanh thu";
+    decimal total = (decimal)(ViewBag.Total ?? 0m);
+    int count = (int)(ViewBag.Count ?? 0);
+    decimal monthTotal = (decimal)(ViewBag.MonthTotal ?? 0m);
+    int monthCount = (int)(ViewBag.MonthCount ?? 0);
+    string Vnd(decimal n) => n.ToString("#,##0") + "đ";
+}
+
+<partial name="_AdminNav" />
+
+<div class="admin-page">
+    <div class="admin-section-header mb-3">
+        <h2 class="admin-section-title">💰 Doanh thu</h2>
+        <p class="admin-section-sub">Tổng hợp các đơn đã thanh toán thành công</p>
+    </div>
+
+    <!-- Thẻ tổng quan -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3 col-6">
+            <div class="astat-card"><div class="astat-num">@Vnd(total)</div><div class="astat-label">Tổng doanh thu</div></div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="astat-card"><div class="astat-num">@count</div><div class="astat-label">Đơn đã trả</div></div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="astat-card"><div class="astat-num">@Vnd(monthTotal)</div><div class="astat-label">Tháng này</div></div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="astat-card"><div class="astat-num">@monthCount</div><div class="astat-label">Đơn tháng này</div></div>
+        </div>
+    </div>
+
+    <div class="admin-table-wrap">
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>Mã đơn</th>
+                    <th>Người dùng</th>
+                    <th>Gói</th>
+                    <th>Số tiền</th>
+                    <th>Kênh</th>
+                    <th>Ngày trả</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (!Model.Any())
+                {
+                    <tr><td colspan="6" class="text-center text-muted p-4">Chưa có giao dịch nào.</td></tr>
+                }
+                else
+                {
+                    @foreach (var r in Model)
+                    {
+                        <tr>
+                            <td><span class="admin-sub">@r.Code</span></td>
+                            <td>@(r.Email ?? "—")</td>
+                            <td>@(r.PlanType == "year" ? "1 năm" : "1 tháng")</td>
+                            <td><strong class="text-success">@Vnd(r.Amount)</strong></td>
+                            <td><span class="admin-sub">@r.Provider</span></td>
+                            <td>@(r.PaidAt?.ToLocalTime().ToString("dd/MM/yyyy HH:mm") ?? "—")</td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
