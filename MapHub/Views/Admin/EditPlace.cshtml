@@ -62,6 +62,30 @@
                     </select>
                 </div>
                 <div class="col-12">
+                    <label class="form-label fw-semibold">🏷️ Tags</label>
+                    @{
+                        var allTags = ViewBag.AllTags as List<MapHub.Models.Tag> ?? new List<MapHub.Models.Tag>();
+                        var selectedTagIds = ViewBag.SelectedTagIds as HashSet<int> ?? new HashSet<int>();
+                    }
+                    @if (allTags.Any())
+                    {
+                        <div class="d-flex flex-wrap gap-2">
+                            @foreach (var tag in allTags)
+                            {
+                                <label style="display:inline-flex;align-items:center;gap:.35rem;padding:.3rem .7rem;border:1px solid #e2e8f0;border-radius:20px;cursor:pointer;font-size:.88rem">
+                                    <input type="checkbox" name="tagIds" value="@tag.Id" @(selectedTagIds.Contains(tag.Id) ? "checked" : "")>
+                                    @tag.Name
+                                </label>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="form-text">Chưa có tag nào. <a href="/Admin/Tags">Tạo tag ở đây →</a></div>
+                    }
+                    <div class="form-text"><a href="/Admin/Tags">+ Quản lý danh sách tags</a></div>
+                </div>
+                <div class="col-12">
                     <label class="form-label fw-semibold">Ảnh đại diện</label>
                     @if (primary != null)
                     {

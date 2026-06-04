@@ -301,8 +301,11 @@ public class AdminController : Controller
     {
         var place = await _context.Places
             .Include(p => p.Images)
+            .Include(p => p.PlaceTags)
             .FirstOrDefaultAsync(p => p.Id == id);
         if (place == null) return NotFound();
+        ViewBag.AllTags = await _context.Tags.OrderBy(t => t.Name).ToListAsync();
+        ViewBag.SelectedTagIds = place.PlaceTags.Select(pt => pt.TagId).ToHashSet();
         return View(place);
     }
 
@@ -310,10 +313,18 @@ public class AdminController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> EditPlace(int id, string name, string? category, string? about,
         string? address, string? phone, string? websiteUrl, decimal? minPrice, decimal? maxPrice,
-        string visibility, string? newImageUrl, IFormFile? imageFile, bool isFeatured = false)
+        string visibility, string? newImageUrl, IFormFile? imageFile, int[]? tagIds, bool isFeatured = false)
     {
         var place = await _context.Places.Include(p => p.Images).FirstOrDefaultAsync(p => p.Id == id);
         if (place == null) return NotFound();
+
+        // Cập nhật tags (thêm cái mới tick, bỏ cái bỏ tick)
+        var newTagIds = (tagIds ?? Array.Empty<int>()).ToHashSet();
+        var currentTags = await _context.PlaceTags.Where(pt => pt.PlaceId == id).ToListAsync();
+        _context.PlaceTags.RemoveRange(currentTags.Where(pt => !newTagIds.Contains(pt.TagId)));
+        var existingTagIds = currentTags.Select(pt => pt.TagId).ToHashSet();
+        foreach (var tid in newTagIds.Where(t => !existingTagIds.Contains(t)))
+            _context.PlaceTags.Add(new PlaceTag { PlaceId = id, TagId = tid });
 
         place.Name       = name;
         place.Category   = category;
