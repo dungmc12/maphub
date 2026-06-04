@@ -65,6 +65,30 @@
                 </select>
             </div>
 
+            <!-- District filter (Quận/Huyện) -->
+            <div class="sidebar-search-box" style="margin-top:.45rem">
+                <select id="districtFilter" class="sidebar-search-input"
+                        style="cursor:pointer;appearance:auto" onchange="filterDistrict(this.value)">
+                    <option value="">📍 Mọi quận/huyện</option>
+                    <option>Ba Đình</option>
+                    <option>Hoàn Kiếm</option>
+                    <option>Đống Đa</option>
+                    <option>Hai Bà Trưng</option>
+                    <option>Cầu Giấy</option>
+                    <option>Thanh Xuân</option>
+                    <option>Tây Hồ</option>
+                    <option>Hoàng Mai</option>
+                    <option>Long Biên</option>
+                    <option>Hà Đông</option>
+                    <option>Nam Từ Liêm</option>
+                    <option>Bắc Từ Liêm</option>
+                    <option>Mỹ Đình</option>
+                    <option>Sơn Tây</option>
+                    <option>Thạch Thất</option>
+                    <option>Hòa Lạc</option>
+                </select>
+            </div>
+
             <!-- Time filter (giờ mở cửa) -->
             <label style="display:flex;align-items:center;gap:.5rem;margin:.5rem .2rem .2rem;font-size:.88rem;cursor:pointer;color:#475569">
                 <input type="checkbox" id="openNowFilter" onchange="filterOpenNow(this.checked)" style="cursor:pointer">
@@ -416,6 +440,7 @@ function createWeatherMarker(suitability) {
 // ── Data ──────────────────────────────────────────────────────────────────
 let currentBudget = '';
 let openNowOnly = false;
+let currentDistrict = '';
 
 function filterBudget(v) {
     currentBudget = v;
@@ -425,6 +450,11 @@ function filterBudget(v) {
 function filterOpenNow(checked) {
     openNowOnly = checked;
     renderPlaces(allPlaces);   // lọc client-side, không cần tải lại
+}
+
+function filterDistrict(v) {
+    currentDistrict = v;
+    renderPlaces(allPlaces);   // lọc theo quận/huyện trong địa chỉ (client-side)
 }
 
 // Ước lượng giờ mở cửa theo LOẠI địa điểm (Place chưa lưu giờ riêng)
@@ -489,8 +519,10 @@ function renderPlaces(list) {
     markers = [];
     const container = document.getElementById('placeList');
 
-    // Lọc "đang mở cửa" (client-side)
-    const view = openNowOnly ? list.filter(p => isOpenNow(p.category)) : list;
+    // Lọc client-side: đang mở cửa + quận/huyện (theo địa chỉ)
+    let view = list;
+    if (openNowOnly) view = view.filter(p => isOpenNow(p.category));
+    if (currentDistrict) view = view.filter(p => (p.address || '').toLowerCase().includes(currentDistrict.toLowerCase()));
 
     if (!view.length) {
         container.innerHTML = '<p class="text-muted text-center p-3">Không tìm thấy địa điểm nào.</p>';
