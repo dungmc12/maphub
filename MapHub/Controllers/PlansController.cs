@@ -221,17 +221,43 @@ public class PlansController : Controller
         if (!isPro && planCount >= maxPlans)
             return Json(new { ok = false, msg = $"Bạn đã đạt giới hạn {maxPlans} kế hoạch. Nâng cấp Pro để tạo không giới hạn!" });
 
+        var start = DateTime.UtcNow.Date;
         var plan = new Plan
         {
             UserId = userId,
             Title = request.Title,
             Description = request.AiText,
-            StartDate = DateTime.UtcNow.Date,
-            EndDate = DateTime.UtcNow.Date.AddDays(Math.Max(0, request.Days - 1)),
+            StartDate = start,
+            EndDate = start.AddDays(Math.Max(0, request.Days - 1)),
             CreatedAt = DateTime.UtcNow
         };
         _context.Plans.Add(plan);
         await _context.SaveChangesAsync();
+
+        // Tạo PlanItems từ danh sách địa điểm AI đã gợi ý
+        if (request.Places?.Any() == true)
+        {
+            var validIds = request.Places.Select(p => p.PlaceId).Distinct().ToList();
+            var existing = (await _context.Places
+                .Where(p => validIds.Contains(p.Id))
+                .Select(p => p.Id).ToListAsync()).ToHashSet();
+
+            int order = 0;
+            foreach (var entry in request.Places.Where(p => existing.Contains(p.PlaceId)))
+            {
+                _context.Set<PlanItem>().Add(new PlanItem
+                {
+                    PlanId = plan.Id,
+                    PlaceId = entry.PlaceId,
+                    DayNumber = entry.DayNumber,
+                    ArrivalTime = entry.ArrivalTime,
+                    Note = entry.Note,
+                    OrderIndex = order++
+                });
+            }
+            await _context.SaveChangesAsync();
+        }
+
         return Json(new { ok = true, id = plan.Id });
     }
 
@@ -273,4 +299,6 @@ public class PlansController : Controller
 }
 
 public record AiPlanRequest(string Destination, int Days, string Interests, int People = 2);
-public record SaveAiPlanRequest(string Title, string AiText, int Days);
+public record SaveAiPlanRequest(string Title, string AiText, int Days,
+    List<AiPlaceEntry>? Places = null);
+public record AiPlaceEntry(int PlaceId, int DayNumber, string? ArrivalTime, string? Note);

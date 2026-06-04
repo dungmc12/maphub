@@ -280,28 +280,68 @@ async function generateAiPlan() {
 }
 
 const _csrf = document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
-
 let _lastAiText = '';
 let _lastAiDays = 1;
 
+// Parse AI text → [{placeId, dayNumber, arrivalTime, note}]
+function parseAiPlaces(text) {
+    const result = [];
+    const lines = text.split('\n');
+    let currentDay = 1;
+    let seenIds = new Set();
+
+    // Patterns
+    const dayPattern = /ngày\s*(\d+)/i;
+    const linkPattern = /\[([^\]]+)\]\(\/Map\/Details\/(\d+)\)/g;
+    const timePattern = /(\d{1,2})[:\.](\d{2})/;
+
+    for (const line of lines) {
+        // Detect day change: "Ngày 1", "Ngày 2", "Day 1"...
+        const dayMatch = line.match(dayPattern);
+        if (dayMatch) currentDay = parseInt(dayMatch[1]);
+
+        // Extract time from line
+        const timeMatch = line.match(timePattern);
+        const arrTime = timeMatch ? `${timeMatch[1].padStart(2,'0')}:${timeMatch[2]}` : null;
+
+        // Extract place links
+        const localLink = /\[([^\]]+)\]\(\/Map\/Details\/(\d+)\)/g;
+        let m;
+        while ((m = localLink.exec(line)) !== null) {
+            const pid = parseInt(m[2]);
+            if (!seenIds.has(pid)) {
+                seenIds.add(pid);
+                result.push({
+                    placeId: pid,
+                    dayNumber: currentDay,
+                    arrivalTime: arrTime,
+                    note: null
+                });
+            }
+        }
+    }
+    return result;
+}
+
 async function saveAiPlan() {
     const title = document.getElementById('aiPlanTitle').value.trim();
-    const dest  = document.getElementById('aiDest').value.trim();
     if (!title) { alert('Vui lòng nhập tên kế hoạch!'); return; }
 
     const btn = document.querySelector('#aiSaveRow .btn-accent');
     btn.disabled = true; btn.textContent = 'Đang lưu…';
 
+    const places = parseAiPlaces(_lastAiText);
+
     const resp = await fetch('/Plans/SaveAiPlan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': _csrf },
-        body: JSON.stringify({ title, aiText: _lastAiText, days: _lastAiDays })
+        body: JSON.stringify({ title, aiText: _lastAiText, days: _lastAiDays, places })
     });
     const d = await resp.json();
     const msgEl = document.getElementById('aiSaveMsg');
     if (d.ok) {
         msgEl.style.display = 'block';
-        msgEl.innerHTML = `<div class="alert alert-success py-2">✅ Đã lưu! <a href="/Plans/Details/${d.id}" class="fw-bold">Xem kế hoạch →</a></div>`;
+        msgEl.innerHTML = `<div class="alert alert-success py-2">✅ Đã lưu ${places.length} địa điểm! <a href="/Plans/Details/${d.id}" class="fw-bold">Xem kế hoạch →</a></div>`;
         btn.style.display = 'none';
     } else {
         msgEl.style.display = 'block';
