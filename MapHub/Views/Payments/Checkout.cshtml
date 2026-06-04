@@ -119,18 +119,20 @@
         }
         else
         {
+            @Html.AntiForgeryToken()
             <div class="ck-wait" id="waitBox">
                 <div class="spinner-border spinner-border-sm text-primary me-2"></div>
                 <span class="ck-wait-title">Đang chờ xác nhận thanh toán…</span>
                 <div class="ck-wait-sub mt-1">
                     Hệ thống tự động xác nhận trong vài phút sau khi bạn chuyển khoản.<br>
-                    Không cần bấm gì thêm.
+                    Đã chuyển lâu mà chưa lên Pro?
+                    <a href="#" onclick="requestAdmin();return false;" style="color:#0369a1;font-weight:700">Gửi yêu cầu Admin duyệt →</a>
+                    <div id="reqAdminMsg" style="margin-top:.45rem;font-size:.82rem"></div>
                 </div>
             </div>
 
             @if (Env.IsDevelopment())
             {
-                @Html.AntiForgeryToken()
                 <div style="margin:0 1.4rem 1.5rem; text-align:center">
                     <button type="button" onclick="devConfirm()"
                             style="font-size:.78rem;padding:.4rem .8rem;border:1px dashed #cbd5e1;border-radius:8px;background:#fff;cursor:pointer;color:#94a3b8">
@@ -154,6 +156,24 @@ function copyCode() {
         event.target.textContent = '✅ Đã copy';
         setTimeout(() => event.target.innerHTML = '📋 Copy', 2000);
     });
+}
+
+// Gửi yêu cầu Admin duyệt thủ công (khi CK lâu mà chưa tự lên Pro)
+function requestAdmin() {
+    const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
+    const el = document.getElementById('reqAdminMsg');
+    el.style.color = '#64748b'; el.textContent = 'Đang gửi…';
+    fetch('/Payments/Confirm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'RequestVerificationToken': token },
+        body: 'code=' + encodeURIComponent('@Model.Code')
+    })
+    .then(r => r.json())
+    .then(d => {
+        if (d.ok) { el.style.color = '#15803d'; el.textContent = '✅ Đã gửi yêu cầu! Admin sẽ duyệt sớm.'; }
+        else { el.style.color = '#b45309'; el.textContent = d.msg || 'Đơn đã được xử lý.'; }
+    })
+    .catch(() => { el.style.color = '#dc2626'; el.textContent = 'Lỗi gửi yêu cầu, thử lại.'; });
 }
 
 // DEV only: giả lập webhook báo đã trả → lên Pro ngay tại localhost
