@@ -138,6 +138,7 @@ else if (isAuth)
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
+                    @Html.AntiForgeryToken()
                     <div class="row g-3">
                         <!-- Tên & Danh mục -->
                         <div class="col-md-7">
@@ -173,41 +174,56 @@ else if (isAuth)
                             <textarea id="newAbout" class="form-control" rows="2"
                                       placeholder="Không gian, món đặc trưng, lưu ý khi đến..."></textarea>
                         </div>
-                        <!-- Giá -->
-                        <div class="col-md-3">
-                            <label class="form-label fw-semibold">Giá từ (đ)</label>
-                            <input type="number" id="newMinPrice" class="form-control" placeholder="30000">
+                        <!-- Giá: nhập tay HOẶC kéo thanh (0 – 2 triệu) -->
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">
+                                Khoảng giá: <span id="priceLabel" class="text-primary fw-bold">Chưa đặt</span>
+                            </label>
+                            <div class="d-flex gap-2 align-items-center mb-1">
+                                <span style="width:34px;font-size:.85rem;color:#64748b">Từ</span>
+                                <input type="number" id="newMinPrice" class="form-control" placeholder="0" style="max-width:120px"
+                                       min="0" max="2000000" oninput="syncPriceFromNumber()">
+                                <input type="range" id="minPriceRange" class="form-range flex-grow-1"
+                                       min="0" max="2000000" step="10000" value="0" oninput="syncPriceFromRange()">
+                            </div>
+                            <div class="d-flex gap-2 align-items-center">
+                                <span style="width:34px;font-size:.85rem;color:#64748b">Đến</span>
+                                <input type="number" id="newMaxPrice" class="form-control" placeholder="0" style="max-width:120px"
+                                       min="0" max="2000000" oninput="syncPriceFromNumber()">
+                                <input type="range" id="maxPriceRange" class="form-range flex-grow-1"
+                                       min="0" max="2000000" step="10000" value="0" oninput="syncPriceFromRange()">
+                            </div>
                         </div>
-                        <div class="col-md-3">
-                            <label class="form-label fw-semibold">Giá đến (đ)</label>
-                            <input type="number" id="newMaxPrice" class="form-control" placeholder="150000">
-                        </div>
-                        <div class="col-md-6">
+                        <div class="col-12">
                             <label class="form-label fw-semibold">Website</label>
                             <input type="url" id="newWebsite" class="form-control" placeholder="https://...">
                         </div>
-                        <!-- Ảnh -->
+                        <!-- Ảnh (bắt buộc): URL hoặc tải từ máy -->
                         <div class="col-12">
-                            <label class="form-label fw-semibold">Ảnh đại diện (URL)</label>
-                            <input type="url" id="newImageUrl" class="form-control"
-                                   placeholder="https://... (paste link ảnh từ internet)">
+                            <label class="form-label fw-semibold">Ảnh đại diện <span class="text-danger">*</span></label>
+                            <input type="url" id="newImageUrl" class="form-control mb-2"
+                                   placeholder="https://... (dán link ảnh)">
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="text-muted small text-nowrap">— hoặc tải từ máy —</span>
+                                <input type="file" id="newImageFile" class="form-control form-control-sm" accept="image/*">
+                            </div>
                         </div>
                         <!-- Quyền riêng tư -->
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">Quyền xem</label>
                             <select id="newVisibility" class="form-select">
                                 <option value="private">🔒 Cá nhân (Chỉ tôi thấy)</option>
-                                <option value="public">🌍 Công khai (Cần admin duyệt)</option>
+                                <option value="public">🌍 Công khai (Mọi người thấy ngay)</option>
                             </select>
                         </div>
                         <!-- Tọa độ -->
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold">Tọa độ (click bản đồ bên dưới)</label>
+                            <label class="form-label fw-semibold">Tọa độ (click bản đồ hoặc nhập tay)</label>
                             <div class="input-group">
-                                <input type="text" id="newLat" class="form-control" placeholder="Vĩ độ" readonly required>
-                                <input type="text" id="newLng" class="form-control" placeholder="Kinh độ" readonly required>
+                                <input type="text" id="newLat" class="form-control" placeholder="Vĩ độ" oninput="syncMiniMarker()" required>
+                                <input type="text" id="newLng" class="form-control" placeholder="Kinh độ" oninput="syncMiniMarker()" required>
                             </div>
-                            <small class="text-muted">Hoặc nhập thủ công nếu biết tọa độ</small>
+                            <small class="text-muted">Click bản đồ bên dưới, hoặc gõ trực tiếp vĩ độ / kinh độ</small>
                         </div>
                         <!-- Mini map -->
                         <div class="col-12">
@@ -593,13 +609,46 @@ function openAddPlace() {
     }, { once: true });
 }
 
+// Nhập tay lat/lng → di chuyển marker trên mini-map
+function syncMiniMarker() {
+    const lat = parseFloat(document.getElementById('newLat').value);
+    const lng = parseFloat(document.getElementById('newLng').value);
+    if (isNaN(lat) || isNaN(lng) || !miniMap) return;
+    if (miniMarker) miniMap.removeLayer(miniMarker);
+    miniMarker = L.marker([lat, lng]).addTo(miniMap);
+    miniMap.setView([lat, lng], Math.max(miniMap.getZoom(), 14));
+}
+
+// ── Thanh kéo giá ───────────────────────────────────────────────────────────
+function fmtVnd(n) { return (Number(n) || 0).toLocaleString('vi-VN') + 'đ'; }
+
+function updatePriceLabel() {
+    const mn = parseFloat(document.getElementById('newMinPrice').value) || 0;
+    const mx = parseFloat(document.getElementById('newMaxPrice').value) || 0;
+    document.getElementById('priceLabel').textContent =
+        (mn === 0 && mx === 0) ? 'Chưa đặt' : `${fmtVnd(mn)} – ${fmtVnd(mx)}`;
+}
+function syncPriceFromRange() {
+    document.getElementById('newMinPrice').value = document.getElementById('minPriceRange').value;
+    document.getElementById('newMaxPrice').value = document.getElementById('maxPriceRange').value;
+    updatePriceLabel();
+}
+function syncPriceFromNumber() {
+    document.getElementById('minPriceRange').value = Math.min(2000000, parseFloat(document.getElementById('newMinPrice').value) || 0);
+    document.getElementById('maxPriceRange').value = Math.min(2000000, parseFloat(document.getElementById('newMaxPrice').value) || 0);
+    updatePriceLabel();
+}
+
 async function submitPlace() {
     const lat = parseFloat(document.getElementById('newLat').value);
     const lng = parseFloat(document.getElementById('newLng').value);
     const name = document.getElementById('newName').value.trim();
+    const imageUrl = document.getElementById('newImageUrl').value.trim();
+    const imageFile = document.getElementById('newImageFile').files[0];
 
     if (!name) { alert('Vui lòng nhập tên địa điểm!'); return; }
-    if (isNaN(lat) || isNaN(lng)) { alert('Vui lòng chọn vị trí trên bản đồ!'); return; }
+    if (isNaN(lat) || isNaN(lng)) { alert('Vui lòng chọn vị trí trên bản đồ (hoặc nhập tọa độ)!'); return; }
+    if (!imageUrl && !imageFile) { alert('Vui lòng thêm ảnh đại diện (dán URL hoặc tải từ máy)!'); return; }
 
     const data = {
         Name:       name,
@@ -624,9 +673,17 @@ async function submitPlace() {
     const json = await res.json();
 
     if (res.ok && json.success) {
+        // Nếu chọn file từ máy → upload làm ảnh chính
+        if (imageFile && json.id) {
+            const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
+            const fd = new FormData();
+            fd.append('placeId', json.id);
+            fd.append('image', imageFile);
+            try { await fetch('/Map/UploadImage', { method: 'POST', headers: { 'RequestVerificationToken': token }, body: fd }); } catch {}
+        }
         bootstrap.Modal.getInstance(document.getElementById('addPlaceModal')).hide();
         const msg = data.Visibility === 'public'
-            ? `✅ Đã gửi duyệt địa điểm "${data.Name}". Admin sẽ xét duyệt sớm!`
+            ? `✅ Đã đăng địa điểm công khai "${data.Name}".`
             : `✅ Đã lưu địa điểm cá nhân "${data.Name}".`;
         showToast(msg, 'success');
         loadPlaces(currentCat);
