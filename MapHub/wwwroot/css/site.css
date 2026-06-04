@@ -454,7 +454,7 @@ body.map-view { overflow: hidden; height: 100vh; }
   transition: height .25s ease;
 }
 .chat-widget.collapsed { height: 42px; }
-.chat-widget.expanded  { height: 420px; }
+.chat-widget.expanded  { height: 520px; }
 .chat-widget-header {
   background: var(--blue); color: #fff; padding: .6rem 1rem;
   cursor: pointer; font-weight: 700; font-size: .9rem;
@@ -660,7 +660,7 @@ body.map-view { overflow: hidden; height: 100vh; }
 .custom-modal-footer { padding: .85rem 1.2rem; border-top: 1px solid var(--line); display: flex; justify-content: flex-end; gap: .6rem; }
 
 /* AI plan result */
-.ai-plan-result { background: #f0f8f4; border-radius: 10px; border: 1px solid #b5d9c5; padding: 1rem; max-height: 260px; overflow-y: auto; font-size: .88rem; line-height: 1.65; }
+.ai-plan-result { background: #f0f8f4; border-radius: 10px; border: 1px solid #b5d9c5; padding: 1rem; max-height: 420px; overflow-y: auto; font-size: .88rem; line-height: 1.65; }
 .ai-plan-text { white-space: pre-wrap; }
 
 /* ── Auth pages ───────────────────────────────────────────────────────── */

@@ -165,7 +165,7 @@
 @if (isPro)
 {
     <div id="aiPlanModal" class="custom-modal-overlay" style="display:none" onclick="if(event.target===this)this.style.display='none'">
-        <div class="custom-modal-box">
+        <div class="custom-modal-box" style="width:min(680px,96vw);max-height:90vh;overflow-y:auto">
             <div class="custom-modal-header">
                 <h5>🤖 AI tạo kế hoạch</h5>
                 <button onclick="document.getElementById('aiPlanModal').style.display='none'">✕</button>
