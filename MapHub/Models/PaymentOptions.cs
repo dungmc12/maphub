@@ -16,6 +16,13 @@ public class SePayOptions
     public string AccountName { get; set; } = "";      // tên chủ tài khoản (IN HOA, không dấu)
 }
 
+// Cấu hình gọi Casso API để chủ động kiểm tra giao dịch (đọc từ appsettings.json "Casso")
+public class CassoOptions
+{
+    public string ApiKey { get; set; } = "";                       // Casso API key (tạo ở trang API Keys)
+    public string BaseUrl { get; set; } = "https://oauth.casso.vn"; // gốc API Casso v2
+}
+
 // Cấu hình giá các gói Pro (đọc từ appsettings.json "Pricing")
 public class PricingOptions
 {

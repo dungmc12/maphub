@@ -16,6 +16,7 @@ public class PaymentsController : Controller
     private readonly SePayOptions _sepay;
     private readonly IProService _proService;
     private readonly PayOSService? _payos;
+    private readonly ICassoApiService _casso;
     private readonly IWebHostEnvironment _env;
     private readonly ILogger<PaymentsController> _logger;
 
@@ -25,6 +26,7 @@ public class PaymentsController : Controller
         IOptions<SePayOptions> sepay,
         IProService proService,
         PayOSService? payos,
+        ICassoApiService casso,
         IWebHostEnvironment env,
         ILogger<PaymentsController> logger)
     {
@@ -33,6 +35,7 @@ public class PaymentsController : Controller
         _sepay = sepay.Value;
         _proService = proService;
         _payos = payos;
+        _casso = casso;
         _env = env;
         _logger = logger;
     }
@@ -209,6 +212,41 @@ public class PaymentsController : Controller
             _logger.LogInformation("DEV: giả lập thanh toán + lên Pro cho đơn {Code}", code);
         }
         return Json(new { ok = true });
+    }
+
+    // Chủ động kiểm tra giao dịch qua Casso API ngay (không chờ webhook).
+    // Khớp mã CSPRO trong nội dung CK + đủ số tiền -> lên Pro luôn.
+    [HttpPost]
+    [Authorize]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> CheckNow(string code, CancellationToken ct)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var payment = await _context.Payments
+            .FirstOrDefaultAsync(p => p.Code == code && p.UserId == userId, ct);
+        if (payment == null) return Json(new { ok = false, msg = "Không tìm thấy đơn." });
+        if (payment.Status == "paid") return Json(new { ok = true, paid = true });
+
+        if (!_casso.IsConfigured)
+            return Json(new { ok = false, paid = false, msg = "Chưa cấu hình Casso API key — vẫn chờ webhook tự động." });
+
+        var txs = await _casso.GetRecentTransactionsAsync(100, ct);
+        var wanted = payment.Code!.ToUpperInvariant();
+        var match = txs.FirstOrDefault(t =>
+            $"{t.Description} {t.Tid}".ToUpperInvariant().Contains(wanted) &&
+            t.Amount >= payment.Amount);
+
+        if (match == null)
+            return Json(new { ok = true, paid = false, msg = "Chưa thấy giao dịch khớp. Thử lại sau ít phút." });
+
+        payment.Status = "paid";
+        payment.PaidAt = DateTime.UtcNow;
+        payment.TransactionId = match.Tid;
+        await _context.SaveChangesAsync(ct);
+        await _proService.ActivateProAsync(payment.UserId, payment.PlanType);
+        _logger.LogInformation("Casso API: kiểm tra thủ công khớp + lên Pro cho đơn {Code}", code);
+
+        return Json(new { ok = true, paid = true });
     }
 
     [HttpGet]
