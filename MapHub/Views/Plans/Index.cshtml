@@ -189,10 +189,18 @@
                     <input type="number" id="aiPeople" class="form-control" value="2" min="1" max="20" placeholder="VD: 2">
                 </div>
                 <div id="aiPlanResult" class="ai-plan-result" style="display:none"></div>
+                <div id="aiSaveRow" style="display:none;margin-top:.75rem">
+                    <input type="text" id="aiPlanTitle" class="form-control form-control-sm mb-2"
+                           placeholder="Tên kế hoạch (VD: Cắm trại Đồng Mô 3 ngày)">
+                    <button type="button" class="btn-accent w-100" onclick="saveAiPlan()">
+                        💾 Lưu kế hoạch này
+                    </button>
+                    <div id="aiSaveMsg" style="display:none;margin-top:.5rem"></div>
+                </div>
             </div>
             <div class="custom-modal-footer">
                 <button type="button" class="btn-ghost" onclick="document.getElementById('aiPlanModal').style.display='none'">Đóng</button>
-                <button type="button" class="btn-accent" onclick="generateAiPlan()">🤖 Tạo lịch trình</button>
+                <button type="button" id="btnAiGenerate" class="btn-accent" onclick="generateAiPlan()">🤖 Tạo lịch trình</button>
             </div>
         </div>
     </div>
@@ -234,8 +242,11 @@ async function generateAiPlan() {
 
     if (!dest) { alert('Vui lòng nhập địa điểm muốn đến!'); return; }
 
+    const genBtn = document.getElementById('btnAiGenerate');
+    genBtn.disabled = true; genBtn.textContent = '⏳ Đang tạo…';
+    document.getElementById('aiSaveRow').style.display = 'none';
     result.style.display = 'block';
-    result.innerHTML = '<div class="text-muted"><em>🤖 AI đang lập kế hoạch…</em></div>';
+    result.innerHTML = '<div class="text-muted"><em>🤖 AI đang lập kế hoạch… (có thể mất 10-20 giây)</em></div>';
 
     try {
         const r = await fetch('/Plans/AiGenerate', {
@@ -247,10 +258,55 @@ async function generateAiPlan() {
         if (d.error) {
             result.innerHTML = `<div class="text-danger">${d.error}</div>`;
         } else {
+            _lastAiText = d.plan;
+            _lastAiDays = days;
             result.innerHTML = `<div class="ai-plan-text">${formatPlan(d.plan)}</div>`;
+            // Hiển thị ô lưu kế hoạch
+            const saveRow = document.getElementById('aiSaveRow');
+            saveRow.style.display = 'block';
+            document.getElementById('aiSaveMsg').style.display = 'none';
+            const saveBtn = saveRow.querySelector('.btn-accent');
+            saveBtn.style.display = ''; saveBtn.disabled = false;
+            saveBtn.textContent = '💾 Lưu kế hoạch này';
+            // Gợi ý tên kế hoạch
+            const titleInput = document.getElementById('aiPlanTitle');
+            if (!titleInput.value) titleInput.value = `Kế hoạch ${dest} ${days} ngày`;
         }
     } catch {
         result.innerHTML = '<div class="text-danger">Lỗi kết nối AI. Vui lòng thử lại.</div>';
+    } finally {
+        genBtn.disabled = false; genBtn.textContent = '🤖 Tạo lịch trình';
+    }
+}
+
+const _csrf = document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
+
+let _lastAiText = '';
+let _lastAiDays = 1;
+
+async function saveAiPlan() {
+    const title = document.getElementById('aiPlanTitle').value.trim();
+    const dest  = document.getElementById('aiDest').value.trim();
+    if (!title) { alert('Vui lòng nhập tên kế hoạch!'); return; }
+
+    const btn = document.querySelector('#aiSaveRow .btn-accent');
+    btn.disabled = true; btn.textContent = 'Đang lưu…';
+
+    const resp = await fetch('/Plans/SaveAiPlan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': _csrf },
+        body: JSON.stringify({ title, aiText: _lastAiText, days: _lastAiDays })
+    });
+    const d = await resp.json();
+    const msgEl = document.getElementById('aiSaveMsg');
+    if (d.ok) {
+        msgEl.style.display = 'block';
+        msgEl.innerHTML = `<div class="alert alert-success py-2">✅ Đã lưu! <a href="/Plans/Details/${d.id}" class="fw-bold">Xem kế hoạch →</a></div>`;
+        btn.style.display = 'none';
+    } else {
+        msgEl.style.display = 'block';
+        msgEl.innerHTML = `<div class="alert alert-warning py-2">${d.msg}</div>`;
+        btn.disabled = false; btn.textContent = '💾 Lưu kế hoạch này';
     }
 }
 

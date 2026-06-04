@@ -207,6 +207,34 @@ public class PlansController : Controller
         return RedirectToAction(nameof(Index));
     }
 
+    // Lưu kế hoạch do AI tạo
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> SaveAiPlan([FromBody] SaveAiPlanRequest request)
+    {
+        var userId = UserId();
+        var isPro = User.IsInRole("Pro") || User.IsInRole("Admin");
+        var profile = await _context.UserProfiles.FindAsync(userId);
+        var maxPlans = profile?.MaxPlans ?? 3;
+        var planCount = await _context.Plans.CountAsync(p => p.UserId == userId);
+
+        if (!isPro && planCount >= maxPlans)
+            return Json(new { ok = false, msg = $"Bạn đã đạt giới hạn {maxPlans} kế hoạch. Nâng cấp Pro để tạo không giới hạn!" });
+
+        var plan = new Plan
+        {
+            UserId = userId,
+            Title = request.Title,
+            Description = request.AiText,
+            StartDate = DateTime.UtcNow.Date,
+            EndDate = DateTime.UtcNow.Date.AddDays(Math.Max(0, request.Days - 1)),
+            CreatedAt = DateTime.UtcNow
+        };
+        _context.Plans.Add(plan);
+        await _context.SaveChangesAsync();
+        return Json(new { ok = true, id = plan.Id });
+    }
+
     // AI tạo kế hoạch (Pro only)
     [HttpPost]
     public async Task<IActionResult> AiGenerate([FromBody] AiPlanRequest request, CancellationToken ct)
@@ -245,3 +273,4 @@ public class PlansController : Controller
 }
 
 public record AiPlanRequest(string Destination, int Days, string Interests, int People = 2);
+public record SaveAiPlanRequest(string Title, string AiText, int Days);
