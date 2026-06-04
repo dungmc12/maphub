@@ -19,12 +19,15 @@ public class WeatherController : ControllerBase
     [AllowAnonymous]
     public async Task<IActionResult> At(double lat, double lng, CancellationToken cancellationToken)
     {
-        var snapshot = await _weatherService.GetSnapshotAsync(lat, lng, cancellationToken);
-        if (snapshot is null)
+        try
+        {
+            var snapshot = await _weatherService.GetSnapshotAsync(lat, lng, cancellationToken);
+            if (snapshot is null) return NotFound();
+            return Ok(snapshot);
+        }
+        catch
         {
             return NotFound();
         }
-
-        return Ok(snapshot);
     }
 }
