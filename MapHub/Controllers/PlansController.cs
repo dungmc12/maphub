@@ -251,6 +251,7 @@ public class PlansController : Controller
                     PlaceId = entry.PlaceId,
                     DayNumber = entry.DayNumber,
                     ArrivalTime = entry.ArrivalTime,
+                    LeaveTime = entry.LeaveTime,
                     Note = entry.Note,
                     OrderIndex = order++
                 });
@@ -301,4 +302,4 @@ public class PlansController : Controller
 public record AiPlanRequest(string Destination, int Days, string Interests, int People = 2);
 public record SaveAiPlanRequest(string Title, string AiText, int Days,
     List<AiPlaceEntry>? Places = null);
-public record AiPlaceEntry(int PlaceId, int DayNumber, string? ArrivalTime, string? Note);
+public record AiPlaceEntry(int PlaceId, int DayNumber, string? ArrivalTime, string? LeaveTime, string? Note);
