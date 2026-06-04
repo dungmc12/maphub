@@ -38,6 +38,11 @@ public class PaymentAutoCheckService : BackgroundService
 
                     if (pending.Count > 0)
                     {
+                        // Có đơn vừa tạo trong 30 phút (đang thanh toán) → tự bấm "Đồng bộ ngay"
+                        // để Casso đọc bank + đẩy webhook, thay vì bạn phải vào Casso bấm tay.
+                        if (pending.Any(p => p.CreatedAt >= DateTime.UtcNow.AddMinutes(-30)))
+                            await casso.TriggerSyncAsync(stoppingToken);
+
                         var txs = await casso.GetRecentTransactionsAsync(100, stoppingToken);
                         foreach (var payment in pending)
                         {

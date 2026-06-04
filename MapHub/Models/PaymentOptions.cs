@@ -21,6 +21,7 @@ public class CassoOptions
 {
     public string ApiKey { get; set; } = "";                       // Casso API key (tạo ở trang API Keys)
     public string BaseUrl { get; set; } = "https://oauth.casso.vn"; // gốc API Casso v2
+    public string BankAccountId { get; set; } = "";                 // số TK ngân hàng — để gọi /v2/sync (buộc Casso đọc bank)
 }
 
 // Cấu hình giá các gói Pro (đọc từ appsettings.json "Pricing")

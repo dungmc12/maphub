@@ -230,6 +230,8 @@ public class PaymentsController : Controller
         if (!_casso.IsConfigured)
             return Json(new { ok = false, paid = false, msg = "Chưa cấu hình Casso API key — vẫn chờ webhook tự động." });
 
+        // Buộc Casso đọc bank ngay (như bấm "Đồng bộ ngay") rồi mới đọc giao dịch
+        await _casso.TriggerSyncAsync(ct);
         var txs = await _casso.GetRecentTransactionsAsync(100, ct);
         var wanted = payment.Code!.ToUpperInvariant();
         var match = txs.FirstOrDefault(t =>
