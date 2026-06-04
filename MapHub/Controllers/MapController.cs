@@ -125,7 +125,8 @@ public class MapController : Controller
             Latitude = dto.Latitude,
             Longitude = dto.Longitude,
             CreatedByUserId = currentUserId,
-            IsApproved = isAdmin || dto.Visibility == "private"
+            // Công khai hiển thị ngay, không cần Admin duyệt (theo yêu cầu)
+            IsApproved = true
         };
 
         _context.Places.Add(place);

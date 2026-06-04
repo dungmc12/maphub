@@ -123,6 +123,10 @@ public class AdminController : Controller
         var adminId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
         ev.CreatedByUserId = adminId;
 
+        // Ép Kind=Utc cho cột timestamptz của Postgres (form trả Unspecified -> sẽ lỗi 500)
+        ev.StartAt = DateTime.SpecifyKind(ev.StartAt, DateTimeKind.Utc);
+        if (ev.EndAt.HasValue) ev.EndAt = DateTime.SpecifyKind(ev.EndAt.Value, DateTimeKind.Utc);
+
         // File upload takes priority over URL
         if (BannerFile != null && BannerFile.Length > 0)
             ev.BannerImageUrl = await SaveUploadAsync(BannerFile, "events");
@@ -156,8 +160,8 @@ public class AdminController : Controller
         existing.Title       = ev.Title;
         existing.Description = ev.Description;
         existing.PlaceId     = ev.PlaceId;
-        existing.StartAt     = ev.StartAt;
-        existing.EndAt       = ev.EndAt;
+        existing.StartAt     = DateTime.SpecifyKind(ev.StartAt, DateTimeKind.Utc);
+        existing.EndAt       = ev.EndAt.HasValue ? DateTime.SpecifyKind(ev.EndAt.Value, DateTimeKind.Utc) : null;
         existing.Status      = ev.Status;
         existing.IsFeatured  = ev.IsFeatured;
 
