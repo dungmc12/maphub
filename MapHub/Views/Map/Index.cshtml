@@ -210,6 +210,7 @@ let map, allPlaces = [], markers = [], miniMap, miniMarker, routingControl;
 let currentCat = '';
 let currentWeather = null;
 let weatherFetchTimeout = null;
+const isPro = @(isPro ? "true" : "false");   // Pro/Admin mới được xem thời tiết
 
 document.addEventListener('DOMContentLoaded', () => {
     map = L.map('map').setView([21.0285, 105.8542], 12);
@@ -219,14 +220,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }).addTo(map);
 
     addWeatherControl();
-    fetchWeatherForCenter();
-
-    map.on('moveend', () => {
-        clearTimeout(weatherFetchTimeout);
-        weatherFetchTimeout = setTimeout(fetchWeatherForCenter, 1500);
-    });
-
-    setInterval(fetchWeatherForCenter, 15 * 60 * 1000);
+    if (isPro) {
+        fetchWeatherForCenter();
+        map.on('moveend', () => {
+            clearTimeout(weatherFetchTimeout);
+            weatherFetchTimeout = setTimeout(fetchWeatherForCenter, 1500);
+        });
+        setInterval(fetchWeatherForCenter, 15 * 60 * 1000);
+    }
 
     // Read ?cat= from URL (links from home page category chips)
     const urlCat = new URLSearchParams(window.location.search).get('cat') || '';
@@ -248,20 +249,35 @@ function addWeatherControl() {
         onAdd: function () {
             const div = L.DomUtil.create('div', 'weather-map-panel');
             div.id = 'weatherPanel';
-            div.innerHTML = `
-                <div class="weather-panel-row">
-                    <div class="weather-panel-icon" id="weatherIcon">⏳</div>
-                    <div>
-                        <div class="weather-panel-temp" id="weatherTemp">--°C</div>
-                        <div class="weather-panel-desc" id="weatherDesc">Đang tải thời tiết…</div>
-                        <div class="weather-panel-wind" id="weatherWind"></div>
+            if (isPro) {
+                div.innerHTML = `
+                    <div class="weather-panel-row">
+                        <div class="weather-panel-icon" id="weatherIcon">⏳</div>
+                        <div>
+                            <div class="weather-panel-temp" id="weatherTemp">--°C</div>
+                            <div class="weather-panel-desc" id="weatherDesc">Đang tải thời tiết…</div>
+                            <div class="weather-panel-wind" id="weatherWind"></div>
+                        </div>
                     </div>
-                </div>
-                <div class="weather-legend">
-                    <span class="wleg wleg-good">Phù hợp</span>
-                    <span class="wleg wleg-mid">Trung bình</span>
-                    <span class="wleg wleg-bad">Không phù hợp</span>
-                </div>`;
+                    <div class="weather-legend">
+                        <span class="wleg wleg-good">Phù hợp</span>
+                        <span class="wleg wleg-mid">Trung bình</span>
+                        <span class="wleg wleg-bad">Không phù hợp</span>
+                    </div>`;
+            } else {
+                // Khách / Free: chặn thời tiết, mời lên Pro
+                div.innerHTML = `
+                    <div class="weather-panel-row">
+                        <div class="weather-panel-icon">🔒</div>
+                        <div>
+                            <div class="weather-panel-temp" style="font-size:.95rem">Thời tiết theo địa điểm</div>
+                            <div class="weather-panel-desc">Tính năng dành cho thành viên Pro</div>
+                            <div class="weather-panel-wind">
+                                <a href="/Payments/Premium" style="color:#e06d1b;font-weight:700;text-decoration:none">⚡ Lên Pro để xem →</a>
+                            </div>
+                        </div>
+                    </div>`;
+            }
             L.DomEvent.disableClickPropagation(div);
             L.DomEvent.disableScrollPropagation(div);
             return div;
@@ -271,25 +287,46 @@ function addWeatherControl() {
 }
 
 async function fetchWeatherForCenter() {
+    if (!isPro) return;
     const panel = document.getElementById('weatherPanel');
     if (panel) panel.classList.add('weather-updating');
     const center = map.getCenter();
     try {
-        const res = await fetch(`/Weather/At?lat=${center.lat.toFixed(4)}&lng=${center.lng.toFixed(4)}`);
-        if (!res.ok) return;
-        const w = await res.json();
-        currentWeather = w;
-        document.getElementById('weatherIcon').textContent = weatherCodeIcon(w.weatherCode);
-        document.getElementById('weatherTemp').textContent = `${Math.round(w.temperatureC)}°C`;
-        document.getElementById('weatherDesc').textContent = w.summary;
-        document.getElementById('weatherWind').textContent = `💨 ${Math.round(w.windKph)} km/h`;
+        // Gọi open-meteo TRỰC TIẾP từ trình duyệt (IP người dùng, open-meteo bật CORS) — không qua server
+        const url = `https://api.open-meteo.com/v1/forecast?latitude=${center.lat.toFixed(4)}`
+                  + `&longitude=${center.lng.toFixed(4)}&current=temperature_2m,wind_speed_10m,weather_code`;
+        const res = await fetch(url);
+        if (!res.ok) throw new Error('weather http ' + res.status);
+        const data = await res.json();
+        const c = data.current;
+        if (!c) throw new Error('no current');
+
+        const code = c.weather_code;
+        currentWeather = { temperatureC: c.temperature_2m, windKph: c.wind_speed_10m, weatherCode: code, summary: weatherCodeSummary(code) };
+        document.getElementById('weatherIcon').textContent = weatherCodeIcon(code);
+        document.getElementById('weatherTemp').textContent = `${Math.round(c.temperature_2m)}°C`;
+        document.getElementById('weatherDesc').textContent = currentWeather.summary;
+        document.getElementById('weatherWind').textContent = `💨 ${Math.round(c.wind_speed_10m)} km/h`;
         if (allPlaces.length > 0) renderPlaces(allPlaces);
     } catch {
         const desc = document.getElementById('weatherDesc');
-        if (desc) desc.textContent = 'Không tải được thời tiết';
+        if (desc) desc.textContent = 'Thời tiết tạm thời không khả dụng';
     } finally {
         if (panel) panel.classList.remove('weather-updating');
     }
+}
+
+function weatherCodeSummary(code) {
+    if (code === 0) return 'Trời quang';
+    if (code === 1 || code === 2) return 'Ít mây';
+    if (code === 3) return 'Nhiều mây';
+    if (code === 45 || code === 48) return 'Sương mù';
+    if (code === 51 || code === 53 || code === 55) return 'Mưa phùn';
+    if (code === 61 || code === 63 || code === 65) return 'Mưa';
+    if (code === 71 || code === 73 || code === 75) return 'Tuyết';
+    if (code === 80 || code === 81 || code === 82) return 'Mưa rào';
+    if (code === 95 || code === 96 || code === 99) return 'Giông sét';
+    return 'Thời tiết thay đổi';
 }
 
 function weatherCodeIcon(code) {
