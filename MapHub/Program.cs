@@ -85,6 +85,10 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.AccessDeniedPath = "/Account/Login";
 });
 
+// Role/Pro thay đổi có hiệu lực trong ~1 phút (tự làm mới claims trong cookie) thay vì 30 phút mặc định
+builder.Services.Configure<SecurityStampValidatorOptions>(o =>
+    o.ValidationInterval = TimeSpan.FromMinutes(1));
+
 // Google OAuth
 var googleClientId     = builder.Configuration["Google:ClientId"]
                          ?? Environment.GetEnvironmentVariable("Google__ClientId") ?? "";

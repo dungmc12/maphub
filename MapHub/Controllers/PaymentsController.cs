@@ -2,6 +2,7 @@ using MapHub.Data;
 using MapHub.Models;
 using MapHub.Services;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -18,6 +19,8 @@ public class PaymentsController : Controller
     private readonly PayOSService? _payos;
     private readonly ICassoApiService _casso;
     private readonly IWebHostEnvironment _env;
+    private readonly SignInManager<ApplicationUser> _signInManager;
+    private readonly UserManager<ApplicationUser> _userManager;
     private readonly ILogger<PaymentsController> _logger;
 
     public PaymentsController(
@@ -28,6 +31,8 @@ public class PaymentsController : Controller
         PayOSService? payos,
         ICassoApiService casso,
         IWebHostEnvironment env,
+        SignInManager<ApplicationUser> signInManager,
+        UserManager<ApplicationUser> userManager,
         ILogger<PaymentsController> logger)
     {
         _context = context;
@@ -37,6 +42,8 @@ public class PaymentsController : Controller
         _payos = payos;
         _casso = casso;
         _env = env;
+        _signInManager = signInManager;
+        _userManager = userManager;
         _logger = logger;
     }
 
@@ -261,6 +268,15 @@ public class PaymentsController : Controller
             .Select(p => new { p.Status })
             .FirstOrDefaultAsync();
         if (payment == null) return NotFound();
-        return Json(new { status = payment.Status, paid = payment.Status == "paid" });
+
+        var paid = payment.Status == "paid";
+        // Vừa lên Pro nhưng cookie cũ chưa có role "Pro" → làm mới đăng nhập để Pro có hiệu lực NGAY,
+        // không phải đăng xuất/login lại mới dùng được AI.
+        if (paid && !User.IsInRole("Pro") && !User.IsInRole("Admin"))
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user != null) await _signInManager.RefreshSignInAsync(user);
+        }
+        return Json(new { status = payment.Status, paid });
     }
 }
