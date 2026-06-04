@@ -119,33 +119,25 @@
         }
         else
         {
-            @Html.AntiForgeryToken()
             <div class="ck-wait" id="waitBox">
                 <div class="spinner-border spinner-border-sm text-primary me-2"></div>
                 <span class="ck-wait-title">Đang chờ xác nhận thanh toán…</span>
                 <div class="ck-wait-sub mt-1">
-                    Trang này tự động cập nhật khi nhận được tiền.<br>
-                    Đã chuyển xong mà chưa thấy? Bấm <strong>Kiểm tra ngay</strong>.
+                    Hệ thống tự động xác nhận trong vài phút sau khi bạn chuyển khoản.<br>
+                    Không cần bấm gì thêm.
                 </div>
             </div>
 
-            <div style="margin:0 1.4rem 1.5rem; text-align:center">
-                <button type="button" id="checkNowBtn" onclick="checkNow()"
-                        style="font-size:.85rem;font-weight:600;padding:.5rem 1.1rem;border:1px solid #7c3aed;border-radius:8px;background:#7c3aed;color:#fff;cursor:pointer">
-                    🔍 Kiểm tra ngay
-                </button>
-                <div id="checkNowMsg" style="font-size:.78rem;color:#64748b;margin-top:.45rem"></div>
-
-                @if (Env.IsDevelopment())
-                {
-                    <div style="margin-top:.7rem">
-                        <button type="button" onclick="devConfirm()"
-                                style="font-size:.78rem;padding:.4rem .8rem;border:1px dashed #cbd5e1;border-radius:8px;background:#fff;cursor:pointer;color:#94a3b8">
-                            🧪 Giả lập đã thanh toán (chỉ DEV)
-                        </button>
-                    </div>
-                }
-            </div>
+            @if (Env.IsDevelopment())
+            {
+                @Html.AntiForgeryToken()
+                <div style="margin:0 1.4rem 1.5rem; text-align:center">
+                    <button type="button" onclick="devConfirm()"
+                            style="font-size:.78rem;padding:.4rem .8rem;border:1px dashed #cbd5e1;border-radius:8px;background:#fff;cursor:pointer;color:#94a3b8">
+                        🧪 Giả lập đã thanh toán (chỉ DEV)
+                    </button>
+                </div>
+            }
         }
 
     </div>
@@ -161,37 +153,6 @@ function copyCode() {
     navigator.clipboard.writeText(code).then(function() {
         event.target.textContent = '✅ Đã copy';
         setTimeout(() => event.target.innerHTML = '📋 Copy', 2000);
-    });
-}
-
-// Chủ động hỏi Casso API ngay, không chờ webhook
-function checkNow() {
-    const btn = document.getElementById('checkNowBtn');
-    const msg = document.getElementById('checkNowMsg');
-    const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
-    btn.disabled = true; btn.textContent = '⏳ Đang kiểm tra…';
-    msg.textContent = '';
-    fetch('/Payments/CheckNow', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'RequestVerificationToken': token },
-        body: 'code=' + encodeURIComponent('@Model.Code')
-    })
-    .then(r => r.json())
-    .then(d => {
-        if (d.paid) {
-            msg.style.color = '#15803d';
-            msg.textContent = '✅ Đã nhận tiền! Đang chuyển…';
-            setTimeout(() => window.location.reload(), 1200);
-        } else {
-            msg.style.color = '#64748b';
-            msg.textContent = d.msg || 'Chưa thấy giao dịch. Thử lại sau ít phút.';
-            btn.disabled = false; btn.textContent = '🔍 Kiểm tra ngay';
-        }
-    })
-    .catch(() => {
-        msg.style.color = '#ef4444';
-        msg.textContent = 'Lỗi kết nối, thử lại.';
-        btn.disabled = false; btn.textContent = '🔍 Kiểm tra ngay';
     });
 }
 
