@@ -1,0 +1,84 @@
+@model MapHub.Models.UserProfile
+@{
+    ViewData["Title"] = "Hồ sơ của tôi";
+    var email = ViewBag.Email as string;
+    bool hasPassword = ViewBag.HasPassword ?? true;
+    var tier = Model.Tier ?? "free";
+    var tierLabel = tier == "admin" ? "👑 Admin" : tier == "pro" ? "⚡ Pro" : "Miễn phí";
+}
+
+<div class="container-xl py-4" style="max-width:680px">
+    <h2 class="mb-4">👤 Hồ sơ của tôi</h2>
+
+    @if (TempData["ProfileMsg"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show">@TempData["ProfileMsg"]<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+    }
+    @if (TempData["PwMsg"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show">@TempData["PwMsg"]<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+    }
+    @if (TempData["PwError"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show">@TempData["PwError"]<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+    }
+
+    <!-- Thông tin hồ sơ -->
+    <div class="info-card mb-4" style="padding:1.25rem">
+        <div class="d-flex align-items-center gap-3 mb-3">
+            <img id="avatarPreview" src="@(string.IsNullOrEmpty(Model.AvatarUrl) ? "https://placehold.co/80x80?text=CS" : Model.AvatarUrl)"
+                 style="width:72px;height:72px;border-radius:50%;object-fit:cover;border:2px solid #e2e8f0">
+            <div>
+                <div class="fw-bold fs-5">@(string.IsNullOrEmpty(Model.DisplayName) ? email : Model.DisplayName)</div>
+                <div class="text-muted small">@email</div>
+                <span class="badge bg-secondary mt-1">@tierLabel</span>
+                @if (tier == "pro" && Model.ProExpiresAt != null)
+                {
+                    <span class="text-muted small ms-1">· hết hạn @Model.ProExpiresAt.Value.ToLocalTime().ToString("dd/MM/yyyy")</span>
+                }
+            </div>
+        </div>
+
+        <form method="post" action="/Account/Profile">
+            @Html.AntiForgeryToken()
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Tên hiển thị</label>
+                <input type="text" name="displayName" class="form-control" value="@Model.DisplayName" placeholder="Tên bạn muốn hiển thị">
+            </div>
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Ảnh đại diện (URL)</label>
+                <input type="url" name="avatarUrl" class="form-control" value="@Model.AvatarUrl"
+                       placeholder="https://... (dán link ảnh)" oninput="document.getElementById('avatarPreview').src = this.value || 'https://placehold.co/80x80?text=CS'">
+            </div>
+            <button type="submit" class="btn-accent">💾 Lưu hồ sơ</button>
+        </form>
+    </div>
+
+    <!-- Đổi mật khẩu -->
+    <div class="info-card" style="padding:1.25rem">
+        <h5 class="mb-3">🔒 @(hasPassword ? "Đổi mật khẩu" : "Tạo mật khẩu")</h5>
+        @if (!hasPassword)
+        {
+            <p class="text-muted small">Tài khoản của bạn đăng nhập bằng Google và chưa có mật khẩu. Tạo mật khẩu để đăng nhập trực tiếp bằng email.</p>
+        }
+        <form method="post" action="/Account/ChangePassword">
+            @Html.AntiForgeryToken()
+            @if (hasPassword)
+            {
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Mật khẩu hiện tại</label>
+                    <input type="password" name="currentPassword" class="form-control" required>
+                </div>
+            }
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Mật khẩu mới (tối thiểu 6 ký tự)</label>
+                <input type="password" name="newPassword" class="form-control" minlength="6" required>
+            </div>
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Xác nhận mật khẩu mới</label>
+                <input type="password" name="confirmPassword" class="form-control" minlength="6" required>
+            </div>
+            <button type="submit" class="btn-accent">@(hasPassword ? "Đổi mật khẩu" : "Tạo mật khẩu")</button>
+        </form>
+    </div>
+</div>

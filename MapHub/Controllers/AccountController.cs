@@ -11,13 +11,16 @@ public class AccountController : Controller
 {
     private readonly SignInManager<ApplicationUser> _signInManager;
     private readonly UserManager<ApplicationUser> _userManager;
+    private readonly ApplicationDbContext _context;
 
     public AccountController(
         SignInManager<ApplicationUser> signInManager,
-        UserManager<ApplicationUser> userManager)
+        UserManager<ApplicationUser> userManager,
+        ApplicationDbContext context)
     {
         _signInManager = signInManager;
         _userManager = userManager;
+        _context = context;
     }
 
     [HttpGet]
@@ -174,6 +177,71 @@ public class AccountController : Controller
         await _userManager.AddLoginAsync(user, info);
         await _signInManager.SignInAsync(user, isPersistent: false);
         return LocalRedirect(NormalizeReturnUrl(returnUrl));
+    }
+
+    // ── Hồ sơ cá nhân ─────────────────────────────────────────────────────────
+    [Authorize]
+    [HttpGet]
+    public async Task<IActionResult> Profile()
+    {
+        var userId = _userManager.GetUserId(User);
+        var user = await _userManager.GetUserAsync(User);
+        var profile = await _context.UserProfiles.FindAsync(userId);
+        if (profile == null)
+        {
+            profile = new UserProfile { UserId = userId! };
+            _context.UserProfiles.Add(profile);
+            await _context.SaveChangesAsync();
+        }
+        ViewBag.Email = user?.Email;
+        ViewBag.HasPassword = user != null && await _userManager.HasPasswordAsync(user);
+        return View(profile);
+    }
+
+    [Authorize]
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Profile(string? displayName, string? avatarUrl)
+    {
+        var userId = _userManager.GetUserId(User);
+        var profile = await _context.UserProfiles.FindAsync(userId);
+        if (profile == null) { profile = new UserProfile { UserId = userId! }; _context.UserProfiles.Add(profile); }
+        profile.DisplayName = string.IsNullOrWhiteSpace(displayName) ? null : displayName.Trim();
+        profile.AvatarUrl   = string.IsNullOrWhiteSpace(avatarUrl) ? null : avatarUrl.Trim();
+        profile.UpdatedAt   = DateTime.UtcNow;
+        await _context.SaveChangesAsync();
+        TempData["ProfileMsg"] = "Đã cập nhật hồ sơ.";
+        return RedirectToAction(nameof(Profile));
+    }
+
+    [Authorize]
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ChangePassword(string? currentPassword, string newPassword, string confirmPassword)
+    {
+        var user = await _userManager.GetUserAsync(User);
+        if (user == null) return RedirectToAction(nameof(Login));
+
+        if (string.IsNullOrEmpty(newPassword) || newPassword.Length < 6)
+        { TempData["PwError"] = "Mật khẩu mới tối thiểu 6 ký tự."; return RedirectToAction(nameof(Profile)); }
+        if (newPassword != confirmPassword)
+        { TempData["PwError"] = "Mật khẩu xác nhận không khớp."; return RedirectToAction(nameof(Profile)); }
+
+        // User đăng nhập Google có thể chưa có mật khẩu → dùng AddPassword
+        IdentityResult result = await _userManager.HasPasswordAsync(user)
+            ? await _userManager.ChangePasswordAsync(user, currentPassword ?? "", newPassword)
+            : await _userManager.AddPasswordAsync(user, newPassword);
+
+        if (result.Succeeded)
+        {
+            await _signInManager.RefreshSignInAsync(user);
+            TempData["PwMsg"] = "Đã đổi mật khẩu thành công.";
+        }
+        else
+        {
+            TempData["PwError"] = string.Join(" ", result.Errors.Select(e => e.Description));
+        }
+        return RedirectToAction(nameof(Profile));
     }
 
     [Authorize]

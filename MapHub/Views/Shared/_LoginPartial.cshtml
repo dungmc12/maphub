@@ -4,10 +4,10 @@
 
 @if (SignInManager.IsSignedIn(User))
 {
-    <div class="nav-user-pill">
+    <a asp-controller="Account" asp-action="Profile" class="nav-user-pill" style="text-decoration:none;color:inherit" title="Hồ sơ của tôi">
         <i class="bi bi-person-circle"></i>
         <span class="nav-user-name">@User.Identity?.Name</span>
-    </div>
+    </a>
     <form class="inline-form" asp-controller="Account" asp-action="Logout"
           asp-route-returnUrl="@Url.Action("Login", "Account")" method="post">
         <button type="submit" class="nav-logout-btn">
