@@ -63,6 +63,12 @@
                 </select>
             </div>
 
+            <!-- Time filter (giờ mở cửa) -->
+            <label style="display:flex;align-items:center;gap:.5rem;margin:.5rem .2rem .2rem;font-size:.88rem;cursor:pointer;color:#475569">
+                <input type="checkbox" id="openNowFilter" onchange="filterOpenNow(this.checked)" style="cursor:pointer">
+                🕐 Chỉ hiện địa điểm <strong>đang mở cửa</strong>
+            </label>
+
             @if (!isAuth)
             {
                 <div class="auth-nudge">
@@ -391,10 +397,46 @@ function createWeatherMarker(suitability) {
 
 // ── Data ──────────────────────────────────────────────────────────────────
 let currentBudget = '';
+let openNowOnly = false;
 
 function filterBudget(v) {
     currentBudget = v;
     loadPlaces(currentCat, document.getElementById('searchInput').value.trim());
+}
+
+function filterOpenNow(checked) {
+    openNowOnly = checked;
+    renderPlaces(allPlaces);   // lọc client-side, không cần tải lại
+}
+
+// Ước lượng giờ mở cửa theo LOẠI địa điểm (Place chưa lưu giờ riêng)
+function categoryHours(cat) {
+    switch ((cat || '').toLowerCase()) {
+        case 'hotel':         return { open: 0,  close: 24 };  // 24/24
+        case 'cafe':          return { open: 7,  close: 22 };
+        case 'restaurant':    return { open: 10, close: 22 };
+        case 'entertainment': return { open: 9,  close: 23 };
+        case 'nature':        return { open: 6,  close: 18 };
+        case 'temple':        return { open: 6,  close: 18 };
+        case 'culture':
+        case 'education':     return { open: 8,  close: 17 };
+        default:              return { open: 8,  close: 22 };
+    }
+}
+
+function isOpenNow(cat) {
+    const h = categoryHours(cat);
+    if (h.open === 0 && h.close >= 24) return true;            // mở cả ngày
+    const d = new Date();
+    const now = d.getHours() + d.getMinutes() / 60;
+    return now >= h.open && now < h.close;
+}
+
+function hoursLabel(cat) {
+    const h = categoryHours(cat);
+    if (h.open === 0 && h.close >= 24) return 'Mở cả ngày';
+    const f = n => String(n).padStart(2, '0') + ':00';
+    return `${f(h.open)}–${f(h.close)}`;
 }
 
 function loadPlaces(cat, q) {
@@ -429,13 +471,16 @@ function renderPlaces(list) {
     markers = [];
     const container = document.getElementById('placeList');
 
-    if (!list.length) {
+    // Lọc "đang mở cửa" (client-side)
+    const view = openNowOnly ? list.filter(p => isOpenNow(p.category)) : list;
+
+    if (!view.length) {
         container.innerHTML = '<p class="text-muted text-center p-3">Không tìm thấy địa điểm nào.</p>';
         return;
     }
 
     container.innerHTML = '';
-    list.forEach(p => {
+    view.forEach(p => {
         const suit = currentWeather
             ? getWeatherSuitability(currentWeather.weatherCode, p.category)
             : 'good';
@@ -460,6 +505,12 @@ function renderPlaces(list) {
             <div class="place-list-info">
                 <div class="place-list-name">${p.name}</div>
                 <div class="place-list-cat">${categoryLabel(p.category)} · 💰 ${priceLabel(p.minPrice, p.maxPrice)}</div>
+                <div class="place-list-cat" style="margin-top:2px">
+                    🕐 ${hoursLabel(p.category)} ·
+                    <span style="font-weight:700;color:${isOpenNow(p.category) ? '#16a34a' : '#dc2626'}">
+                        ${isOpenNow(p.category) ? 'Đang mở' : 'Đã đóng'}
+                    </span>
+                </div>
                 ${p.address ? `<div class="place-list-addr">📍 ${p.address}</div>` : ''}
                 <div class="place-list-footer">
                     <span class="place-list-rating">${p.rating > 0 ? '★ ' + p.rating : 'Chưa có đánh giá'}</span>
