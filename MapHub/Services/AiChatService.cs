@@ -45,10 +45,10 @@ public class AiChatService : IAiChatService
         if (string.IsNullOrWhiteSpace(options.ApiKey))
             return "AI chưa được cấu hình. Vui lòng liên hệ quản trị viên.";
 
-        // Chỉ dùng model đang hoạt động (2025)
-        var modelsToTry = new[] { "gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-2.5-flash" };
-        if (!string.IsNullOrWhiteSpace(options.Model) && options.Model != "gemini-2.0-flash")
-            modelsToTry = new[] { options.Model.Trim(), "gemini-2.0-flash", "gemini-2.0-flash-lite" };
+        // Model ưu tiên: 2.5-flash (hoạt động với free tier mới)
+        var modelsToTry = new[] { "gemini-2.5-flash", "gemini-2.0-flash", "gemini-2.0-flash-lite" };
+        if (!string.IsNullOrWhiteSpace(options.Model))
+            modelsToTry = new[] { options.Model.Trim(), "gemini-2.5-flash", "gemini-2.0-flash" };
 
         var requestBody = new
         {
