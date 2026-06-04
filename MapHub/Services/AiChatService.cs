@@ -56,7 +56,7 @@ public class AiChatService : IAiChatService
             generationConfig = new
             {
                 temperature = 0.4,
-                maxOutputTokens = 320
+                maxOutputTokens = 800
             }
         };
         var json = new StringContent(JsonSerializer.Serialize(requestBody), Encoding.UTF8, "application/json");
