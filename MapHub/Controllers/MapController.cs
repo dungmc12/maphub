@@ -228,6 +228,24 @@ public class MapController : Controller
         return RedirectToAction(nameof(Details), new { id = placeId });
     }
 
+    // Xóa đánh giá (chủ đánh giá hoặc Admin) — gọi AJAX, không cần load lại trang
+    [Authorize]
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> DeleteReview(int id)
+    {
+        var review = await _context.PlaceReviews.FindAsync(id);
+        if (review == null) return NotFound();
+
+        var currentUserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (review.UserId != currentUserId && !User.IsInRole("Admin"))
+            return Forbid();
+
+        _context.PlaceReviews.Remove(review);
+        await _context.SaveChangesAsync();
+        return Ok(new { success = true });
+    }
+
     [Authorize]
     [HttpGet]
     public async Task<IActionResult> MyPlaces()

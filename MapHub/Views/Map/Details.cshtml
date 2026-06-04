@@ -7,7 +7,10 @@
                      ? Math.Round(Model.Reviews.Where(r => r.FoodRating.HasValue).Average(r => r.FoodRating!.Value), 1) : 0.0;
     var attrGroups = Model.Attributes.GroupBy(a => a.GroupName).ToDictionary(g => g.Key, g => g.ToList());
     bool isRestaurantLike = new[]{"restaurant","cafe","nhà hàng","cà phê"}.Contains(Model.Category?.ToLower());
+    string? currentUserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+    bool isAdmin = User.IsInRole("Admin");
 }
+@Html.AntiForgeryToken()
 
 <div class="container-xl py-4">
     <div class="row g-4">
@@ -198,7 +201,7 @@
                 {
                     @foreach (var rv in Model.Reviews.OrderByDescending(r => r.CreatedAt))
                     {
-                        <div class="review-card">
+                        <div class="review-card" id="review-@rv.Id">
                             <div class="review-header">
                                 <div class="review-avatar"><i class="bi bi-person-fill" style="color:#6366f1"></i></div>
                                 <div>
@@ -208,6 +211,13 @@
                                 <div class="review-stars ms-auto">
                                     ★ @((rv.QualityRating + rv.ServiceRating) / 2.0)
                                 </div>
+                                @if (currentUserId == rv.UserId || isAdmin)
+                                {
+                                    <button type="button" onclick="deleteReview(@rv.Id, this)" title="Xóa đánh giá"
+                                            style="background:none;border:none;color:#dc2626;cursor:pointer;font-size:1rem;margin-left:.4rem">
+                                        🗑️
+                                    </button>
+                                }
                             </div>
                             <div class="review-ratings-row">
                                 <span>Chất lượng: <b>@rv.QualityRating/5</b></span>
@@ -379,6 +389,23 @@
 
 @section Scripts {
 <script>
+// Xóa đánh giá real-time (không reload trang)
+function deleteReview(id, btn) {
+    if (!confirm('Xóa đánh giá này?')) return;
+    const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
+    fetch('/Map/DeleteReview', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'RequestVerificationToken': token },
+        body: 'id=' + encodeURIComponent(id)
+    })
+    .then(r => {
+        if (!r.ok) throw new Error();
+        const card = document.getElementById('review-' + id);
+        if (card) { card.style.transition = 'opacity .2s'; card.style.opacity = '0'; setTimeout(() => card.remove(), 220); }
+    })
+    .catch(() => alert('Không xóa được đánh giá. Thử lại.'));
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     const lat = @Model.Latitude, lng = @Model.Longitude;
     const m = L.map('detailMiniMap', { zoomControl:false, dragging:false, scrollWheelZoom:false })
