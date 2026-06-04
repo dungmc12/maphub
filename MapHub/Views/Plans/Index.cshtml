@@ -242,11 +242,20 @@ async function generateAiPlan() {
         if (d.error) {
             result.innerHTML = `<div class="text-danger">${d.error}</div>`;
         } else {
-            result.innerHTML = `<div class="ai-plan-text">${d.plan.replace(/\n/g, '<br>')}</div>`;
+            result.innerHTML = `<div class="ai-plan-text">${formatPlan(d.plan)}</div>`;
         }
     } catch {
         result.innerHTML = '<div class="text-danger">Lỗi kết nối AI. Vui lòng thử lại.</div>';
     }
+}
+
+function formatPlan(text) {
+    return text
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+        .replace(/\[([^\]]+)\]\((\/[^)]+)\)/g,
+            '<a href="$2" style="color:#7c3aed;font-weight:600;text-decoration:underline">$1 🗺️</a>')
+        .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+        .replace(/\n/g, '<br>');
 }
 
 function showCopyMsg(input) {

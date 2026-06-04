@@ -214,9 +214,23 @@ public class PlansController : Controller
         if (!User.IsInRole("Pro") && !User.IsInRole("Admin"))
             return Json(new { error = "Tính năng này dành cho thành viên Pro. Vui lòng nâng cấp tài khoản!" });
 
-        var prompt = $"Hãy lập kế hoạch du lịch {request.Days} ngày tại {request.Destination} " +
-                     $"với sở thích: {request.Interests}. " +
-                     $"Trả lời theo dạng lịch trình theo giờ, ngắn gọn, thực tế, bằng tiếng Việt.";
+        // Lấy địa điểm từ DB phù hợp với destination
+        var places = await _context.Places
+            .Where(p => p.IsApproved && p.Visibility == "public")
+            .OrderByDescending(p => p.IsFeatured)
+            .Take(40)
+            .Select(p => new { p.Id, p.Name, p.Category, p.Address })
+            .ToListAsync(ct);
+
+        var placesCtx = string.Join("\n", places.Select(p =>
+            $"- ID={p.Id} | {p.Name} | {p.Category} | {p.Address}"));
+
+        var prompt = $"[DỮ LIỆU ĐỊA ĐIỂM TRONG APP]\n{placesCtx}\n\n" +
+                     $"Hãy lập kế hoạch {request.Days} ngày tại/gần {request.Destination} " +
+                     $"với sở thích: {request.Interests}.\n" +
+                     $"Chia rõ từng ngày, từng buổi (Sáng/Trưa/Chiều/Tối).\n" +
+                     $"Với mỗi địa điểm PHẢI dùng link: [Tên](/Map/Details/ID)\n" +
+                     $"Nếu không có địa điểm phù hợp trong danh sách, gợi ý địa điểm gần nhất có thể.";
 
         var result = await _aiChat.AskAsync(prompt, ct);
         return Json(new { plan = result });

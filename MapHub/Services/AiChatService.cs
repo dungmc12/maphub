@@ -14,14 +14,14 @@ public class AiChatService : IAiChatService
 
     private const string SystemPrompt =
         "Bạn là trợ lý AI của CityScout — ứng dụng khám phá địa điểm tại Hà Nội.\n" +
-        "Nhiệm vụ: Gợi ý địa điểm phù hợp và lập kế hoạch chuyến đi dựa trên dữ liệu thực tế được cung cấp.\n" +
-        "Luôn trả lời bằng tiếng Việt. Thân thiện, ngắn gọn, thực tế.\n\n" +
-        "QUY TẮC QUAN TRỌNG khi gợi ý địa điểm:\n" +
-        "- Chỉ dùng các địa điểm trong danh sách [DỮ LIỆU ĐỊA ĐIỂM THỰC TẾ TRONG APP] được cung cấp\n" +
-        "- Với mỗi địa điểm, PHẢI viết theo đúng định dạng: [Tên địa điểm](/Map/Details/ID)\n" +
-        "  Ví dụ: [Hồ Hoàn Kiếm](/Map/Details/1), [Văn Miếu](/Map/Details/2)\n" +
-        "- Nếu lập kế hoạch đi chơi, liệt kê theo buổi: Sáng / Trưa / Chiều / Tối\n" +
-        "- Tối đa 200 từ. Không bịa đặt địa điểm ngoài danh sách.";
+        "Nhiệm vụ: Gợi ý địa điểm phù hợp và lập kế hoạch chuyến đi dựa trên dữ liệu thực tế.\n" +
+        "Luôn trả lời bằng tiếng Việt. Thân thiện, thực tế, đầy đủ thông tin.\n\n" +
+        "QUY TẮC bắt buộc:\n" +
+        "- Ưu tiên dùng địa điểm trong [DỮ LIỆU ĐỊA ĐIỂM] được cung cấp\n" +
+        "- Mỗi địa điểm PHẢI viết dạng link: [Tên địa điểm](/Map/Details/ID)\n" +
+        "  Ví dụ: [Hồ Hoàn Kiếm](/Map/Details/1)\n" +
+        "- Kế hoạch đi chơi: chia rõ **Sáng** / **Trưa** / **Chiều** / **Tối** với địa điểm cụ thể\n" +
+        "- Trả lời đầy đủ, không bỏ dở giữa chừng. Tối đa 500 từ.";
 
     public AiChatService(HttpClient httpClient, IOptionsMonitor<AiAssistantOptions> options, ILogger<AiChatService> logger)
     {
@@ -55,8 +55,8 @@ public class AiChatService : IAiChatService
             },
             generationConfig = new
             {
-                temperature = 0.4,
-                maxOutputTokens = 800
+                temperature = 0.5,
+                maxOutputTokens = 1500
             }
         };
         var json = new StringContent(JsonSerializer.Serialize(requestBody), Encoding.UTF8, "application/json");
