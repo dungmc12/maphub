@@ -70,6 +70,22 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.AccessDeniedPath = "/Account/Login";
 });
 
+// Google OAuth
+var googleClientId     = builder.Configuration["Google:ClientId"]
+                         ?? Environment.GetEnvironmentVariable("Google__ClientId") ?? "";
+var googleClientSecret = builder.Configuration["Google:ClientSecret"]
+                         ?? Environment.GetEnvironmentVariable("Google__ClientSecret") ?? "";
+if (!string.IsNullOrWhiteSpace(googleClientId))
+{
+    builder.Services.AddAuthentication()
+        .AddGoogle(o =>
+        {
+            o.ClientId     = googleClientId;
+            o.ClientSecret = googleClientSecret;
+            o.CallbackPath = "/signin-google";
+        });
+}
+
 builder.Services.AddHttpClient<IAiSuggestionService, AiSuggestionService>();
 builder.Services.AddHttpClient<IAiChatService, AiChatService>();
 builder.Services.AddHttpClient<IWeatherService, WeatherService>();

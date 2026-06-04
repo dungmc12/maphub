@@ -116,6 +116,58 @@ public class AccountController : Controller
         return View(model);
     }
 
+    // Đăng nhập bằng Google
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public IActionResult GoogleLogin(string? returnUrl = null)
+    {
+        var redirectUrl = Url.Action(nameof(GoogleCallback), "Account", new { returnUrl });
+        var props = _signInManager.ConfigureExternalAuthenticationProperties("Google", redirectUrl);
+        return Challenge(props, "Google");
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> GoogleCallback(string? returnUrl = null, string? remoteError = null)
+    {
+        if (remoteError != null)
+        {
+            ModelState.AddModelError(string.Empty, $"Lỗi từ Google: {remoteError}");
+            return View("Login");
+        }
+
+        var info = await _signInManager.GetExternalLoginInfoAsync();
+        if (info == null) return RedirectToAction(nameof(Login));
+
+        // Thử login bằng external account đã liên kết
+        var result = await _signInManager.ExternalLoginSignInAsync(info.LoginProvider, info.ProviderKey, isPersistent: false);
+        if (result.Succeeded)
+            return LocalRedirect(NormalizeReturnUrl(returnUrl));
+
+        // Chưa có tài khoản → tự tạo từ thông tin Google
+        var email = info.Principal.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value ?? "";
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            ModelState.AddModelError(string.Empty, "Không lấy được email từ Google.");
+            return View("Login");
+        }
+
+        var user = await _userManager.FindByEmailAsync(email);
+        if (user == null)
+        {
+            user = new ApplicationUser { UserName = email, Email = email, EmailConfirmed = true };
+            var createResult = await _userManager.CreateAsync(user);
+            if (!createResult.Succeeded)
+            {
+                ModelState.AddModelError(string.Empty, "Không thể tạo tài khoản.");
+                return View("Login");
+            }
+        }
+
+        await _userManager.AddLoginAsync(user, info);
+        await _signInManager.SignInAsync(user, isPersistent: false);
+        return LocalRedirect(NormalizeReturnUrl(returnUrl));
+    }
+
     [Authorize]
     [HttpPost]
     [ValidateAntiForgeryToken]

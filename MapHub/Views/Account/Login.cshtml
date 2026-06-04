@@ -7,23 +7,53 @@
     <article class="auth-card">
         <p class="eyebrow">Chào mừng quay lại</p>
         <h1>Đăng nhập CityScout</h1>
-        <p class="subtitle">Đăng nhập để xem bản đồ và dữ liệu điểm riêng theo tài khoản của bạn.</p>
+
+        <!-- Đăng nhập bằng Google -->
+        <form asp-action="GoogleLogin" method="post" class="mb-3">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="returnUrl" value="@Model.ReturnUrl" />
+            <button type="submit" style="width:100%;display:flex;align-items:center;justify-content:center;gap:.6rem;
+                padding:.7rem 1rem;border:1.5px solid #e2e8f0;border-radius:12px;background:#fff;
+                font-weight:600;font-size:.92rem;cursor:pointer;transition:all .15s;"
+                onmouseover="this.style.borderColor='#4285f4';this.style.background='#f8f9ff'"
+                onmouseout="this.style.borderColor='#e2e8f0';this.style.background='#fff'">
+                <svg width="20" height="20" viewBox="0 0 48 48">
+                    <path fill="#4285F4" d="M44.5 20H24v8.5h11.8C34.7 33.9 30.1 37 24 37c-7.2 0-13-5.8-13-13s5.8-13 13-13c3.1 0 5.9 1.1 8.1 2.9l6.4-6.4C34.6 4.1 29.6 2 24 2 11.8 2 2 11.8 2 24s9.8 22 22 22c11 0 21-8 21-22 0-1.3-.2-2.7-.5-4z"/>
+                    <path fill="#34A853" d="M6.3 14.7l7 5.1C15.1 16.1 19.2 13 24 13c3.1 0 5.9 1.1 8.1 2.9l6.4-6.4C34.6 4.1 29.6 2 24 2 16.3 2 9.7 7.4 6.3 14.7z"/>
+                    <path fill="#FBBC05" d="M24 46c5.5 0 10.5-1.9 14.3-5l-6.6-5.4C29.6 37.3 27 38 24 38c-6 0-11.1-4-12.9-9.5l-7 5.4C7.9 41.9 15.3 46 24 46z"/>
+                    <path fill="#EA4335" d="M44.5 20H24v8.5h11.8c-.8 2.3-2.3 4.2-4.3 5.5l6.6 5.4C42 36.3 45 31 45 24c0-1.3-.2-2.7-.5-4z"/>
+                </svg>
+                Đăng nhập bằng Google
+            </button>
+        </form>
+
+        <div style="display:flex;align-items:center;gap:.75rem;margin:.5rem 0">
+            <hr style="flex:1;border-color:#e5e7eb"><span style="font-size:.8rem;color:#94a3b8">hoặc</span>
+            <hr style="flex:1;border-color:#e5e7eb">
+        </div>
 
         <form asp-action="Login" method="post" class="auth-form">
             <input type="hidden" asp-for="ReturnUrl" />
             <div asp-validation-summary="ModelOnly" class="validation"></div>
 
-            <label asp-for="Email"></label>
-            <input asp-for="Email" autocomplete="username" />
+            <label asp-for="Email">Email Gmail</label>
+            <input asp-for="Email" autocomplete="username" placeholder="ten@gmail.com" />
             <span asp-validation-for="Email" class="validation"></span>
 
-            <label asp-for="Password"></label>
-            <input asp-for="Password" autocomplete="current-password" />
+            <label asp-for="Password">Mật khẩu</label>
+            <div style="position:relative">
+                <input asp-for="Password" id="loginPwd" autocomplete="current-password" style="padding-right:2.5rem" />
+                <button type="button" onclick="togglePwd('loginPwd',this)"
+                    style="position:absolute;right:.6rem;top:50%;transform:translateY(-50%);
+                    background:none;border:none;cursor:pointer;color:#94a3b8;padding:.2rem">
+                    <i class="bi bi-eye" id="loginPwdIcon"></i>
+                </button>
+            </div>
             <span asp-validation-for="Password" class="validation"></span>
 
             <label class="checkbox-field">
                 <input asp-for="RememberMe" />
-                <span>Ghi nhớ đăng nhập trên thiết bị này</span>
+                <span>Ghi nhớ đăng nhập</span>
             </label>
 
             <button type="submit" class="btn-accent">Đăng nhập</button>
@@ -38,4 +68,17 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script>
+    function togglePwd(id, btn) {
+        var inp = document.getElementById(id);
+        var icon = btn.querySelector('i');
+        if (inp.type === 'password') {
+            inp.type = 'text';
+            icon.className = 'bi bi-eye-slash';
+        } else {
+            inp.type = 'password';
+            icon.className = 'bi bi-eye';
+        }
+    }
+    </script>
 }
