@@ -37,10 +37,10 @@ public class AiChatService : IAiChatService
         if (apiKeys.Count == 0)
             return "AI chưa được cấu hình. Vui lòng liên hệ quản trị viên.";
 
-        // Model ưu tiên: alias "-latest" có quota free tier riêng, ổn định cho cả key AIza lẫn AQ
-        var modelsToTry = new[] { "gemini-flash-latest", "gemini-flash-lite-latest" };
+        // Model ưu tiên: gemini-3.1-flash-lite (500 req/ngày free), fallback sang alias "-latest"
+        var modelsToTry = new[] { "gemini-3.1-flash-lite", "gemini-flash-lite-latest", "gemini-flash-latest" };
         if (!string.IsNullOrWhiteSpace(options.Model))
-            modelsToTry = new[] { options.Model.Trim(), "gemini-flash-latest", "gemini-flash-lite-latest" }
+            modelsToTry = new[] { options.Model.Trim(), "gemini-3.1-flash-lite", "gemini-flash-lite-latest", "gemini-flash-latest" }
                 .Distinct().ToArray();
 
         var requestBody = new

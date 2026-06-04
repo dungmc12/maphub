@@ -54,7 +54,7 @@ builder.Services.PostConfigure<AiAssistantOptions>(options =>
     var deadModels = new[] { "gemini-2.0-flash", "gemini-2.5-flash", "gemini-2.0-flash-lite", "gemini-1.5-flash", "gemini-pro" };
     if (string.IsNullOrWhiteSpace(options.Model) ||
         deadModels.Contains(options.Model.Trim(), StringComparer.OrdinalIgnoreCase))
-        options.Model = "gemini-flash-latest";
+        options.Model = "gemini-3.1-flash-lite";
 });
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
