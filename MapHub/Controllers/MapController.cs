@@ -279,6 +279,69 @@ public class MapController : Controller
         TempData["Success"] = $"Đã xóa địa điểm \"{place.Name}\".";
         return RedirectToAction(nameof(MyPlaces));
     }
+
+    // Sửa địa điểm cá nhân của chính mình
+    [Authorize]
+    [HttpGet]
+    public async Task<IActionResult> EditMyPlace(int id)
+    {
+        var currentUserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        var place = await _context.Places.Include(p => p.Images).FirstOrDefaultAsync(p => p.Id == id);
+        if (place == null) return NotFound();
+        if (place.CreatedByUserId != currentUserId && !User.IsInRole("Admin")) return Forbid();
+        return View(place);
+    }
+
+    [Authorize]
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> EditMyPlace(int id, string name, string? category, string? about,
+        string? address, string? phone, decimal? minPrice, decimal? maxPrice, string visibility,
+        decimal latitude, decimal longitude, string? newImageUrl, IFormFile? imageFile)
+    {
+        var currentUserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        var place = await _context.Places.Include(p => p.Images).FirstOrDefaultAsync(p => p.Id == id);
+        if (place == null) return NotFound();
+        if (place.CreatedByUserId != currentUserId && !User.IsInRole("Admin")) return Forbid();
+
+        place.Name       = name;
+        place.Category   = category;
+        place.About      = about;
+        place.Address    = address;
+        place.Phone      = phone;
+        place.MinPrice   = minPrice;
+        place.MaxPrice   = maxPrice;
+        place.Visibility = visibility;
+        if (latitude != 0 && longitude != 0) { place.Latitude = latitude; place.Longitude = longitude; }
+        place.UpdatedAt  = DateTime.UtcNow;
+
+        string? resolvedUrl = null;
+        if (imageFile != null && imageFile.Length > 0)
+        {
+            var ext = Path.GetExtension(imageFile.FileName).ToLowerInvariant();
+            if (new[] { ".jpg", ".jpeg", ".png", ".webp" }.Contains(ext))
+            {
+                var folder = Path.Combine(_env.WebRootPath, "uploads", "places", place.Id.ToString());
+                Directory.CreateDirectory(folder);
+                var fileName = $"{Guid.NewGuid()}{ext}";
+                using var fs = new FileStream(Path.Combine(folder, fileName), FileMode.Create);
+                await imageFile.CopyToAsync(fs);
+                resolvedUrl = $"/uploads/places/{place.Id}/{fileName}";
+            }
+        }
+        else if (!string.IsNullOrWhiteSpace(newImageUrl))
+            resolvedUrl = newImageUrl;
+        if (resolvedUrl != null)
+        {
+            var primary = place.Images.FirstOrDefault(i => i.IsPrimary);
+            if (primary != null) primary.Url = resolvedUrl;
+            else _context.PlaceImages.Add(new PlaceImage { PlaceId = place.Id, Url = resolvedUrl, IsPrimary = true, UploadedByUserId = currentUserId });
+        }
+
+        await _context.SaveChangesAsync();
+        TempData["Success"] = $"Đã cập nhật \"{place.Name}\".";
+        return RedirectToAction(nameof(MyPlaces));
+    }
 }
 
 public class PlaceDto

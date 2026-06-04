@@ -38,6 +38,9 @@
                 </a>
                 @if (User.Identity?.IsAuthenticated == true)
                 {
+                    <a asp-controller="Map" asp-action="MyPlaces" class="nav-item @(ViewContext.RouteData.Values["action"]?.ToString() == "MyPlaces" ? "nav-item-active" : "")">
+                        <i class="bi bi-geo-alt-fill" style="color:#ef4444"></i><span>Địa điểm của tôi</span>
+                    </a>
                     <a asp-controller="Plans" asp-action="Index" class="nav-item @(ctrl == "Plans" ? "nav-item-active" : "")">
                         <i class="bi bi-calendar-week-fill" style="color:#8b5cf6"></i><span>Kế hoạch</span>
                     </a>

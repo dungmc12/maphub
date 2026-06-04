@@ -172,15 +172,23 @@ else if (isAuth)
                         <div class="col-md-5">
                             <label class="form-label fw-semibold">Danh mục</label>
                             <select id="newCategory" class="form-select">
-                                <option value="restaurant">🍽️ Nhà hàng</option>
-                                <option value="cafe">☕ Cà phê</option>
-                                <option value="entertainment">🎯 Vui chơi</option>
-                                <option value="hotel">🏨 Lưu trú</option>
-                                <option value="culture">🏛️ Văn hóa / Bảo tàng</option>
-                                <option value="temple">🛕 Tâm linh</option>
-                                <option value="nature">🌿 Thiên nhiên</option>
-                                <option value="education">🎓 Giáo dục</option>
-                                <option value="other">📌 Khác</option>
+                                <optgroup label="Cá nhân">
+                                    <option value="home">🏠 Nhà riêng</option>
+                                    <option value="work">🏢 Công ty</option>
+                                    <option value="school">🏫 Trường học</option>
+                                    <option value="favorite">❤️ Quán ăn yêu thích</option>
+                                </optgroup>
+                                <optgroup label="Công khai">
+                                    <option value="restaurant">🍽️ Nhà hàng</option>
+                                    <option value="cafe">☕ Cà phê</option>
+                                    <option value="entertainment">🎯 Vui chơi</option>
+                                    <option value="hotel">🏨 Lưu trú</option>
+                                    <option value="culture">🏛️ Văn hóa / Bảo tàng</option>
+                                    <option value="temple">🛕 Tâm linh</option>
+                                    <option value="nature">🌿 Thiên nhiên</option>
+                                    <option value="education">🎓 Giáo dục</option>
+                                    <option value="other">📌 Khác</option>
+                                </optgroup>
                             </select>
                         </div>
                         <!-- Địa chỉ & Điện thoại -->
@@ -579,7 +587,8 @@ function renderPlaces(list) {
 function categoryLabel(cat) {
     const map = { restaurant:'🍽️ Nhà hàng', cafe:'☕ Cà phê', entertainment:'🎯 Vui chơi',
                   hotel:'🏨 Lưu trú', culture:'🏛️ Văn hóa', temple:'🛕 Tâm linh',
-                  nature:'🌿 Thiên nhiên', education:'🎓 Giáo dục' };
+                  nature:'🌿 Thiên nhiên', education:'🎓 Giáo dục',
+                  home:'🏠 Nhà riêng', work:'🏢 Công ty', school:'🏫 Trường học', favorite:'❤️ Quán yêu thích' };
     return map[cat?.toLowerCase()] || ('📌 ' + (cat || 'Khác'));
 }
 

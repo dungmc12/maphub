@@ -44,11 +44,40 @@
     }
     else
     {
-        <div class="row g-3">
+        <div class="d-flex flex-wrap gap-2 mb-3">
+            <input type="text" id="searchMy" class="form-control" style="max-width:260px"
+                   placeholder="🔍 Tìm theo tên..." oninput="filterMy()">
+            <select id="catMy" class="form-select" style="max-width:190px" onchange="filterMy()">
+                <option value="">Mọi danh mục</option>
+                <option value="home">🏠 Nhà riêng</option>
+                <option value="work">🏢 Công ty</option>
+                <option value="school">🏫 Trường học</option>
+                <option value="favorite">❤️ Quán yêu thích</option>
+                <option value="restaurant">🍽️ Nhà hàng</option>
+                <option value="cafe">☕ Cà phê</option>
+                <option value="entertainment">🎯 Vui chơi</option>
+                <option value="hotel">🏨 Lưu trú</option>
+                <option value="culture">🏛️ Văn hóa</option>
+                <option value="temple">🛕 Tâm linh</option>
+                <option value="nature">🌿 Thiên nhiên</option>
+                <option value="education">🎓 Giáo dục</option>
+                <option value="other">📌 Khác</option>
+            </select>
+            <select id="sortMy" class="form-select" style="max-width:150px" onchange="sortMy()">
+                <option value="new">Mới nhất</option>
+                <option value="old">Cũ nhất</option>
+                <option value="name">Tên A→Z</option>
+            </select>
+        </div>
+
+        <div class="row g-3" id="placeGrid">
             @foreach (var p in Model)
             {
                 var img = p.Images.FirstOrDefault()?.Url ?? "https://placehold.co/400x250?text=No+Image";
-                <div class="col-md-4 col-sm-6">
+                var inv = System.Globalization.CultureInfo.InvariantCulture;
+                var dir = $"https://www.google.com/maps/dir/?api=1&destination={p.Latitude.ToString(inv)},{p.Longitude.ToString(inv)}";
+                var delMsg = $"Xóa địa điểm \"{p.Name}\"? Hành động này không thể hoàn tác.";
+                <div class="col-md-4 col-sm-6 my-place-card" data-name="@p.Name.ToLower()" data-cat="@(p.Category?.ToLower())" data-created="@p.CreatedAt.Ticks">
                     <div class="plan-card" style="overflow:hidden">
                         <img src="@img" alt="@p.Name"
                              style="width:100%;height:160px;object-fit:cover;border-radius:10px 10px 0 0">
@@ -57,15 +86,19 @@
                             <div class="text-muted small mb-1">
                                 @switch(p.Category?.ToLower())
                                 {
-                                    case "restaurant":    <text>🍽️ Nhà hàng</text>    break;
-                                    case "cafe":          <text>☕ Cà phê</text>         break;
-                                    case "entertainment": <text>🎯 Vui chơi</text>       break;
-                                    case "hotel":         <text>🏨 Lưu trú</text>        break;
-                                    case "culture":       <text>🏛️ Văn hóa</text>       break;
-                                    case "temple":        <text>🛕 Tâm linh</text>       break;
-                                    case "nature":        <text>🌿 Thiên nhiên</text>    break;
-                                    case "education":     <text>🎓 Giáo dục</text>       break;
-                                    default:              <text>📌 @p.Category</text>    break;
+                                    case "home":          <text>🏠 Nhà riêng</text>      break;
+                                    case "work":          <text>🏢 Công ty</text>        break;
+                                    case "school":        <text>🏫 Trường học</text>     break;
+                                    case "favorite":      <text>❤️ Quán yêu thích</text> break;
+                                    case "restaurant":    <text>🍽️ Nhà hàng</text>     break;
+                                    case "cafe":          <text>☕ Cà phê</text>          break;
+                                    case "entertainment": <text>🎯 Vui chơi</text>        break;
+                                    case "hotel":         <text>🏨 Lưu trú</text>         break;
+                                    case "culture":       <text>🏛️ Văn hóa</text>        break;
+                                    case "temple":        <text>🛕 Tâm linh</text>        break;
+                                    case "nature":        <text>🌿 Thiên nhiên</text>     break;
+                                    case "education":     <text>🎓 Giáo dục</text>        break;
+                                    default:              <text>📌 @p.Category</text>     break;
                                 }
                             </div>
                             @if (!string.IsNullOrEmpty(p.Address))
@@ -73,22 +106,21 @@
                                 <div class="text-muted small">📍 @p.Address</div>
                             }
                             <div class="mt-2 mb-1">
-                                @if (p.IsApproved)
-                                { <span class="badge bg-success">✓ Đã duyệt</span> }
-                                else if (p.Visibility == "public")
-                                { <span class="badge bg-warning text-dark">⏳ Chờ duyệt</span> }
+                                @if (p.Visibility == "public")
+                                { <span class="badge bg-success">🌍 Công khai</span> }
                                 else
                                 { <span class="badge bg-secondary">🔒 Cá nhân</span> }
                             </div>
-                            <div class="d-flex gap-2 mt-2">
-                                <a href="/Map/Details/@p.Id" class="btn btn-sm btn-outline-secondary flex-grow-1">👁️ Xem</a>
-                                @{ var myDelMsg = $"Xóa địa điểm \"{p.Name}\"? Hành động này không thể hoàn tác."; }
+                            <div class="d-flex gap-1 mt-2 flex-wrap align-items-center">
+                                <a href="/Map/Details/@p.Id" class="btn btn-sm btn-outline-secondary" title="Xem">👁️</a>
+                                <a href="/Map/EditMyPlace/@p.Id" class="btn btn-sm btn-outline-primary" title="Sửa">✏️</a>
+                                <a href="@dir" target="_blank" rel="noopener" class="btn btn-sm btn-outline-success" title="Chỉ đường (Google Maps)">🧭</a>
                                 <form method="post" action="/Map/DeleteMyPlace"
-                                      onsubmit="return confirm(this.dataset.msg)" data-msg="@myDelMsg"
-                                      class="d-inline">
+                                      onsubmit="return confirm(this.dataset.msg)" data-msg="@delMsg"
+                                      class="d-inline ms-auto">
                                     @Html.AntiForgeryToken()
                                     <input type="hidden" name="id" value="@p.Id">
-                                    <button type="submit" class="btn btn-sm btn-outline-danger">🗑️</button>
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Xóa">🗑️</button>
                                 </form>
                             </div>
                         </div>
@@ -96,5 +128,37 @@
                 </div>
             }
         </div>
+        <p id="noMyResult" class="text-muted text-center p-4" style="display:none">Không tìm thấy địa điểm nào.</p>
     }
 </div>
+
+@section Scripts {
+<script>
+function filterMy() {
+    const q   = (document.getElementById('searchMy').value || '').toLowerCase().trim();
+    const cat = document.getElementById('catMy').value;
+    let shown = 0;
+    document.querySelectorAll('.my-place-card').forEach(card => {
+        const okName = !q || (card.dataset.name || '').includes(q);
+        const okCat  = !cat || card.dataset.cat === cat;
+        const ok = okName && okCat;
+        card.style.display = ok ? '' : 'none';
+        if (ok) shown++;
+    });
+    const none = document.getElementById('noMyResult');
+    if (none) none.style.display = shown ? 'none' : 'block';
+}
+
+function sortMy() {
+    const mode = document.getElementById('sortMy').value;
+    const grid = document.getElementById('placeGrid');
+    const cards = Array.from(grid.querySelectorAll('.my-place-card'));
+    cards.sort((a, b) => {
+        if (mode === 'name') return (a.dataset.name || '').localeCompare(b.dataset.name || '');
+        const ca = Number(a.dataset.created || 0), cb = Number(b.dataset.created || 0);
+        return mode === 'old' ? ca - cb : cb - ca;
+    });
+    cards.forEach(c => grid.appendChild(c));
+}
+</script>
+}

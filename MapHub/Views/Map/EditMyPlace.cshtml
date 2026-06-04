@@ -1,0 +1,121 @@
+@model MapHub.Models.Place
+@{
+    ViewData["Title"] = "Sửa địa điểm cá nhân";
+    var primary = Model.Images.FirstOrDefault(i => i.IsPrimary) ?? Model.Images.FirstOrDefault();
+    var cats = new[] {
+        ("home","🏠 Nhà riêng"), ("work","🏢 Công ty"), ("school","🏫 Trường học"),
+        ("favorite","❤️ Quán ăn yêu thích"),
+        ("restaurant","🍽️ Nhà hàng"), ("cafe","☕ Cà phê"), ("entertainment","🎯 Vui chơi"),
+        ("hotel","🏨 Lưu trú"), ("culture","🏛️ Văn hóa"), ("temple","🛕 Tâm linh"),
+        ("nature","🌿 Thiên nhiên"), ("education","🎓 Giáo dục"), ("other","📌 Khác")
+    };
+}
+
+<div class="container-xl py-4" style="max-width:760px">
+    <a href="/Map/MyPlaces" class="back-link">← Địa điểm của tôi</a>
+    <h2 class="mt-3 mb-4">✏️ Sửa địa điểm <small class="text-muted fs-6">#@Model.Id</small></h2>
+
+    <form method="post" action="/Map/EditMyPlace/@Model.Id" enctype="multipart/form-data">
+        @Html.AntiForgeryToken()
+        <div class="info-card mb-3">
+            <div class="row g-3">
+                <div class="col-md-8">
+                    <label class="form-label fw-semibold">Tên địa điểm *</label>
+                    <input type="text" name="name" class="form-control" required value="@Model.Name">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold">Danh mục</label>
+                    <select name="category" class="form-select">
+                        @foreach (var c in cats)
+                        {
+                            <option value="@c.Item1" selected="@(Model.Category == c.Item1)">@c.Item2</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-12">
+                    <label class="form-label fw-semibold">Địa chỉ</label>
+                    <input type="text" name="address" class="form-control" value="@Model.Address">
+                </div>
+                <div class="col-12">
+                    <label class="form-label fw-semibold">Mô tả / Ghi chú</label>
+                    <textarea name="about" class="form-control" rows="3">@Model.About</textarea>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold">Điện thoại</label>
+                    <input type="text" name="phone" class="form-control" value="@Model.Phone">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold">Giá từ (đ)</label>
+                    <input type="number" name="minPrice" class="form-control" value="@Model.MinPrice">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold">Giá đến (đ)</label>
+                    <input type="number" name="maxPrice" class="form-control" value="@Model.MaxPrice">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">Quyền xem</label>
+                    <select name="visibility" class="form-select">
+                        <option value="private" selected="@(Model.Visibility == "private")">🔒 Cá nhân (chỉ tôi)</option>
+                        <option value="public"  selected="@(Model.Visibility == "public")">🌍 Công khai</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">Tọa độ</label>
+                    <div class="input-group">
+                        <input type="text" name="latitude"  id="editLat" class="form-control" value="@Model.Latitude"  oninput="syncEditMarker()">
+                        <input type="text" name="longitude" id="editLng" class="form-control" value="@Model.Longitude" oninput="syncEditMarker()">
+                    </div>
+                    <small class="text-muted">Click bản đồ hoặc gõ trực tiếp</small>
+                </div>
+                <div class="col-12">
+                    <div id="editMiniMap" style="height:240px;border-radius:10px;overflow:hidden"></div>
+                </div>
+                <div class="col-12">
+                    <label class="form-label fw-semibold">Ảnh đại diện</label>
+                    <img id="imgPreview" src="@(primary?.Url)" alt=""
+                         style="max-height:120px;border-radius:8px;margin-bottom:8px;@(primary == null ? "display:none" : "display:block")">
+                    <input type="file" name="imageFile" class="form-control mb-2" accept="image/*" onchange="previewImg(this)">
+                    <input type="url" name="newImageUrl" class="form-control" placeholder="Hoặc URL ảnh mới (để trống = giữ nguyên)">
+                </div>
+            </div>
+        </div>
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn-accent">💾 Lưu thay đổi</button>
+            <a href="/Map/Details/@Model.Id" class="btn-ghost" target="_blank">👁️ Xem</a>
+            <a href="/Map/MyPlaces" class="btn-ghost">Hủy</a>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+<script>
+let editMap, editMarker;
+document.addEventListener('DOMContentLoaded', () => {
+    const lat = parseFloat(document.getElementById('editLat').value) || 21.0285;
+    const lng = parseFloat(document.getElementById('editLng').value) || 105.8542;
+    editMap = L.map('editMiniMap').setView([lat, lng], 15);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(editMap);
+    editMarker = L.marker([lat, lng]).addTo(editMap);
+    editMap.on('click', e => {
+        document.getElementById('editLat').value = e.latlng.lat.toFixed(6);
+        document.getElementById('editLng').value = e.latlng.lng.toFixed(6);
+        editMarker.setLatLng(e.latlng);
+    });
+});
+function syncEditMarker() {
+    const lat = parseFloat(document.getElementById('editLat').value);
+    const lng = parseFloat(document.getElementById('editLng').value);
+    if (isNaN(lat) || isNaN(lng) || !editMap) return;
+    editMarker.setLatLng([lat, lng]);
+    editMap.setView([lat, lng]);
+}
+function previewImg(input) {
+    const preview = document.getElementById('imgPreview');
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = e => { preview.src = e.target.result; preview.style.display = 'block'; };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+</script>
+}
