@@ -48,7 +48,12 @@ builder.Services.PostConfigure<AiAssistantOptions>(options =>
 {
     if (string.IsNullOrWhiteSpace(options.ApiKey))
         options.ApiKey = Environment.GetEnvironmentVariable("AI__ApiKey") ?? string.Empty;
-    if (string.IsNullOrWhiteSpace(options.Model))
+
+    // Ép về alias còn quota nếu Model trống hoặc là model free-tier đã cạn
+    // (tránh phải sửa env AI__Model trên Render nếu nó còn để giá trị cũ)
+    var deadModels = new[] { "gemini-2.0-flash", "gemini-2.5-flash", "gemini-2.0-flash-lite", "gemini-1.5-flash", "gemini-pro" };
+    if (string.IsNullOrWhiteSpace(options.Model) ||
+        deadModels.Contains(options.Model.Trim(), StringComparer.OrdinalIgnoreCase))
         options.Model = "gemini-flash-latest";
 });
 
