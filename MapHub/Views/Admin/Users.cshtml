@@ -3,6 +3,8 @@
     ViewData["Title"] = "Admin – Người dùng";
     var userRoles   = (Dictionary<string, IList<string>>)ViewBag.UserRoles;
     var placeCounts = (Dictionary<string, int>)ViewBag.PlaceCounts;
+    var proUserIds   = ViewBag.ProUserIds   as HashSet<string> ?? new HashSet<string>();
+    var adminUserIds = ViewBag.AdminUserIds as HashSet<string> ?? new HashSet<string>();
     string? q = ViewBag.Q as string;
     string? currentUserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
 }
@@ -50,8 +52,9 @@
                 {
                     var roles = userRoles.TryGetValue(u.Id, out var r) ? r : new List<string>();
                     var placeCount = placeCounts.TryGetValue(u.Id, out var c) ? c : 0;
-                    var isAdmin = roles.Contains("Admin");
-                    var isPro   = roles.Contains("Pro");
+                    // Trạng thái thật = role HOẶC profile (để thấy đúng cả khi 2 nguồn lệch nhau)
+                    var isAdmin = roles.Contains("Admin") || adminUserIds.Contains(u.Id);
+                    var isPro   = roles.Contains("Pro")   || proUserIds.Contains(u.Id);
                     var isSelf  = u.Id == currentUserId;
 
                     <tr class="@(isSelf ? "admin-row-self" : "")">

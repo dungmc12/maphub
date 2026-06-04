@@ -412,8 +412,20 @@ public class AdminController : Controller
             .Select(g => new { UserId = g.Key, Count = g.Count() })
             .ToDictionaryAsync(x => x.UserId, x => x.Count);
 
+        // Trạng thái Pro/Admin THẬT theo UserProfile (cái user thực sự đang hưởng) — để admin
+        // thấy đúng kể cả khi role & profile lệch nhau, và bấm "Bỏ Pro" sửa được.
+        var now = DateTime.UtcNow;
+        var proUserIds = (await _context.UserProfiles
+            .Where(p => p.Tier == "pro" && (p.ProExpiresAt == null || p.ProExpiresAt > now))
+            .Select(p => p.UserId).ToListAsync()).ToHashSet();
+        var adminUserIds = (await _context.UserProfiles
+            .Where(p => p.Tier == "admin")
+            .Select(p => p.UserId).ToListAsync()).ToHashSet();
+
         ViewBag.UserRoles   = userRoles;
         ViewBag.PlaceCounts = placeCounts;
+        ViewBag.ProUserIds   = proUserIds;
+        ViewBag.AdminUserIds = adminUserIds;
         ViewBag.Q           = q;
         return View(users);
     }
@@ -436,6 +448,44 @@ public class AdminController : Controller
 
         if (role == "Pro")   await _userManager.AddToRoleAsync(user, "Pro");
         if (role == "Admin") await _userManager.AddToRoleAsync(user, "Admin");
+
+        // QUAN TRỌNG: đồng bộ UserProfile.Tier với role.
+        // App xác định Pro qua profile.IsPro (Tier=="pro") ở nhiều chỗ — nếu chỉ đổi role
+        // mà không đổi Tier thì "Bỏ Pro" không có tác dụng (user vẫn được coi là Pro).
+        var profile = await _context.UserProfiles.FindAsync(userId);
+        if (profile == null)
+        {
+            profile = new UserProfile { UserId = userId };
+            _context.UserProfiles.Add(profile);
+        }
+        if (role == "Admin")
+        {
+            profile.Tier = "admin";
+            profile.ProExpiresAt = null;
+            profile.MaxPlaces = int.MaxValue;
+            profile.MaxPlans  = int.MaxValue;
+        }
+        else if (role == "Pro")
+        {
+            profile.Tier = "pro";
+            // Cấp Pro tay: cho 30 ngày nếu chưa có hạn xa hơn
+            if (profile.ProExpiresAt == null || profile.ProExpiresAt < DateTime.UtcNow.AddDays(30))
+                profile.ProExpiresAt = DateTime.UtcNow.AddDays(30);
+            profile.MaxPlaces = int.MaxValue;
+            profile.MaxPlans  = int.MaxValue;
+        }
+        else // "User" = bỏ Pro
+        {
+            profile.Tier = "free";
+            profile.ProExpiresAt = null;
+            profile.MaxPlaces = 3;
+            profile.MaxPlans  = 3;
+        }
+        profile.UpdatedAt = DateTime.UtcNow;
+        await _context.SaveChangesAsync();
+
+        // Vô hiệu hoá phiên đăng nhập cũ để role mới có hiệu lực (không phải đợi 30 phút)
+        await _userManager.UpdateSecurityStampAsync(user);
 
         TempData["Success"] = $"Đã cập nhật vai trò cho {user.Email}.";
         return RedirectToAction(nameof(Users));

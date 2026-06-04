@@ -113,7 +113,8 @@ builder.Services.Configure<CassoOptions>(builder.Configuration.GetSection("Casso
 builder.Services.AddHttpClient<ICassoApiService, CassoApiService>();
 builder.Services.AddHttpClient<PayOSService>();
 builder.Services.AddScoped<IProService, ProService>();
-builder.Services.AddHostedService<ProExpiryService>();   // tự hạ Pro hết hạn về Free
+builder.Services.AddHostedService<ProExpiryService>();        // tự hạ Pro hết hạn về Free
+builder.Services.AddHostedService<PaymentAutoCheckService>(); // tự kiểm tra CK qua Casso API → lên Pro
 
 var app = builder.Build();
 
