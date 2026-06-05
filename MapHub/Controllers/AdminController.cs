@@ -275,23 +275,41 @@ public class AdminController : Controller
 
     // ── Place management ─────────────────────────────────────────────────────
     [HttpGet]
-    public IActionResult AddPlace() => View();
+    public async Task<IActionResult> AddPlace()
+    {
+        ViewBag.AllTags = await _context.Tags.OrderBy(t => t.Name).ToListAsync();
+        return View();
+    }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> AddPlace(Place place, string? imageUrl)
+    public async Task<IActionResult> AddPlace(Place place, string? imageUrl, IFormFile? imageFile, int[]? tagIds)
     {
         place.IsApproved      = true;
         place.CreatedByUserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        place.CreatedAt       = DateTime.UtcNow;
+        place.UpdatedAt       = DateTime.UtcNow;
         _context.Places.Add(place);
         await _context.SaveChangesAsync();
 
-        if (!string.IsNullOrWhiteSpace(imageUrl))
+        // Tags
+        if (tagIds?.Any() == true)
         {
-            _context.PlaceImages.Add(new PlaceImage { PlaceId = place.Id, Url = imageUrl, IsPrimary = true });
-            await _context.SaveChangesAsync();
+            var validTagIds = await _context.Tags.Where(t => tagIds.Contains(t.Id)).Select(t => t.Id).ToListAsync();
+            foreach (var tid in validTagIds)
+                _context.PlaceTags.Add(new PlaceTag { PlaceId = place.Id, TagId = tid });
         }
 
+        // Ảnh: ưu tiên file upload, sau đó URL
+        string? resolvedUrl = null;
+        if (imageFile != null && imageFile.Length > 0)
+            resolvedUrl = await SaveUploadAsync(imageFile, "places");
+        else if (!string.IsNullOrWhiteSpace(imageUrl))
+            resolvedUrl = imageUrl;
+        if (resolvedUrl != null)
+            _context.PlaceImages.Add(new PlaceImage { PlaceId = place.Id, Url = resolvedUrl, IsPrimary = true });
+
+        await _context.SaveChangesAsync();
         TempData["Success"] = $"Đã thêm địa điểm: {place.Name}";
         return RedirectToAction(nameof(Index));
     }
