@@ -54,10 +54,15 @@ public class PaymentAutoCheckService : BackgroundService
                                 t.Amount >= payment.Amount);
                             if (match == null) continue;
 
-                            payment.Status = "paid";
-                            payment.PaidAt = DateTime.UtcNow;
-                            payment.TransactionId = match.Tid;
-                            await db.SaveChangesAsync(stoppingToken);
+                            // Atomic: chỉ đổi khi chưa paid → tránh kích hoạt Pro 2 lần nếu webhook/poll cùng bắt được GD này
+                            var claimed = await db.Payments
+                                .Where(p => p.Id == payment.Id && p.Status != "paid")
+                                .ExecuteUpdateAsync(s => s
+                                    .SetProperty(p => p.Status, "paid")
+                                    .SetProperty(p => p.PaidAt, DateTime.UtcNow)
+                                    .SetProperty(p => p.TransactionId, match.Tid), stoppingToken);
+                            if (claimed == 0) continue;   // đã được xác nhận ở nơi khác
+
                             await pro.ActivateProAsync(payment.UserId, payment.PlanType);
                             _logger.LogInformation("Auto-check: tự lên Pro cho đơn {Code}", payment.Code);
                         }

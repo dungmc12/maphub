@@ -148,10 +148,18 @@ public class CassoWebhookController : ControllerBase
             return;
         }
 
-        payment.Status = "paid";
-        payment.PaidAt = DateTime.UtcNow;
-        payment.TransactionId = tx.Tid;
-        await _db.SaveChangesAsync();
+        // Atomic: chỉ đổi khi chưa paid → tránh kích hoạt Pro 2 lần nếu poll/vòng nền cùng bắt được GD này
+        var claimed = await _db.Payments
+            .Where(p => p.Id == payment.Id && p.Status != "paid")
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(p => p.Status, "paid")
+                .SetProperty(p => p.PaidAt, DateTime.UtcNow)
+                .SetProperty(p => p.TransactionId, tx.Tid));
+        if (claimed == 0)
+        {
+            _logger.LogInformation("Casso webhook: đơn {Code} đã được xác nhận trước đó", code);
+            return;
+        }
 
         await _proService.ActivateProAsync(payment.UserId, payment.PlanType);
         _logger.LogInformation("Casso: kích hoạt Pro thành công cho đơn {Code}", code);

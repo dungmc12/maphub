@@ -202,9 +202,11 @@ function devConfirm() {
 (function() {
     var code = '@Model.Code';
     var tries = 0;
-    var maxTries = 72; // 6 phút rồi dừng
+    var maxTries = 150; // ~12 phút rồi dừng (đủ cho CK chậm khi vẫn mở trang)
 
     function poll() {
+        // Status giờ chủ động hỏi Casso → xác nhận gần như tức thì sau khi tiền vào,
+        // không phụ thuộc webhook hay vòng nền (Render free có thể ngủ).
         fetch('/Payments/Status?code=' + code)
             .then(r => r.json())
             .then(d => {
@@ -214,14 +216,14 @@ function devConfirm() {
                         '<div class="ck-success-title" style="color:#15803d;font-weight:800;font-size:1.05rem;margin:.3rem 0 .2rem">Thanh toán thành công!</div>' +
                         '<div class="ck-success-sub">Tài khoản của bạn đã lên Pro. Đang chuyển hướng…</div>';
                     document.getElementById('waitBox').className = 'ck-success';
-                    setTimeout(() => { window.location.href = '/Payments/Premium'; }, 2500);
+                    setTimeout(() => { window.location.href = '/Payments/Premium'; }, 2000);
                 } else if (maxTries > ++tries) {
                     setTimeout(poll, 5000);
                 }
             })
             .catch(() => { if (maxTries > ++tries) setTimeout(poll, 8000); });
     }
-    setTimeout(poll, 5000);
+    setTimeout(poll, 3000);
 })();
     </text>
 }

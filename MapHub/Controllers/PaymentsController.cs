@@ -182,11 +182,15 @@ public class PaymentsController : Controller
         if (payment == null) return NotFound();
         if (payment.Status == "paid") return Json(new { ok = true, msg = "Đã duyệt trước đó." });
 
-        payment.Status = "paid";
-        payment.PaidAt = DateTime.UtcNow;
-        await _context.SaveChangesAsync();
-        await _proService.ActivateProAsync(payment.UserId, payment.PlanType);
+        // Atomic: chỉ activate nếu chính request này flip pending→paid (tránh cộng dồn ngày 2 lần)
+        var claimed = await _context.Payments
+            .Where(p => p.Id == id && p.Status != "paid")
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(p => p.Status, "paid")
+                .SetProperty(p => p.PaidAt, DateTime.UtcNow));
+        if (claimed == 0) return Json(new { ok = true, msg = "Đã duyệt trước đó." });
 
+        await _proService.ActivateProAsync(payment.UserId, payment.PlanType);
         return Json(new { ok = true });
     }
 
@@ -232,8 +236,59 @@ public class PaymentsController : Controller
         return Json(new { ok = true });
     }
 
+    // Throttle: không hỏi Casso quá 1 lần / 10s cho mỗi mã đơn, dù trình duyệt poll dày hơn.
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, DateTime> _lastCassoCheck = new();
+    private static readonly TimeSpan CassoCheckCooldown = TimeSpan.FromSeconds(10);
+
+    // Hỏi Casso API ngay cho 1 đơn: nếu thấy giao dịch khớp (mã CSPRO + đủ tiền) thì set paid + lên Pro.
+    // Trả về true nếu đơn đã/đang ở trạng thái paid. Dùng chung cho CheckNow (bấm tay) và Status (poll tự động).
+    private async Task<bool> TryConfirmViaCassoAsync(Payment payment, bool force, CancellationToken ct)
+    {
+        if (payment.Status == "paid") return true;
+        if (!_casso.IsConfigured) return false;
+
+        // Throttle theo mã đơn để tránh spam Casso API khi nhiều lần poll dồn dập
+        var now = DateTime.UtcNow;
+        if (!force && _lastCassoCheck.TryGetValue(payment.Code!, out var last) && now - last < CassoCheckCooldown)
+            return false;
+        _lastCassoCheck[payment.Code!] = now;
+
+        // Buộc Casso đọc bank ngay (tự giới hạn 1/phút; 429 thì bỏ qua) rồi đọc giao dịch gần nhất
+        await _casso.TriggerSyncAsync(ct);
+        var txs = await _casso.GetRecentTransactionsAsync(100, ct);
+        var wanted = payment.Code!.ToUpperInvariant();
+        var match = txs.FirstOrDefault(t =>
+            $"{t.Description} {t.Tid}".ToUpperInvariant().Contains(wanted) &&
+            t.Amount >= payment.Amount);
+        if (match == null) return false;
+
+        // Đánh dấu "paid" theo kiểu atomic (chỉ đổi khi chưa paid) để tránh kích hoạt Pro 2 lần
+        // khi webhook / vòng nền / poll cùng bắt được 1 giao dịch (ActivatePro cộng dồn ngày).
+        var claimed = await _context.Payments
+            .Where(p => p.Id == payment.Id && p.Status != "paid")
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(p => p.Status, "paid")
+                .SetProperty(p => p.PaidAt, DateTime.UtcNow)
+                .SetProperty(p => p.TransactionId, match.Tid), ct);
+
+        _lastCassoCheck.TryRemove(payment.Code!, out _);
+        if (claimed == 0) return true;   // request khác đã set paid trước → không activate lại
+
+        payment.Status = "paid";
+        await _proService.ActivateProAsync(payment.UserId, payment.PlanType);
+        _logger.LogInformation("Casso: tự xác nhận + lên Pro cho đơn {Code}", payment.Code);
+        return true;
+    }
+
+    // Vừa lên Pro nhưng cookie cũ chưa có role "Pro" → làm mới đăng nhập để Pro có hiệu lực NGAY.
+    private async Task RefreshProSignInAsync()
+    {
+        if (User.IsInRole("Pro") || User.IsInRole("Admin")) return;
+        var user = await _userManager.GetUserAsync(User);
+        if (user != null) await _signInManager.RefreshSignInAsync(user);
+    }
+
     // Chủ động kiểm tra giao dịch qua Casso API ngay (không chờ webhook).
-    // Khớp mã CSPRO trong nội dung CK + đủ số tiền -> lên Pro luôn.
     [HttpPost]
     [Authorize]
     [ValidateAntiForgeryToken]
@@ -243,51 +298,31 @@ public class PaymentsController : Controller
         var payment = await _context.Payments
             .FirstOrDefaultAsync(p => p.Code == code && p.UserId == userId, ct);
         if (payment == null) return Json(new { ok = false, msg = "Không tìm thấy đơn." });
-        if (payment.Status == "paid") return Json(new { ok = true, paid = true });
-
+        if (payment.Status == "paid") { await RefreshProSignInAsync(); return Json(new { ok = true, paid = true }); }
         if (!_casso.IsConfigured)
             return Json(new { ok = false, paid = false, msg = "Chưa cấu hình Casso API key — vẫn chờ webhook tự động." });
 
-        // Buộc Casso đọc bank ngay (như bấm "Đồng bộ ngay") rồi mới đọc giao dịch
-        await _casso.TriggerSyncAsync(ct);
-        var txs = await _casso.GetRecentTransactionsAsync(100, ct);
-        var wanted = payment.Code!.ToUpperInvariant();
-        var match = txs.FirstOrDefault(t =>
-            $"{t.Description} {t.Tid}".ToUpperInvariant().Contains(wanted) &&
-            t.Amount >= payment.Amount);
-
-        if (match == null)
-            return Json(new { ok = true, paid = false, msg = "Chưa thấy giao dịch khớp. Thử lại sau ít phút." });
-
-        payment.Status = "paid";
-        payment.PaidAt = DateTime.UtcNow;
-        payment.TransactionId = match.Tid;
-        await _context.SaveChangesAsync(ct);
-        await _proService.ActivateProAsync(payment.UserId, payment.PlanType);
-        _logger.LogInformation("Casso API: kiểm tra thủ công khớp + lên Pro cho đơn {Code}", code);
-
-        return Json(new { ok = true, paid = true });
+        // force=true: bấm tay thì bỏ qua throttle, kiểm tra ngay lập tức
+        var paid = await TryConfirmViaCassoAsync(payment, force: true, ct);
+        if (paid) await RefreshProSignInAsync();
+        return Json(new { ok = true, paid, msg = paid ? null : "Chưa thấy giao dịch khớp. Thử lại sau ít phút." });
     }
 
     [HttpGet]
     [Authorize]
-    public async Task<IActionResult> Status(string code)
+    public async Task<IActionResult> Status(string code, CancellationToken ct)
     {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         var payment = await _context.Payments
-            .Where(p => p.Code == code && p.UserId == userId)
-            .Select(p => new { p.Status })
-            .FirstOrDefaultAsync();
+            .FirstOrDefaultAsync(p => p.Code == code && p.UserId == userId, ct);
         if (payment == null) return NotFound();
 
+        // Chủ động hỏi Casso ngay trong lúc user đang mở trang chờ → xác nhận gần như tức thì,
+        // KHÔNG phụ thuộc webhook (có thể trượt) hay vòng nền 2 phút (Render free có thể ngủ).
         var paid = payment.Status == "paid";
-        // Vừa lên Pro nhưng cookie cũ chưa có role "Pro" → làm mới đăng nhập để Pro có hiệu lực NGAY,
-        // không phải đăng xuất/login lại mới dùng được AI.
-        if (paid && !User.IsInRole("Pro") && !User.IsInRole("Admin"))
-        {
-            var user = await _userManager.GetUserAsync(User);
-            if (user != null) await _signInManager.RefreshSignInAsync(user);
-        }
+        if (!paid) paid = await TryConfirmViaCassoAsync(payment, force: false, ct);
+        if (paid) await RefreshProSignInAsync();
+
         return Json(new { status = payment.Status, paid });
     }
 }
