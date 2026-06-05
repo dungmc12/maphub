@@ -1,0 +1,54 @@
+@model IEnumerable<MapHub.Models.FeedPost>
+@{
+    var type = ViewBag.Type as string;
+    string TypeLabel(string t) => t switch { "guide" => "📖 Cẩm nang", "tip" => "💡 Mẹo hay", _ => "📰 Tin tức" };
+}
+
+<div class="container-xl py-4" style="max-width:960px">
+    <h1 class="mb-1">📝 Blog CityScout</h1>
+    <p class="text-muted mb-4">Cẩm nang, mẹo hay & tin tức khám phá Hà Nội</p>
+
+    <div class="d-flex flex-wrap gap-2 mb-4">
+        <a href="/Blog" class="btn btn-sm @(string.IsNullOrEmpty(type) ? "btn-accent" : "btn-outline-secondary")">Tất cả</a>
+        <a href="/Blog?type=news"  class="btn btn-sm @(type == "news"  ? "btn-accent" : "btn-outline-secondary")">📰 Tin tức</a>
+        <a href="/Blog?type=guide" class="btn btn-sm @(type == "guide" ? "btn-accent" : "btn-outline-secondary")">📖 Cẩm nang</a>
+        <a href="/Blog?type=tip"   class="btn btn-sm @(type == "tip"   ? "btn-accent" : "btn-outline-secondary")">💡 Mẹo hay</a>
+    </div>
+
+    @if (!Model.Any())
+    {
+        <div class="text-center text-muted p-5">
+            <div style="font-size:2.5rem">📝</div>
+            <p class="mt-2">Chưa có bài viết nào.</p>
+        </div>
+    }
+    else
+    {
+        <div class="row g-4">
+            @foreach (var p in Model)
+            {
+                var img = string.IsNullOrEmpty(p.CoverImageUrl) ? "https://placehold.co/600x340?text=CityScout+Blog" : p.CoverImageUrl;
+                <div class="col-md-6">
+                    <a href="/Blog/@p.Id" class="text-decoration-none text-reset">
+                        <article class="plan-card h-100" style="overflow:hidden">
+                            <img src="@img" alt="@p.Title" style="width:100%;height:200px;object-fit:cover">
+                            <div style="padding:1rem">
+                                <div class="d-flex align-items-center gap-2 mb-2">
+                                    <span class="badge bg-secondary">@TypeLabel(p.Type)</span>
+                                    @if (p.IsPinned) { <span class="badge bg-warning text-dark">📌 Ghim</span> }
+                                    <span class="text-muted small ms-auto">@p.PublishedAt.ToLocalTime().ToString("dd/MM/yyyy")</span>
+                                </div>
+                                <h3 class="h5 fw-bold mb-2">@p.Title</h3>
+                                @if (!string.IsNullOrEmpty(p.Summary))
+                                {
+                                    <p class="text-muted small mb-0" style="display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden">@p.Summary</p>
+                                }
+                                <span class="text-primary small fw-semibold d-inline-block mt-2">Đọc tiếp →</span>
+                            </div>
+                        </article>
+                    </a>
+                </div>
+            }
+        </div>
+    }
+</div>

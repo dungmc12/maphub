@@ -36,6 +36,9 @@
                 <a asp-controller="Map" asp-action="Index" class="nav-item @(ctrl == "Map" ? "nav-item-active" : "")">
                     <i class="bi bi-map-fill" style="color:#3b82f6"></i><span>Bản đồ</span>
                 </a>
+                <a asp-controller="Blog" asp-action="Index" class="nav-item @(ctrl == "Blog" ? "nav-item-active" : "")">
+                    <i class="bi bi-journal-text" style="color:#f59e0b"></i><span>Blog</span>
+                </a>
                 @if (User.Identity?.IsAuthenticated == true)
                 {
                     <a asp-controller="Map" asp-action="MyPlaces" class="nav-item @(ViewContext.RouteData.Values["action"]?.ToString() == "MyPlaces" ? "nav-item-active" : "")">
