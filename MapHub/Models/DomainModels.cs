@@ -144,6 +144,8 @@ public class Event
     public string Title { get; set; } = null!;
     public string? Description { get; set; }
     public int? PlaceId { get; set; }
+    public decimal? Latitude { get; set; }   // vị trí tuỳ chọn của sự kiện (click chỗ trống trên bản đồ)
+    public decimal? Longitude { get; set; }
     public string? BannerImageUrl { get; set; }
     public DateTime StartAt { get; set; }
     public DateTime? EndAt { get; set; }

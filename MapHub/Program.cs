@@ -156,6 +156,25 @@ using (var scope = app.Services.CreateScope())
     var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
 
     context.Database.EnsureCreated();
+
+    // Auto-migration an toàn: thêm cột Latitude/Longitude cho Events nếu chưa có
+    // (EnsureCreated không tự thêm cột vào bảng đã tồn tại). Idempotent, không phá dữ liệu.
+    try
+    {
+        if (dbProvider == "postgres")
+            await context.Database.ExecuteSqlRawAsync(
+                "ALTER TABLE \"Events\" ADD COLUMN IF NOT EXISTS \"Latitude\" numeric NULL; " +
+                "ALTER TABLE \"Events\" ADD COLUMN IF NOT EXISTS \"Longitude\" numeric NULL;");
+        else
+            await context.Database.ExecuteSqlRawAsync(
+                "IF COL_LENGTH('Events','Latitude') IS NULL ALTER TABLE Events ADD Latitude decimal(18,6) NULL; " +
+                "IF COL_LENGTH('Events','Longitude') IS NULL ALTER TABLE Events ADD Longitude decimal(18,6) NULL;");
+    }
+    catch (Exception ex)
+    {
+        app.Logger.LogError(ex, "Auto-migration Events lat/lng lỗi");
+    }
+
     await DataSeeder.SeedAsync(context);
 
     // Tạo roles

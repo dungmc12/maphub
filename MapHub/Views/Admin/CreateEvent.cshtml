@@ -56,10 +56,13 @@
                 </div>
                 <div class="col-12">
                     <button type="button" class="btn btn-sm btn-outline-secondary" onclick="toggleEventMap()">
-                        🗺️ Chọn địa điểm trên bản đồ (tuỳ chọn)
+                        🗺️ Chọn vị trí trên bản đồ (tuỳ chọn)
                     </button>
+                    <div class="form-text">Click marker địa điểm có sẵn, HOẶC click chỗ trống bất kỳ để đặt vị trí riêng cho sự kiện.</div>
                     <div id="eventPickMap" style="height:280px;border-radius:10px;overflow:hidden;display:none;margin-top:.5rem"></div>
                     <div id="eventPickLabel" class="form-text"></div>
+                    <input type="hidden" name="Latitude"  id="evLat">
+                    <input type="hidden" name="Longitude" id="evLng">
                 </div>
                 <div class="col-12">
                     <label class="form-label fw-semibold">Ảnh banner</label>
@@ -109,7 +112,7 @@ var eventPlaces = [
     }
 }
 ];
-var eventMap = null;
+var eventMap = null, eventCustomMarker = null;
 function toggleEventMap() {
     const box = document.getElementById('eventPickMap');
     const show = box.style.display === 'none';
@@ -119,20 +122,34 @@ function toggleEventMap() {
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(eventMap);
         const bounds = [];
         eventPlaces.forEach(p => {
-            const m = L.marker([p.lat, p.lng]).addTo(eventMap).bindPopup(
-                `<b>${p.name}</b><br><button type="button" class="btn btn-sm btn-accent" style="font-size:12px;margin-top:4px" onclick="pickEventPlace(${p.id})">Chọn địa điểm này</button>`);
+            L.marker([p.lat, p.lng]).addTo(eventMap).bindPopup(
+                `<b>${p.name}</b><br><button type="button" class="btn btn-sm btn-accent" style="font-size:12px;margin-top:4px" onclick="pickEventPlace(${p.id}, ${p.lat}, ${p.lng})">Chọn địa điểm này</button>`);
             bounds.push([p.lat, p.lng]);
         });
         if (bounds.length) eventMap.fitBounds(bounds, { padding: [30, 30], maxZoom: 14 });
+        // Click chỗ trống → đặt vị trí riêng cho sự kiện
+        eventMap.on('click', e => setEventCustomPoint(e.latlng.lat, e.latlng.lng));
     }
     if (show && eventMap) setTimeout(() => eventMap.invalidateSize(), 120);
 }
-function pickEventPlace(id) {
+function setEventCustomPoint(lat, lng) {
+    document.getElementById('evLat').value = lat.toFixed(6);
+    document.getElementById('evLng').value = lng.toFixed(6);
+    document.querySelector('select[name="PlaceId"]').value = '';   // vị trí tuỳ chọn → bỏ liên kết địa điểm
+    if (eventCustomMarker) eventCustomMarker.setLatLng([lat, lng]);
+    else eventCustomMarker = L.marker([lat, lng], { title: 'Vị trí sự kiện' }).addTo(eventMap);
+    document.getElementById('eventPickLabel').innerHTML =
+        '📍 Vị trí tuỳ chọn: <strong>' + lat.toFixed(5) + ', ' + lng.toFixed(5) + '</strong>';
+}
+function pickEventPlace(id, lat, lng) {
     const sel = document.querySelector('select[name="PlaceId"]');
     sel.value = id;
+    document.getElementById('evLat').value = lat;
+    document.getElementById('evLng').value = lng;
+    if (eventCustomMarker) { eventMap.removeLayer(eventCustomMarker); eventCustomMarker = null; }
     const opt = sel.options[sel.selectedIndex];
     document.getElementById('eventPickLabel').innerHTML =
-        '✅ Đã chọn: <strong>' + (opt ? opt.textContent : id) + '</strong>';
+        '✅ Đã chọn địa điểm: <strong>' + (opt ? opt.textContent : id) + '</strong>';
 }
 </script>
 }
