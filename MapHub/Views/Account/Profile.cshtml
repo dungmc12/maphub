@@ -29,6 +29,7 @@
     <div class="info-card mb-4" style="padding:1.25rem">
         <div class="d-flex align-items-center gap-3 mb-3">
             <img id="avatarPreview" src="@(string.IsNullOrEmpty(Model.AvatarUrl) ? "https://placehold.co/80x80?text=CS" : Model.AvatarUrl)"
+                 onerror="this.onerror=null;this.src='https://placehold.co/80x80?text=CS'"
                  style="width:72px;height:72px;border-radius:50%;object-fit:cover;border:2px solid #e2e8f0">
             <div>
                 <div class="fw-bold fs-5">@(string.IsNullOrEmpty(Model.DisplayName) ? email : Model.DisplayName)</div>
@@ -41,16 +42,24 @@
             </div>
         </div>
 
-        <form method="post" action="/Account/Profile">
+        <form method="post" action="/Account/Profile" enctype="multipart/form-data">
             @Html.AntiForgeryToken()
             <div class="mb-3">
                 <label class="form-label fw-semibold">Tên hiển thị</label>
                 <input type="text" name="displayName" class="form-control" value="@Model.DisplayName" placeholder="Tên bạn muốn hiển thị">
             </div>
             <div class="mb-3">
-                <label class="form-label fw-semibold">Ảnh đại diện (URL)</label>
-                <input type="url" name="avatarUrl" class="form-control" value="@Model.AvatarUrl"
-                       placeholder="https://... (dán link ảnh)" oninput="document.getElementById('avatarPreview').src = this.value || 'https://placehold.co/80x80?text=CS'">
+                <label class="form-label fw-semibold"><i class="fa-solid fa-image"></i> Ảnh đại diện — tải từ máy</label>
+                <input type="file" name="avatarFile" class="form-control" accept="image/*"
+                       onchange="previewAvatar(this)">
+                <small class="text-muted">Ảnh ≤ 5MB. Tải lên sẽ được lưu vĩnh viễn (không mất khi cập nhật web).</small>
+            </div>
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Hoặc dán link ảnh (URL)</label>
+                <input type="url" name="avatarUrl" class="form-control"
+                       value="@(Model.AvatarUrl != null && Model.AvatarUrl.StartsWith("data:") ? "" : Model.AvatarUrl)"
+                       placeholder="https://... (tùy chọn)"
+                       oninput="document.getElementById('avatarPreview').src = this.value || 'https://placehold.co/80x80?text=CS'">
             </div>
             <button type="submit" class="btn-accent"><i class="fa-solid fa-floppy-disk"></i> Lưu hồ sơ</button>
         </form>
@@ -84,3 +93,17 @@
         </form>
     </div>
 </div>
+
+@section Scripts {
+<script>
+// Xem trước avatar ngay khi chọn ảnh từ máy
+function previewAvatar(input) {
+    const f = input.files && input.files[0];
+    if (!f) return;
+    if (f.size > 5 * 1024 * 1024) { alert('Ảnh quá lớn (tối đa 5MB).'); input.value = ''; return; }
+    const reader = new FileReader();
+    reader.onload = e => document.getElementById('avatarPreview').src = e.target.result;
+    reader.readAsDataURL(f);
+}
+</script>
+}

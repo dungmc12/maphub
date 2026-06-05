@@ -1,5 +1,6 @@
 using MapHub.Data;
 using MapHub.Models;
+using MapHub.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -255,16 +256,26 @@ public class AccountController : Controller
     [Authorize]
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Profile(string? displayName, string? avatarUrl)
+    public async Task<IActionResult> Profile(string? displayName, string? avatarUrl, IFormFile? avatarFile)
     {
         var userId = _userManager.GetUserId(User);
         var profile = await _context.UserProfiles.FindAsync(userId);
         if (profile == null) { profile = new UserProfile { UserId = userId! }; _context.UserProfiles.Add(profile); }
         profile.DisplayName = string.IsNullOrWhiteSpace(displayName) ? null : displayName.Trim();
-        profile.AvatarUrl   = string.IsNullOrWhiteSpace(avatarUrl) ? null : avatarUrl.Trim();
-        profile.UpdatedAt   = DateTime.UtcNow;
+
+        // Ưu tiên ảnh tải từ máy → lưu base64 (bền với Render redeploy, không mất ảnh).
+        // Không có file thì dùng URL dán vào; cả hai trống thì GIỮ ảnh cũ (không xoá nhầm).
+        var dataUrl = await ImageHelper.ToDataUrlAsync(avatarFile);
+        if (dataUrl != null)
+            profile.AvatarUrl = dataUrl;
+        else if (!string.IsNullOrWhiteSpace(avatarUrl))
+            profile.AvatarUrl = avatarUrl.Trim();
+
+        profile.UpdatedAt = DateTime.UtcNow;
         await _context.SaveChangesAsync();
-        TempData["ProfileMsg"] = "Đã cập nhật hồ sơ.";
+        TempData["ProfileMsg"] = avatarFile != null && dataUrl == null
+            ? "Đã lưu hồ sơ, nhưng ảnh không hợp lệ (chỉ nhận ảnh ≤5MB)."
+            : "Đã cập nhật hồ sơ.";
         return RedirectToAction(nameof(Profile));
     }
 
