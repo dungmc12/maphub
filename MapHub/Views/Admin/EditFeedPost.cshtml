@@ -7,7 +7,7 @@
     <a href="/Admin/FeedPosts" class="back-link">← Quản lý tin tức</a>
     <h2 class="mt-3 mb-4">✏️ Sửa Bài Viết <small class="text-muted fs-6">#@Model.Id</small></h2>
 
-    <form method="post" action="/Admin/EditFeedPost">
+    <form method="post" action="/Admin/EditFeedPost" enctype="multipart/form-data">
         @Html.AntiForgeryToken()
         <input type="hidden" name="Id" value="@Model.Id">
 
@@ -26,23 +26,37 @@
                     </select>
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label fw-semibold">ID sự kiện liên quan</label>
-                    <input type="number" name="EventId" class="form-control"
-                           placeholder="Để trống nếu không có" value="@(Model.EventId?.ToString() ?? "")">
+                    <label class="form-label fw-semibold">Sự kiện liên quan</label>
+                    <select name="EventId" class="form-select">
+                        <option value="">— Không liên kết sự kiện —</option>
+                        @if (ViewBag.Events != null)
+                        {
+                            foreach (var e in (dynamic)ViewBag.Events)
+                            {
+                                <option value="@e.Id" selected="@(Model.EventId == (int)e.Id)">@e.Title</option>
+                            }
+                        }
+                    </select>
                 </div>
                 <div class="col-12">
                     <label class="form-label fw-semibold">Tóm tắt</label>
                     <textarea name="Summary" class="form-control" rows="3">@Model.Summary</textarea>
                 </div>
                 <div class="col-12">
-                    <label class="form-label fw-semibold">URL ảnh bìa</label>
+                    <label class="form-label fw-semibold">Ảnh bìa</label>
                     @if (!string.IsNullOrEmpty(Model.CoverImageUrl))
                     {
-                        <img src="@Model.CoverImageUrl" alt="Ảnh bìa hiện tại"
-                             style="max-height:100px;border-radius:6px;margin-bottom:6px;display:block">
+                        <img id="coverPreview" src="@Model.CoverImageUrl" alt="Ảnh bìa hiện tại"
+                             style="max-height:120px;border-radius:6px;margin-bottom:6px;display:block">
                     }
+                    else
+                    {
+                        <img id="coverPreview" src="" alt="" style="display:none;max-height:120px;border-radius:6px;margin-bottom:6px">
+                    }
+                    <input type="file" name="imageFile" class="form-control mb-2" accept="image/*" onchange="previewCover(this)">
                     <input type="url" name="CoverImageUrl" class="form-control"
-                           placeholder="https://..." value="@Model.CoverImageUrl">
+                           placeholder="Hoặc URL ảnh (để trống = giữ nguyên)" value="@Model.CoverImageUrl">
+                    <div class="form-text">Tải ảnh mới từ máy HOẶC URL, hoặc để trống để giữ ảnh cũ.</div>
                 </div>
                 <div class="col-12">
                     <div class="form-check">
@@ -62,3 +76,15 @@
         </div>
     </form>
 </div>
+@section Scripts {
+<script>
+function previewCover(input) {
+    const preview = document.getElementById('coverPreview');
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = e => { preview.src = e.target.result; preview.style.display = 'block'; };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+</script>
+}

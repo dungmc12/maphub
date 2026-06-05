@@ -215,13 +215,22 @@ public class AdminController : Controller
     }
 
     [HttpGet]
-    public IActionResult CreateFeedPost() => View(new FeedPost());
+    public async Task<IActionResult> CreateFeedPost()
+    {
+        ViewBag.Events = await _context.Events.OrderByDescending(e => e.StartAt)
+            .Select(e => new { e.Id, e.Title }).ToListAsync();
+        return View(new FeedPost());
+    }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> CreateFeedPost(FeedPost post)
+    public async Task<IActionResult> CreateFeedPost(FeedPost post, IFormFile? imageFile)
     {
         post.PublishedAt = DateTime.UtcNow;
+        // Ảnh bìa: ưu tiên file upload, sau đó URL
+        if (imageFile != null && imageFile.Length > 0)
+            post.CoverImageUrl = await SaveUploadAsync(imageFile, "feed");
+
         _context.FeedPosts.Add(post);
         await _context.SaveChangesAsync();
         TempData["Success"] = "Đã tạo bài viết.";
@@ -255,21 +264,28 @@ public class AdminController : Controller
     {
         var post = await _context.FeedPosts.FindAsync(id);
         if (post == null) return NotFound();
+        ViewBag.Events = await _context.Events.OrderByDescending(e => e.StartAt)
+            .Select(e => new { e.Id, e.Title }).ToListAsync();
         return View(post);
     }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> EditFeedPost(FeedPost post)
+    public async Task<IActionResult> EditFeedPost(FeedPost post, IFormFile? imageFile)
     {
         var existing = await _context.FeedPosts.FindAsync(post.Id);
         if (existing == null) return NotFound();
         existing.Title         = post.Title;
         existing.Summary       = post.Summary;
-        existing.CoverImageUrl = post.CoverImageUrl;
         existing.Type          = post.Type;
         existing.IsPinned      = post.IsPinned;
         existing.EventId       = post.EventId;
+        // Ảnh bìa: file mới ưu tiên, rồi URL, để trống = giữ nguyên
+        if (imageFile != null && imageFile.Length > 0)
+            existing.CoverImageUrl = await SaveUploadAsync(imageFile, "feed");
+        else if (!string.IsNullOrWhiteSpace(post.CoverImageUrl))
+            existing.CoverImageUrl = post.CoverImageUrl;
+
         await _context.SaveChangesAsync();
         TempData["Success"] = "Đã cập nhật bài viết.";
         return RedirectToAction(nameof(FeedPosts));
