@@ -310,6 +310,19 @@ document.addEventListener('DOMContentLoaded', () => {
     }).addTo(map);
 
     addWeatherControl();
+
+    // Click chỗ trống trên bản đồ → gợi ý thêm địa điểm tại đó (như Google Maps)
+    if (isAuth) {
+        map.on('click', e => {
+            L.popup({ closeButton: true })
+                .setLatLng(e.latlng)
+                .setContent(`<div style="text-align:center;min-width:140px">📍 Thêm địa điểm tại đây?<br>
+                    <button type="button" onclick="openAddPlace(${e.latlng.lat}, ${e.latlng.lng})"
+                        style="margin-top:6px;padding:5px 12px;background:#e06d1b;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:600;font-size:13px">➕ Thêm địa điểm</button></div>`)
+                .openOn(map);
+        });
+    }
+
     if (isPro) {
         fetchWeatherForCenter();
         map.on('moveend', () => {
@@ -658,7 +671,14 @@ function drawRoute(slat, slng, dlat, dlng) {
 }
 
 // ── Add Place Modal ───────────────────────────────────────────────────────
-function openAddPlace() {
+// Có thể truyền sẵn lat/lng (vd click từ bản đồ chính) để điền toạ độ luôn
+function openAddPlace(presetLat, presetLng) {
+    if (map) map.closePopup();   // đóng popup "Thêm địa điểm tại đây" nếu có
+    const hasPreset = (typeof presetLat === 'number' && typeof presetLng === 'number');
+    if (hasPreset) {
+        document.getElementById('newLat').value = presetLat.toFixed(6);
+        document.getElementById('newLng').value = presetLng.toFixed(6);
+    }
     const modal = new bootstrap.Modal(document.getElementById('addPlaceModal'));
     modal.show();
     document.getElementById('addPlaceModal').addEventListener('shown.bs.modal', () => {
@@ -671,10 +691,16 @@ function openAddPlace() {
                 if (miniMarker) miniMap.removeLayer(miniMarker);
                 miniMarker = L.marker(e.latlng).addTo(miniMap);
             });
-            if (navigator.geolocation)
+            if (!hasPreset && navigator.geolocation)
                 navigator.geolocation.getCurrentPosition(p => miniMap.setView([p.coords.latitude, p.coords.longitude], 15));
         } else {
             miniMap.invalidateSize();
+        }
+        // Điền sẵn marker + center theo toạ độ click trên bản đồ chính
+        if (hasPreset) {
+            if (miniMarker) miniMap.removeLayer(miniMarker);
+            miniMarker = L.marker([presetLat, presetLng]).addTo(miniMap);
+            miniMap.setView([presetLat, presetLng], 16);
         }
     }, { once: true });
 }
