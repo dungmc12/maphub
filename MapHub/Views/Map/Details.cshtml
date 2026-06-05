@@ -25,6 +25,14 @@
             <div class="d-flex align-items-start gap-3 mt-2 mb-3 flex-wrap">
                 <div class="flex-grow-1">
                     <h1 class="place-detail-title">@Model.Name</h1>
+                    @if (User.Identity?.IsAuthenticated == true)
+                    {
+                        bool isSavedDetail = ViewBag.IsSaved ?? false;
+                        <button type="button" id="saveBtn" onclick="toggleSaveDetail(@Model.Id)"
+                                class="btn btn-sm @(isSavedDetail ? "btn-danger" : "btn-outline-danger") mb-2">
+                            @(isSavedDetail ? "❤️ Đã lưu" : "🤍 Lưu địa điểm")
+                        </button>
+                    }
                     <div class="place-detail-meta-row">
                         @{
             var catMeta = new Dictionary<string,(string Label,string Icon,string Color)>(StringComparer.OrdinalIgnoreCase)
@@ -389,6 +397,21 @@
 
 @section Scripts {
 <script>
+// Lưu / bỏ lưu địa điểm
+function toggleSaveDetail(id) {
+    const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
+    fetch('/Map/ToggleSave', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'RequestVerificationToken': token },
+        body: 'placeId=' + id
+    }).then(r => r.json()).then(d => {
+        if (!d.ok) return;
+        const btn = document.getElementById('saveBtn');
+        if (d.saved) { btn.className = 'btn btn-sm btn-danger mb-2'; btn.textContent = '❤️ Đã lưu'; }
+        else { btn.className = 'btn btn-sm btn-outline-danger mb-2'; btn.textContent = '🤍 Lưu địa điểm'; }
+    }).catch(() => {});
+}
+
 // Xóa đánh giá real-time (không reload trang)
 function deleteReview(id, btn) {
     if (!confirm('Xóa đánh giá này?')) return;

@@ -64,7 +64,7 @@ public class MapController : Controller
         if (maxPrice.HasValue)
             query = query.Where(p => p.MinPrice == null || p.MinPrice <= maxPrice.Value);
 
-        var places = await query.Select(p => new
+        var rows = await query.Select(p => new
         {
             p.Id, p.Name, p.Description, p.Latitude, p.Longitude,
             p.Address, p.Category, p.Phone, p.MinPrice, p.MaxPrice,
@@ -74,6 +74,20 @@ public class MapController : Controller
                 ? p.Images.First().Url
                 : "https://picsum.photos/seed/default-place/400/300"
         }).ToListAsync();
+
+        // Đánh dấu địa điểm đã lưu của user hiện tại
+        var savedIds = currentUserId == null ? new HashSet<int>()
+            : (await _context.UserListItems
+                .Where(i => _context.UserLists.Any(l => l.Id == i.ListId && l.UserId == currentUserId))
+                .Select(i => i.PlaceId).ToListAsync()).ToHashSet();
+
+        var places = rows.Select(p => new
+        {
+            p.Id, p.Name, p.Description, p.Latitude, p.Longitude,
+            p.Address, p.Category, p.Phone, p.MinPrice, p.MaxPrice,
+            p.Rating, p.ReviewCount, p.PrimaryImage,
+            IsSaved = savedIds.Contains(p.Id)
+        });
 
         return Json(places);
     }
@@ -89,6 +103,10 @@ public class MapController : Controller
             .FirstOrDefaultAsync(p => p.Id == id);
 
         if (place == null) return NotFound();
+
+        var uid = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        ViewBag.IsSaved = uid != null && await _context.UserListItems
+            .AnyAsync(i => i.PlaceId == id && _context.UserLists.Any(l => l.Id == i.ListId && l.UserId == uid));
         return View(place);
     }
 
@@ -267,11 +285,53 @@ public class MapController : Controller
             .OrderByDescending(p => p.CreatedAt)
             .ToListAsync();
 
+        // Địa điểm đã LƯU (yêu thích) — của bất kỳ ai, lưu qua UserList/UserListItem
+        var saved = await _context.UserListItems
+            .Where(i => _context.UserLists.Any(l => l.Id == i.ListId && l.UserId == currentUserId))
+            .OrderByDescending(i => i.AddedAt)
+            .Select(i => i.Place!)
+            .Where(p => p != null)
+            .Include(p => p.Images.Where(im => im.IsPrimary))
+            .ToListAsync();
+
         var profile = await _context.UserProfiles.FindAsync(currentUserId);
         ViewBag.MaxPlaces  = profile?.MaxPlaces ?? 3;
         ViewBag.PlaceCount = places.Count;
         ViewBag.IsPro      = User.IsInRole("Pro") || User.IsInRole("Admin");
+        ViewBag.SavedPlaces = saved;
         return View(places);
+    }
+
+    // Lấy/ tạo danh sách "Yêu thích" mặc định của user
+    private async Task<UserList> GetOrCreateFavListAsync(string userId)
+    {
+        var list = await _context.UserLists.FirstOrDefaultAsync(l => l.UserId == userId && l.Name == "Yêu thích");
+        if (list == null)
+        {
+            list = new UserList { UserId = userId, Name = "Yêu thích" };
+            _context.UserLists.Add(list);
+            await _context.SaveChangesAsync();
+        }
+        return list;
+    }
+
+    // Lưu / bỏ lưu địa điểm (toggle) — AJAX
+    [Authorize]
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ToggleSave(int placeId)
+    {
+        var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value!;
+        if (!await _context.Places.AnyAsync(p => p.Id == placeId))
+            return NotFound();
+
+        var list = await GetOrCreateFavListAsync(userId);
+        var item = await _context.UserListItems.FirstOrDefaultAsync(i => i.ListId == list.Id && i.PlaceId == placeId);
+        bool saved;
+        if (item != null) { _context.UserListItems.Remove(item); saved = false; }
+        else { _context.UserListItems.Add(new UserListItem { ListId = list.Id, PlaceId = placeId }); saved = true; }
+        await _context.SaveChangesAsync();
+        return Json(new { ok = true, saved });
     }
 
     [Authorize]

@@ -130,10 +130,56 @@
         </div>
         <p id="noMyResult" class="text-muted text-center p-4" style="display:none">Không tìm thấy địa điểm nào.</p>
     }
+
+    @{
+        var savedPlaces = ViewBag.SavedPlaces as List<MapHub.Models.Place> ?? new List<MapHub.Models.Place>();
+    }
+    @if (savedPlaces.Any())
+    {
+        @Html.AntiForgeryToken()
+        <hr class="my-4">
+        <h4 class="mb-3">❤️ Địa điểm đã lưu <span class="text-muted fs-6">(@savedPlaces.Count)</span></h4>
+        <div class="row g-3">
+            @foreach (var p in savedPlaces)
+            {
+                var simg = p.Images.FirstOrDefault()?.Url ?? "https://placehold.co/400x250?text=No+Image";
+                var sinv = System.Globalization.CultureInfo.InvariantCulture;
+                var sdir = $"https://www.google.com/maps/dir/?api=1&destination={p.Latitude.ToString(sinv)},{p.Longitude.ToString(sinv)}";
+                <div class="col-md-4 col-sm-6" id="saved-@p.Id">
+                    <div class="plan-card" style="overflow:hidden">
+                        <img src="@simg" alt="@p.Name" style="width:100%;height:160px;object-fit:cover;border-radius:10px 10px 0 0">
+                        <div style="padding:.85rem">
+                            <div class="fw-bold mb-1">@p.Name</div>
+                            @if (!string.IsNullOrEmpty(p.Address))
+                            {
+                                <div class="text-muted small">📍 @p.Address</div>
+                            }
+                            <div class="d-flex gap-1 mt-2 align-items-center">
+                                <a href="/Map/Details/@p.Id" class="btn btn-sm btn-outline-secondary" title="Xem">👁️</a>
+                                <a href="@sdir" target="_blank" rel="noopener" class="btn btn-sm btn-outline-success" title="Chỉ đường">🧭</a>
+                                <button type="button" class="btn btn-sm btn-outline-danger ms-auto" onclick="unsavePlace(@p.Id)">❤️ Bỏ lưu</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
 </div>
 
 @section Scripts {
 <script>
+function unsavePlace(id) {
+    const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
+    fetch('/Map/ToggleSave', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'RequestVerificationToken': token },
+        body: 'placeId=' + id
+    }).then(r => r.json()).then(d => {
+        if (d.ok) { const c = document.getElementById('saved-' + id); if (c) c.remove(); }
+    }).catch(() => alert('Lỗi, thử lại.'));
+}
+
 function filterMy() {
     const q   = (document.getElementById('searchMy').value || '').toLowerCase().trim();
     const cat = document.getElementById('catMy').value;

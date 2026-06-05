@@ -285,6 +285,22 @@ let currentCat = '';
 let currentWeather = null;
 let weatherFetchTimeout = null;
 const isPro = @(isPro ? "true" : "false");   // Pro/Admin mới được xem thời tiết
+const isAuth = @(isAuth ? "true" : "false");
+
+// Lưu / bỏ lưu địa điểm (yêu thích)
+function toggleSave(placeId, btn, full) {
+    if (!isAuth) { window.location = '/Account/Login?returnUrl=/Map'; return; }
+    const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
+    fetch('/Map/ToggleSave', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'RequestVerificationToken': token },
+        body: 'placeId=' + placeId
+    }).then(r => r.json()).then(d => {
+        if (!d.ok) return;
+        if (btn) btn.innerHTML = d.saved ? (full ? '❤️ Đã lưu' : '❤️') : (full ? '🤍 Lưu' : '🤍');
+        const p = allPlaces.find(x => x.id === placeId); if (p) p.isSaved = d.saved;
+    }).catch(() => {});
+}
 
 document.addEventListener('DOMContentLoaded', () => {
     map = L.map('map').setView([21.0285, 105.8542], 12);
@@ -563,7 +579,8 @@ function renderPlaces(list) {
 
         const m = L.marker([p.latitude, p.longitude], { icon }).addTo(map)
             .bindPopup(`<b>${p.name}</b><br><small>${p.address || ''}</small>${weatherPopupLine}<br>
-                        <a href="/Map/Details/${p.id}" style="display:inline-block;margin-top:6px;padding:4px 12px;background:#e06d1b;color:#fff;border-radius:8px;text-decoration:none;font-size:13px;font-weight:600">Xem chi tiết →</a>`);
+                        <a href="/Map/Details/${p.id}" style="display:inline-block;margin-top:6px;padding:4px 12px;background:#e06d1b;color:#fff;border-radius:8px;text-decoration:none;font-size:13px;font-weight:600">Xem chi tiết →</a>
+                        <button type="button" onclick="toggleSave(${p.id}, this, true)" style="display:inline-block;margin:6px 0 0 6px;padding:4px 10px;background:#fff;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">${p.isSaved ? '❤️ Đã lưu' : '🤍 Lưu'}</button>`);
         markers.push(m);
 
         // Sidebar card
@@ -584,6 +601,7 @@ function renderPlaces(list) {
                 <div class="place-list-footer">
                     <span class="place-list-rating">${p.rating > 0 ? '★ ' + p.rating : 'Chưa có đánh giá'}</span>
                     <div class="place-list-actions">
+                        <button class="btn-list-action" onclick="toggleSave(${p.id}, this, false);event.stopPropagation();" title="Lưu">${p.isSaved ? '❤️' : '🤍'}</button>
                         <button class="btn-list-action" onclick="routeTo(${p.latitude},${p.longitude});event.stopPropagation();" title="Chỉ đường">🧭</button>
                         <a href="/Map/Details/${p.id}" class="btn-list-action" title="Chi tiết" onclick="event.stopPropagation();">ℹ️</a>
                     </div>
