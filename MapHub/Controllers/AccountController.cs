@@ -60,6 +60,12 @@ public class AccountController : Controller
             return LocalRedirect(targetUrl);
         }
 
+        if (result.IsLockedOut)
+        {
+            ModelState.AddModelError(string.Empty, await LockedMessageAsync(model.Email));
+            return View(model);
+        }
+
         ModelState.AddModelError(string.Empty, "Sai email hoặc mật khẩu.");
         return View(model);
     }
@@ -153,6 +159,11 @@ public class AccountController : Controller
         var result = await _signInManager.ExternalLoginSignInAsync(info.LoginProvider, info.ProviderKey, isPersistent: false);
         if (result.Succeeded)
             return LocalRedirect(NormalizeReturnUrl(returnUrl));
+        if (result.IsLockedOut)
+        {
+            TempData["LoginError"] = await LockedMessageAsync(info.Principal.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value);
+            return RedirectToAction(nameof(Login));
+        }
 
         // Chưa có tài khoản → tự tạo từ thông tin Google
         var email = info.Principal.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value ?? "";
@@ -174,9 +185,25 @@ public class AccountController : Controller
             }
         }
 
+        // Chặn user đã bị khóa (đường vòng tạo/liên kết bỏ qua lockout)
+        if (await _userManager.IsLockedOutAsync(user))
+        {
+            TempData["LoginError"] = await LockedMessageAsync(email);
+            return RedirectToAction(nameof(Login));
+        }
+
         await _userManager.AddLoginAsync(user, info);
         await _signInManager.SignInAsync(user, isPersistent: false);
         return LocalRedirect(NormalizeReturnUrl(returnUrl));
+    }
+
+    private async Task<string> LockedMessageAsync(string? email)
+    {
+        var u = string.IsNullOrWhiteSpace(email) ? null : await _userManager.FindByEmailAsync(email);
+        var reason = u != null
+            ? (await _userManager.GetClaimsAsync(u)).FirstOrDefault(c => c.Type == "LockReason")?.Value
+            : null;
+        return $"🔒 Tài khoản đã bị khóa. Lý do: {reason ?? "Vui lòng liên hệ quản trị viên."}";
     }
 
     // ── Hồ sơ cá nhân ─────────────────────────────────────────────────────────

@@ -437,12 +437,70 @@ public class AdminController : Controller
             .Where(p => p.Tier == "admin")
             .Select(p => p.UserId).ToListAsync()).ToHashSet();
 
+        // Trạng thái khóa tài khoản (Identity lockout) + lý do (lưu ở claim)
+        var lockedUserIds = users
+            .Where(u => u.LockoutEnd != null && u.LockoutEnd > DateTimeOffset.UtcNow)
+            .Select(u => u.Id).ToHashSet();
+        var lockReasons = new Dictionary<string, string>();
+        foreach (var u in users.Where(u => lockedUserIds.Contains(u.Id)))
+        {
+            var reason = (await _userManager.GetClaimsAsync(u)).FirstOrDefault(c => c.Type == "LockReason")?.Value;
+            if (reason != null) lockReasons[u.Id] = reason;
+        }
+
         ViewBag.UserRoles   = userRoles;
         ViewBag.PlaceCounts = placeCounts;
         ViewBag.ProUserIds   = proUserIds;
         ViewBag.AdminUserIds = adminUserIds;
+        ViewBag.LockedUserIds = lockedUserIds;
+        ViewBag.LockReasons   = lockReasons;
         ViewBag.Q           = q;
         return View(users);
+    }
+
+    // ── Khóa / mở khóa tài khoản (kèm lý do) ───────────────────────────────────
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> LockUser(string userId, string? reason)
+    {
+        var currentUserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (userId == currentUserId)
+        {
+            TempData["Error"] = "Không thể khóa tài khoản của chính mình.";
+            return RedirectToAction(nameof(Users));
+        }
+        var user = await _userManager.FindByIdAsync(userId);
+        if (user == null) return NotFound();
+
+        await _userManager.SetLockoutEnabledAsync(user, true);
+        await _userManager.SetLockoutEndDateAsync(user, DateTimeOffset.MaxValue);
+
+        // Lưu lý do qua claim (không cần thêm cột DB)
+        foreach (var c in (await _userManager.GetClaimsAsync(user)).Where(c => c.Type == "LockReason"))
+            await _userManager.RemoveClaimAsync(user, c);
+        await _userManager.AddClaimAsync(user, new System.Security.Claims.Claim(
+            "LockReason", string.IsNullOrWhiteSpace(reason) ? "Vi phạm điều khoản sử dụng." : reason.Trim()));
+
+        // Đẩy user ra khỏi phiên hiện tại (cookie hết hiệu lực trong ~1 phút)
+        await _userManager.UpdateSecurityStampAsync(user);
+
+        TempData["Success"] = $"Đã khóa tài khoản {user.Email}.";
+        return RedirectToAction(nameof(Users));
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> UnlockUser(string userId)
+    {
+        var user = await _userManager.FindByIdAsync(userId);
+        if (user == null) return NotFound();
+
+        await _userManager.SetLockoutEndDateAsync(user, null);
+        foreach (var c in (await _userManager.GetClaimsAsync(user)).Where(c => c.Type == "LockReason"))
+            await _userManager.RemoveClaimAsync(user, c);
+
+        TempData["Success"] = $"Đã mở khóa tài khoản {user.Email}.";
+        return RedirectToAction(nameof(Users));
     }
 
     [HttpPost]

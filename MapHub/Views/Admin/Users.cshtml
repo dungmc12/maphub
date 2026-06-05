@@ -5,6 +5,8 @@
     var placeCounts = (Dictionary<string, int>)ViewBag.PlaceCounts;
     var proUserIds   = ViewBag.ProUserIds   as HashSet<string> ?? new HashSet<string>();
     var adminUserIds = ViewBag.AdminUserIds as HashSet<string> ?? new HashSet<string>();
+    var lockedUserIds = ViewBag.LockedUserIds as HashSet<string> ?? new HashSet<string>();
+    var lockReasons   = ViewBag.LockReasons   as Dictionary<string, string> ?? new Dictionary<string, string>();
     string? q = ViewBag.Q as string;
     string? currentUserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
 }
@@ -56,11 +58,20 @@
                     var isAdmin = roles.Contains("Admin") || adminUserIds.Contains(u.Id);
                     var isPro   = roles.Contains("Pro")   || proUserIds.Contains(u.Id);
                     var isSelf  = u.Id == currentUserId;
+                    var isLocked = lockedUserIds.Contains(u.Id);
 
-                    <tr class="@(isSelf ? "admin-row-self" : "")">
+                    <tr class="@(isSelf ? "admin-row-self" : "")" style="@(isLocked ? "opacity:.7" : "")">
                         <td>
-                            <div class="admin-user-email">@u.Email @if (isSelf) { <span class="admin-self-tag">(bạn)</span> }</div>
+                            <div class="admin-user-email">
+                                @u.Email
+                                @if (isSelf) { <span class="admin-self-tag">(bạn)</span> }
+                                @if (isLocked) { <span class="abadge abadge-red" title="@(lockReasons.TryGetValue(u.Id, out var lr) ? lr : "")">🔒 Bị khóa</span> }
+                            </div>
                             <div class="admin-sub">ID: @u.Id[..8]…</div>
+                            @if (isLocked && lockReasons.TryGetValue(u.Id, out var reason))
+                            {
+                                <div class="admin-sub" style="color:#dc2626">Lý do: @reason</div>
+                            }
                         </td>
                         <td>
                             @if (isAdmin)
@@ -117,6 +128,23 @@
                                             <button type="submit" class="aact-btn aact-del" title="Xóa tài khoản"><i class="bi bi-trash3-fill"></i></button>
                                         </form>
                                     }
+                                    @if (isLocked)
+                                    {
+                                        <form method="post" action="/Admin/UnlockUser" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="userId" value="@u.Id">
+                                            <button type="submit" class="aact-btn aact-pro" title="Mở khóa"><i class="bi bi-unlock-fill"></i> Mở khóa</button>
+                                        </form>
+                                    }
+                                    else
+                                    {
+                                        <form method="post" action="/Admin/LockUser" class="d-inline lock-form" onsubmit="return promptLock(this)">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="userId" value="@u.Id">
+                                            <input type="hidden" name="reason" class="lock-reason">
+                                            <button type="submit" class="aact-btn aact-reject" title="Khóa tài khoản"><i class="bi bi-lock-fill"></i> Khóa</button>
+                                        </form>
+                                    }
                                 }
                                 @if (isSelf)
                                 {
@@ -130,3 +158,14 @@
         </table>
     </div>
 </div>
+
+@section Scripts {
+<script>
+function promptLock(form) {
+    const reason = prompt('Lý do khóa tài khoản này (người dùng sẽ thấy khi đăng nhập):', 'Vi phạm điều khoản sử dụng.');
+    if (reason === null) return false;            // huỷ
+    form.querySelector('.lock-reason').value = reason.trim();
+    return true;
+}
+</script>
+}
