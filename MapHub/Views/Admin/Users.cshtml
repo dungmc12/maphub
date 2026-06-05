@@ -121,12 +121,6 @@
                                             <input type="hidden" name="role"   value="Admin">
                                             <button type="submit" class="aact-btn aact-admin-grant"><i class="bi bi-shield-fill"></i> Admin</button>
                                         </form>
-                                        <form method="post" action="/Admin/DeleteUser" class="d-inline"
-                                              onsubmit="return confirm('Xóa tài khoản @u.Email? Hành động này không thể hoàn tác.')">
-                                            @Html.AntiForgeryToken()
-                                            <input type="hidden" name="userId" value="@u.Id">
-                                            <button type="submit" class="aact-btn aact-del" title="Xóa tài khoản"><i class="bi bi-trash3-fill"></i></button>
-                                        </form>
                                     }
                                     @if (isLocked)
                                     {

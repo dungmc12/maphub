@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using MapHub.Data;
 using MapHub.Models;
+using MapHub.Services;
 
 namespace MapHub.Controllers;
 
@@ -641,20 +642,9 @@ public class AdminController : Controller
     }
 
     // ── Helper ───────────────────────────────────────────────────────────────
+    // Lưu ảnh thành base64 data URL trong DB (bền với Render redeploy, không dùng /uploads ephemeral)
     private async Task<string> SaveUploadAsync(IFormFile file, string folder)
-    {
-        var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
-        if (!new[] { ".jpg", ".jpeg", ".png", ".webp", ".gif" }.Contains(ext))
-            return string.Empty;
-
-        var dir = Path.Combine(_env.WebRootPath, "uploads", folder);
-        Directory.CreateDirectory(dir);
-        var fileName = $"{Guid.NewGuid()}{ext}";
-        var filePath = Path.Combine(dir, fileName);
-        using var stream = new FileStream(filePath, FileMode.Create);
-        await file.CopyToAsync(stream);
-        return $"/uploads/{folder}/{fileName}";
-    }
+        => await ImageHelper.ToDataUrlAsync(file) ?? string.Empty;
 }
 
 public record RevenueRow(int Id, decimal Amount, string PlanType, string? Code, string? Provider, DateTime? PaidAt, string? Email);

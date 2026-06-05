@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using MapHub.Data;
 using MapHub.Models;
+using MapHub.Services;
 
 namespace MapHub.Controllers;
 
@@ -187,33 +188,21 @@ public class MapController : Controller
         if (place.CreatedByUserId != currentUserId && !User.IsInRole("Admin"))
             return Forbid();
 
-        if (image == null || image.Length == 0)
-            return BadRequest("Không có ảnh.");
-
-        // Kiểm tra định dạng
-        var allowed = new[] { ".jpg", ".jpeg", ".png", ".webp" };
-        var ext = Path.GetExtension(image.FileName).ToLowerInvariant();
-        if (!allowed.Contains(ext)) return BadRequest("Định dạng ảnh không hỗ trợ.");
-
-        var folder = Path.Combine(_env.WebRootPath, "uploads", "places", placeId.ToString());
-        Directory.CreateDirectory(folder);
-        var fileName = $"{Guid.NewGuid()}{ext}";
-        var filePath = Path.Combine(folder, fileName);
-
-        using var stream = new FileStream(filePath, FileMode.Create);
-        await image.CopyToAsync(stream);
+        // Lưu thành base64 data URL (bền với Render redeploy)
+        var dataUrl = await ImageHelper.ToDataUrlAsync(image);
+        if (dataUrl == null) return BadRequest("Định dạng/kích thước ảnh không hợp lệ (≤5MB).");
 
         var hasPrimary = await _context.PlaceImages.AnyAsync(i => i.PlaceId == placeId && i.IsPrimary);
         _context.PlaceImages.Add(new PlaceImage
         {
             PlaceId = placeId,
-            Url = $"/uploads/places/{placeId}/{fileName}",
+            Url = dataUrl,
             IsPrimary = !hasPrimary,
             UploadedByUserId = currentUserId
         });
         await _context.SaveChangesAsync();
 
-        return Ok(new { url = $"/uploads/places/{placeId}/{fileName}" });
+        return Ok(new { url = dataUrl });
     }
 
     [Authorize]
@@ -224,21 +213,8 @@ public class MapController : Controller
     {
         var currentUserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value!;
 
-        string? photoUrl = null;
-        if (photo != null && photo.Length > 0 && photo.Length <= 5 * 1024 * 1024)
-        {
-            var ext = Path.GetExtension(photo.FileName).ToLowerInvariant();
-            if (new[] { ".jpg", ".jpeg", ".png", ".webp" }.Contains(ext))
-            {
-                var dir = Path.Combine(_env.WebRootPath, "uploads", "reviews");
-                Directory.CreateDirectory(dir);
-                var fileName = $"{Guid.NewGuid()}{ext}";
-                var filePath = Path.Combine(dir, fileName);
-                using var stream = new FileStream(filePath, FileMode.Create);
-                await photo.CopyToAsync(stream);
-                photoUrl = $"/uploads/reviews/{fileName}";
-            }
-        }
+        // Lưu ảnh review thành base64 data URL (tồn tại vĩnh viễn, không mất khi Render redeploy)
+        string? photoUrl = await ImageHelper.ToDataUrlAsync(photo);
 
         _context.PlaceReviews.Add(new PlaceReview
         {
@@ -391,21 +367,8 @@ public class MapController : Controller
         if (latitude != 0 && longitude != 0) { place.Latitude = latitude; place.Longitude = longitude; }
         place.UpdatedAt  = DateTime.UtcNow;
 
-        string? resolvedUrl = null;
-        if (imageFile != null && imageFile.Length > 0)
-        {
-            var ext = Path.GetExtension(imageFile.FileName).ToLowerInvariant();
-            if (new[] { ".jpg", ".jpeg", ".png", ".webp" }.Contains(ext))
-            {
-                var folder = Path.Combine(_env.WebRootPath, "uploads", "places", place.Id.ToString());
-                Directory.CreateDirectory(folder);
-                var fileName = $"{Guid.NewGuid()}{ext}";
-                using var fs = new FileStream(Path.Combine(folder, fileName), FileMode.Create);
-                await imageFile.CopyToAsync(fs);
-                resolvedUrl = $"/uploads/places/{place.Id}/{fileName}";
-            }
-        }
-        else if (!string.IsNullOrWhiteSpace(newImageUrl))
+        string? resolvedUrl = await ImageHelper.ToDataUrlAsync(imageFile);
+        if (resolvedUrl == null && !string.IsNullOrWhiteSpace(newImageUrl))
             resolvedUrl = newImageUrl;
         if (resolvedUrl != null)
         {
