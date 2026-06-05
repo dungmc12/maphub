@@ -128,7 +128,11 @@
     <div id="chatWidget" class="chat-widget collapsed">
         <div class="chat-widget-header" onclick="toggleChat()">
             <span>🤖 Trợ lý AI CityScout</span>
-            <i class="bi bi-chevron-up" id="chatChevron"></i>
+            <span style="display:flex;gap:.6rem;align-items:center">
+                <button type="button" title="Xoá lịch sử chat" onclick="event.stopPropagation();clearChatHistory()"
+                        style="background:none;border:none;color:#fff;cursor:pointer;font-size:.85rem;opacity:.85">🗑️</button>
+                <i class="bi bi-chevron-up" id="chatChevron"></i>
+            </span>
         </div>
         <div id="chatBody" class="chat-widget-body">
             <div class="chat-msg ai"><em>Xin chào! Tôi có thể giúp bạn tìm địa điểm ăn uống, vui chơi tại Hà Nội. Hỏi thử nhé!</em></div>
@@ -343,6 +347,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     loadPlaces(currentCat);
+    restoreChatHistory();   // hiện lại 5 đoạn chat gần nhất
 });
 
 // ── Weather ───────────────────────────────────────────────────────────────
@@ -796,6 +801,36 @@ function toggleChat() {
 }
 
 let _chatBusy = false;
+// ── Lịch sử chat (lưu 5 đoạn gần nhất ở trình duyệt) ──
+const CHAT_KEY = 'cityscout_chat_v1';
+function loadChatHistory() {
+    try { return JSON.parse(localStorage.getItem(CHAT_KEY) || '[]'); } catch { return []; }
+}
+function saveChatHistory(q, a) {
+    let h = loadChatHistory();
+    h.push({ q: q, a: a });
+    h = h.slice(-5);                       // chỉ giữ 5 đoạn gần nhất
+    try { localStorage.setItem(CHAT_KEY, JSON.stringify(h)); } catch {}
+}
+function restoreChatHistory() {
+    const body = document.getElementById('chatBody');
+    if (!body) return;
+    const h = loadChatHistory();
+    if (!h.length) return;
+    let html = '<div class="chat-msg ai" style="opacity:.7;font-size:.8rem">— Lịch sử gần đây —</div>';
+    h.forEach(m => {
+        html += `<div class="chat-msg user"><b>Bạn:</b> ${escHtml(m.q)}</div>`;
+        html += `<div class="chat-msg ai"><b>AI:</b> ${formatAiMsg(m.a)}</div>`;
+    });
+    html += '<div class="chat-msg ai" style="opacity:.7;font-size:.8rem">— Tin mới —</div>';
+    body.innerHTML += html;
+}
+function clearChatHistory() {
+    try { localStorage.removeItem(CHAT_KEY); } catch {}
+    const body = document.getElementById('chatBody');
+    if (body) body.innerHTML = '<div class="chat-msg ai"><em>Đã xoá lịch sử. Hỏi gì cứ hỏi nhé!</em></div>';
+}
+
 async function sendChat() {
     if (_chatBusy) return;
     const input = document.getElementById('chatInput');
@@ -824,6 +859,7 @@ async function sendChat() {
         if (r.ok) {
             const d = await r.json();
             body.innerHTML += `<div class="chat-msg ai"><b>AI:</b> ${formatAiMsg(d.answer)}</div>`;
+            saveChatHistory(val, d.answer);
         } else {
             body.innerHTML += `<div class="chat-msg err">⚠️ Không kết nối được AI.</div>`;
         }
