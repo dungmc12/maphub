@@ -207,7 +207,7 @@ public class MapController : Controller
 
     [Authorize]
     [HttpPost]
-    public async Task<IActionResult> UploadImage(int placeId, IFormFile image)
+    public async Task<IActionResult> UploadImage(int placeId, IFormFile image, bool isMenu = false)
     {
         var place = await _context.Places.FindAsync(placeId);
         if (place == null) return NotFound();
@@ -220,12 +220,14 @@ public class MapController : Controller
         var dataUrl = await ImageHelper.ToDataUrlAsync(image);
         if (dataUrl == null) return BadRequest("Định dạng/kích thước ảnh không hợp lệ (≤5MB).");
 
+        // Ảnh menu không bao giờ là ảnh đại diện; ảnh thường đầu tiên thì làm đại diện
         var hasPrimary = await _context.PlaceImages.AnyAsync(i => i.PlaceId == placeId && i.IsPrimary);
         _context.PlaceImages.Add(new PlaceImage
         {
             PlaceId = placeId,
             Url = dataUrl,
-            IsPrimary = !hasPrimary,
+            IsPrimary = !isMenu && !hasPrimary,
+            IsMenu = isMenu,
             UploadedByUserId = currentUserId
         });
         await _context.SaveChangesAsync();

@@ -211,6 +211,21 @@ using (var scope = app.Services.CreateScope())
         app.Logger.LogError(ex, "Auto-migration UserLists lỗi");
     }
 
+    // Thêm cột IsMenu cho PlaceImages nếu chưa có (ảnh thực đơn/menu)
+    try
+    {
+        if (dbProvider == "postgres")
+            await context.Database.ExecuteSqlRawAsync(
+                "ALTER TABLE \"PlaceImages\" ADD COLUMN IF NOT EXISTS \"IsMenu\" boolean NOT NULL DEFAULT false;");
+        else
+            await context.Database.ExecuteSqlRawAsync(
+                "IF COL_LENGTH('PlaceImages','IsMenu') IS NULL ALTER TABLE PlaceImages ADD IsMenu bit NOT NULL DEFAULT 0;");
+    }
+    catch (Exception ex)
+    {
+        app.Logger.LogError(ex, "Auto-migration PlaceImages.IsMenu lỗi");
+    }
+
     // Bảng lưu DataProtection keys (EnsureCreated không tự thêm vào DB đã tồn tại)
     try
     {

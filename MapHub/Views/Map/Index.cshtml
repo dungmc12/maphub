@@ -251,6 +251,22 @@ else if (isAuth)
                                 <input type="file" id="newImageFile" class="form-control form-control-sm" accept="image/*">
                             </div>
                         </div>
+                        <!-- Thêm nhiều ảnh khác (không bắt buộc) — như Google Maps -->
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">
+                                <i class="bi bi-images"></i> Thêm nhiều ảnh khác
+                                <span class="text-muted fw-normal" style="font-size:.82rem">— không bắt buộc, chọn nhiều ảnh</span>
+                            </label>
+                            <input type="file" id="newMoreImages" class="form-control form-control-sm" accept="image/*" multiple>
+                        </div>
+                        <!-- Ảnh menu / thực đơn (không bắt buộc) -->
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">
+                                <i class="bi bi-card-list"></i> Ảnh thực đơn / menu
+                                <span class="text-muted fw-normal" style="font-size:.82rem">— không bắt buộc, dành cho quán ăn/cafe</span>
+                            </label>
+                            <input type="file" id="newMenuImages" class="form-control form-control-sm" accept="image/*" multiple>
+                        </div>
                         <!-- Quyền riêng tư -->
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">Quyền xem</label>
@@ -768,13 +784,21 @@ async function submitPlace() {
     const json = await res.json();
 
     if (res.ok && json.success) {
-        // Nếu chọn file từ máy → upload làm ảnh chính
-        if (imageFile && json.id) {
+        if (json.id) {
             const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
-            const fd = new FormData();
-            fd.append('placeId', json.id);
-            fd.append('image', imageFile);
-            try { await fetch('/Map/UploadImage', { method: 'POST', headers: { 'RequestVerificationToken': token }, body: fd }); } catch {}
+            const uploadOne = async (file, isMenu) => {
+                const fd = new FormData();
+                fd.append('placeId', json.id);
+                fd.append('image', file);
+                fd.append('isMenu', isMenu);
+                try { await fetch('/Map/UploadImage', { method: 'POST', headers: { 'RequestVerificationToken': token }, body: fd }); } catch {}
+            };
+            // 1) Ảnh đại diện từ máy (nếu có) — là ảnh thường đầu tiên → thành ảnh chính
+            if (imageFile) await uploadOne(imageFile, false);
+            // 2) Nhiều ảnh khác (không bắt buộc)
+            for (const f of document.getElementById('newMoreImages').files) await uploadOne(f, false);
+            // 3) Ảnh menu/thực đơn (không bắt buộc)
+            for (const f of document.getElementById('newMenuImages').files) await uploadOne(f, true);
         }
         bootstrap.Modal.getInstance(document.getElementById('addPlaceModal')).hide();
         const msg = data.Visibility === 'public'
