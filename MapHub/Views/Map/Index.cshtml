@@ -223,25 +223,14 @@ else if (isAuth)
                                 <div class="form-text">Chưa có tag nào (Admin tạo ở Admin → Tags).</div>
                             }
                         </div>
-                        <!-- Giá: nhập tay HOẶC kéo thanh (0 – 2 triệu) -->
-                        <div class="col-12">
-                            <label class="form-label fw-semibold">
-                                Khoảng giá: <span id="priceLabel" class="text-primary fw-bold">Chưa đặt</span>
-                            </label>
-                            <div class="d-flex gap-2 align-items-center mb-1">
-                                <span style="width:34px;font-size:.85rem;color:#64748b">Từ</span>
-                                <input type="number" id="newMinPrice" class="form-control" placeholder="0" style="max-width:120px"
-                                       min="0" max="2000000" oninput="syncPriceFromNumber()">
-                                <input type="range" id="minPriceRange" class="form-range flex-grow-1"
-                                       min="0" max="2000000" step="10000" value="0" oninput="syncPriceFromRange()">
-                            </div>
-                            <div class="d-flex gap-2 align-items-center">
-                                <span style="width:34px;font-size:.85rem;color:#64748b">Đến</span>
-                                <input type="number" id="newMaxPrice" class="form-control" placeholder="0" style="max-width:120px"
-                                       min="0" max="2000000" oninput="syncPriceFromNumber()">
-                                <input type="range" id="maxPriceRange" class="form-range flex-grow-1"
-                                       min="0" max="2000000" step="10000" value="0" oninput="syncPriceFromRange()">
-                            </div>
+                        <!-- Giá: nhập số Từ – Đến -->
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Giá từ (đ)</label>
+                            <input type="number" id="newMinPrice" class="form-control" placeholder="VD: 30000" min="0">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Giá đến (đ)</label>
+                            <input type="number" id="newMaxPrice" class="form-control" placeholder="VD: 150000" min="0">
                         </div>
                         <div class="col-12">
                             <label class="form-label fw-semibold">Website</label>
@@ -682,25 +671,6 @@ function syncMiniMarker() {
     miniMap.setView([lat, lng], Math.max(miniMap.getZoom(), 14));
 }
 
-// ── Thanh kéo giá ───────────────────────────────────────────────────────────
-function fmtVnd(n) { return (Number(n) || 0).toLocaleString('vi-VN') + 'đ'; }
-
-function updatePriceLabel() {
-    const mn = parseFloat(document.getElementById('newMinPrice').value) || 0;
-    const mx = parseFloat(document.getElementById('newMaxPrice').value) || 0;
-    document.getElementById('priceLabel').textContent =
-        (mn === 0 && mx === 0) ? 'Chưa đặt' : `${fmtVnd(mn)} – ${fmtVnd(mx)}`;
-}
-function syncPriceFromRange() {
-    document.getElementById('newMinPrice').value = document.getElementById('minPriceRange').value;
-    document.getElementById('newMaxPrice').value = document.getElementById('maxPriceRange').value;
-    updatePriceLabel();
-}
-function syncPriceFromNumber() {
-    document.getElementById('minPriceRange').value = Math.min(2000000, parseFloat(document.getElementById('newMinPrice').value) || 0);
-    document.getElementById('maxPriceRange').value = Math.min(2000000, parseFloat(document.getElementById('newMaxPrice').value) || 0);
-    updatePriceLabel();
-}
 
 async function submitPlace() {
     const lat = parseFloat(document.getElementById('newLat').value);
