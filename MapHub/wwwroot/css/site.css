@@ -2,20 +2,22 @@
 
 /* ── Variables ────────────────────────────────────────────────────────── */
 :root {
-  --bg-main:       #f4f2ea;
-  --bg-panel:      #fbf8f3;
-  --ink-primary:   #152226;
-  --ink-secondary: #4d5c61;
-  --line:          #cdd7d4;
-  --accent:        #e06d1b;
-  --accent-dark:   #bf5510;
-  --accent-rgb:    224,109,27;
-  --accent-soft:   #ffcfaa;
-  --blue:          #2f5fe6;
-  --blue-soft:     #e7eefc;
-  --mint:          #e4f2ea;
-  --green:         #2e7d52;
-  --red:           #c0392b;
+  --bg-main:       #f8f9fa;
+  --bg-panel:      #ffffff;
+  --ink-primary:   #1a1f3a;
+  --ink-secondary: #5a6478;
+  --line:          #dce3ec;
+  --accent:        #0891b2;
+  --accent-dark:   #0e7490;
+  --accent-rgb:    8,145,178;
+  --accent-soft:   #a5f3fc;
+  --secondary:     #2dd4bf;
+  --secondary-rgb: 45,212,191;
+  --blue:          #06b6d4;
+  --blue-soft:     #cffafe;
+  --mint:          #d6f5ef;
+  --green:         #0d9488;
+  --red:           #e11d48;
   --radius:        16px;
   --radius-lg:     20px;
   --shadow-soft:   0 12px 40px rgba(17,33,35,.10);
@@ -43,7 +45,7 @@ body.map-view { overflow: hidden; height: 100vh; }
 .app-header {
   position: sticky; top: 0; z-index: 200;
   backdrop-filter: blur(10px);
-  background: rgba(244,242,234,.92);
+  background: rgba(248,249,250,.92);
   border-bottom: 1px solid var(--line);
   height: 56px;
 }
@@ -197,7 +199,7 @@ body.map-view { overflow: hidden; height: 100vh; }
 .hero-no-place { display:inline-block; padding:.4rem .9rem; border-radius:8px; background:rgba(255,255,255,.18); color:rgba(255,255,255,.75); font-size:.85rem; }
 
 .hero-default {
-  background: linear-gradient(135deg, #e9f4f0 0%, #f2e8d8 100%);
+  background: linear-gradient(135deg, #e0f7fa 0%, #d6f5ef 100%);
   min-height: 320px; display: grid; place-items: center; padding: 3rem 1.5rem;
 }
 .hero-default-inner { text-align: center; }
@@ -363,7 +365,7 @@ body.map-view { overflow: hidden; height: 100vh; }
 
 /* ── CTA Banner ───────────────────────────────────────────────────────── */
 .cta-banner {
-  background: linear-gradient(135deg, var(--accent-dark), #8b3a0a);
+  background: linear-gradient(135deg, var(--accent-dark), #075985);
   padding: 2.5rem 0; margin-top: 1.5rem;
 }
 .cta-inner { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1.5rem; }

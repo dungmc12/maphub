@@ -214,7 +214,8 @@
                 var reviews = place.Reviews.Count;
                 <div class="place-card">
                     <a href="/Map/Details/@place.Id" class="place-card-img-link">
-                        <img src="@img" alt="@place.Name" loading="lazy">
+                        <img src="@img" alt="@place.Name" loading="lazy"
+                             onerror="this.onerror=null;this.src='https://placehold.co/400x300?text=No+Img'">
                         @{
                             var catMap = new Dictionary<string,string>(StringComparer.OrdinalIgnoreCase){
                                 ["restaurant"]="🍽️ Nhà hàng",["cafe"]="☕ Cà phê",["entertainment"]="🎯 Vui chơi",

@@ -2,6 +2,8 @@
     ViewData["Title"] = "Nâng cấp Pro – CityScout";
     bool isPro = User.Identity?.IsAuthenticated == true && (User.IsInRole("Admin") || User.IsInRole("Pro") || (ViewBag.IsPro as bool? ?? false));
     bool isLoggedIn = User.Identity?.IsAuthenticated == true;
+    var proExpiresAt = ViewBag.ProExpiresAt as DateTime?;
+    string? currentPlan = ViewBag.CurrentPlan as string;   // "month" | "year" | null
 }
 
 <style>
@@ -33,6 +35,8 @@
 .pr-btn-active { background:#f0fdf4; color:#16a34a; border:2px solid #86efac; cursor:default; }
 .pr-save { display:inline-block; font-size:.65rem; background:#22c55e; color:#fff;
            padding:.1rem .45rem; border-radius:6px; vertical-align:middle; margin-left:.3rem; }
+.pr-using-tag { display:inline-block; font-size:.66rem; font-weight:800; background:#dcfce7; color:#16a34a;
+                border:1px solid #86efac; padding:.12rem .5rem; border-radius:999px; margin-left:.4rem; vertical-align:middle; }
 </style>
 
 <!-- Hero -->
@@ -46,7 +50,13 @@
         </p>
         @if (isPro)
         {
-            <div class="premium-active-badge"><i class="bi bi-patch-check-fill"></i> Bạn đang là thành viên Pro</div>
+            <div class="premium-active-badge">
+                <i class="bi bi-patch-check-fill"></i> Bạn đang là thành viên Pro
+                @if (proExpiresAt.HasValue)
+                {
+                    <text> · Hết hạn @proExpiresAt.Value.ToLocalTime().ToString("dd/MM/yyyy")</text>
+                }
+            </div>
         }
     </div>
 </div>
@@ -81,7 +91,7 @@
     <!-- Pro tháng -->
     <div class="pr-card featured">
         <div class="pr-badge">Phổ biến</div>
-        <div class="pr-tier">Pro</div>
+        <div class="pr-tier">Pro @if (isPro && currentPlan == "month") { <span class="pr-using-tag">Đang dùng</span> }</div>
         <div class="pr-price">@(((decimal)ViewBag.MonthAmount).ToString("#,##0"))đ <span>/ tháng</span></div>
         <div class="pr-desc">Gia hạn mỗi 30 ngày</div>
         <ul class="pr-feats">
@@ -93,11 +103,7 @@
             <li>Chia sẻ kế hoạch qua link</li>
             <li>Lọc địa điểm nâng cao</li>
         </ul>
-        @if (isPro)
-        {
-            <div class="pr-btn pr-btn-active"><i class="bi bi-patch-check-fill"></i> Đang sử dụng</div>
-        }
-        else if (!isLoggedIn)
+        @if (!isLoggedIn)
         {
             <a href="/Account/Login" class="pr-btn pr-btn-month">Đăng nhập để mua</a>
         }
@@ -107,7 +113,7 @@
                 @Html.AntiForgeryToken()
                 <input type="hidden" name="plan" value="month">
                 <button type="submit" class="pr-btn pr-btn-month w-100">
-                    <i class="bi bi-qr-code-scan me-1"></i> Đăng ký 1 tháng
+                    <i class="bi bi-qr-code-scan me-1"></i> @(isPro ? "Gia hạn thêm 1 tháng" : "Đăng ký 1 tháng")
                 </button>
             </form>
         }
@@ -116,7 +122,7 @@
     <!-- Pro năm -->
     <div class="pr-card best">
         <div class="pr-badge gold">Tiết kiệm nhất</div>
-        <div class="pr-tier">Pro</div>
+        <div class="pr-tier">Pro @if (isPro && currentPlan == "year") { <span class="pr-using-tag">Đang dùng</span> }</div>
         <div class="pr-price">@(((decimal)ViewBag.YearAmount).ToString("#,##0"))đ <span>/ năm</span></div>
         <div class="pr-desc">Dùng trọn 365 ngày <span class="pr-save">-17%</span></div>
         <ul class="pr-feats">
@@ -128,11 +134,7 @@
             <li>Chia sẻ kế hoạch qua link</li>
             <li>Lọc địa điểm nâng cao</li>
         </ul>
-        @if (isPro)
-        {
-            <div class="pr-btn pr-btn-active"><i class="bi bi-patch-check-fill"></i> Đang sử dụng</div>
-        }
-        else if (!isLoggedIn)
+        @if (!isLoggedIn)
         {
             <a href="/Account/Login" class="pr-btn pr-btn-year">Đăng nhập để mua</a>
         }
@@ -142,7 +144,7 @@
                 @Html.AntiForgeryToken()
                 <input type="hidden" name="plan" value="year">
                 <button type="submit" class="pr-btn pr-btn-year w-100">
-                    <i class="bi bi-qr-code-scan me-1"></i> Đăng ký 1 năm
+                    <i class="bi bi-qr-code-scan me-1"></i> @(isPro ? "Gia hạn thêm 1 năm" : "Đăng ký 1 năm")
                 </button>
             </form>
         }

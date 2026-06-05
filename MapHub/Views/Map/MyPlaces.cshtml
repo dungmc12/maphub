@@ -80,6 +80,7 @@
                 <div class="col-md-4 col-sm-6 my-place-card" data-name="@p.Name.ToLower()" data-cat="@(p.Category?.ToLower())" data-created="@p.CreatedAt.Ticks">
                     <div class="plan-card" style="overflow:hidden">
                         <img src="@img" alt="@p.Name"
+                             onerror="this.onerror=null;this.src='https://placehold.co/400x300?text=No+Img'"
                              style="width:100%;height:160px;object-fit:cover;border-radius:10px 10px 0 0">
                         <div style="padding:.85rem">
                             <div class="fw-bold mb-1">@p.Name</div>
@@ -147,7 +148,7 @@
                 var sdir = $"https://www.google.com/maps/dir/?api=1&destination={p.Latitude.ToString(sinv)},{p.Longitude.ToString(sinv)}";
                 <div class="col-md-4 col-sm-6" id="saved-@p.Id">
                     <div class="plan-card" style="overflow:hidden">
-                        <img src="@simg" alt="@p.Name" style="width:100%;height:160px;object-fit:cover;border-radius:10px 10px 0 0">
+                        <img src="@simg" alt="@p.Name" onerror="this.onerror=null;this.src='https://placehold.co/400x300?text=No+Img'" style="width:100%;height:160px;object-fit:cover;border-radius:10px 10px 0 0">
                         <div style="padding:.85rem">
                             <div class="fw-bold mb-1">@p.Name</div>
                             @if (!string.IsNullOrEmpty(p.Address))

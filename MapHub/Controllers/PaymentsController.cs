@@ -61,6 +61,17 @@ public class PaymentsController : Controller
             {
                 var profile = await _context.UserProfiles.FindAsync(userId);
                 isPro = profile?.IsPro ?? false;
+                ViewBag.ProExpiresAt = profile?.ProExpiresAt;
+
+                // Gói đang dùng = gói của đơn đã thanh toán gần nhất (month/year)
+                if (isPro)
+                {
+                    ViewBag.CurrentPlan = await _context.Payments
+                        .Where(p => p.UserId == userId && p.Status == "paid")
+                        .OrderByDescending(p => p.PaidAt)
+                        .Select(p => p.PlanType)
+                        .FirstOrDefaultAsync();
+                }
             }
         }
         ViewBag.IsPro = isPro;
