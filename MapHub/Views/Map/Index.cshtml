@@ -65,10 +65,10 @@
                        value="2000000" oninput="onBudgetSlide()">
             </div>
 
-            <!-- District filter (Quận/Huyện) -->
-            <div class="sidebar-search-box" style="margin-top:.45rem">
+            <!-- Quận/huyện + Đang mở cửa: gom 1 hàng gọn -->
+            <div class="sidebar-search-box" style="margin-top:.45rem;display:flex;gap:.5rem;align-items:center">
                 <select id="districtFilter" class="sidebar-search-input"
-                        style="cursor:pointer;appearance:auto" onchange="filterDistrict(this.value)">
+                        style="flex:1;min-width:0;cursor:pointer;appearance:auto" onchange="filterDistrict(this.value)">
                     <option value="">📍 Mọi quận/huyện</option>
                     <option>Ba Đình</option>
                     <option>Hoàn Kiếm</option>
@@ -87,13 +87,11 @@
                     <option>Thạch Thất</option>
                     <option>Hòa Lạc</option>
                 </select>
+                <label style="display:flex;align-items:center;gap:.3rem;font-size:.8rem;cursor:pointer;color:#475569;white-space:nowrap" title="Chỉ hiện địa điểm đang mở cửa">
+                    <input type="checkbox" id="openNowFilter" onchange="filterOpenNow(this.checked)" style="cursor:pointer">
+                    <i class="bi bi-clock"></i> Đang mở
+                </label>
             </div>
-
-            <!-- Time filter (giờ mở cửa) -->
-            <label style="display:flex;align-items:center;gap:.5rem;margin:.5rem .2rem .2rem;font-size:.88rem;cursor:pointer;color:#475569">
-                <input type="checkbox" id="openNowFilter" onchange="filterOpenNow(this.checked)" style="cursor:pointer">
-                <i class="bi bi-clock"></i> Chỉ hiện địa điểm <strong>đang mở cửa</strong>
-            </label>
 
             @if (!isAuth)
             {

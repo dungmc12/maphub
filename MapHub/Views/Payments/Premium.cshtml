@@ -42,7 +42,7 @@
 <!-- Hero -->
 <div class="premium-hero">
     <div class="premium-hero-inner">
-        <div class="premium-badge"><i class="bi bi-stars"></i> CityScout Pro</div>
+        <div class="premium-badge"><i class="fa-solid fa-wand-magic-sparkles"></i> CityScout Pro</div>
         <h1 class="premium-title">Khám phá Hà Nội không giới hạn</h1>
         <p class="premium-subtitle">
             Lập kế hoạch hành trình thông minh, gợi ý địa điểm bằng AI<br>
@@ -51,7 +51,7 @@
         @if (isPro)
         {
             <div class="premium-active-badge">
-                <i class="bi bi-patch-check-fill"></i> Bạn đang là thành viên Pro
+                <i class="fa-solid fa-circle-check"></i> Bạn đang là thành viên Pro
                 @if (proExpiresAt.HasValue)
                 {
                     <text> · Hết hạn @proExpiresAt.Value.ToLocalTime().ToString("dd/MM/yyyy")</text>
@@ -113,7 +113,7 @@
                 @Html.AntiForgeryToken()
                 <input type="hidden" name="plan" value="month">
                 <button type="submit" class="pr-btn pr-btn-month w-100">
-                    <i class="bi bi-qr-code-scan me-1"></i> @(isPro ? "Gia hạn thêm 1 tháng" : "Đăng ký 1 tháng")
+                    <i class="fa-solid fa-qrcode me-1"></i> @(isPro ? "Gia hạn thêm 1 tháng" : "Đăng ký 1 tháng")
                 </button>
             </form>
         }
@@ -144,7 +144,7 @@
                 @Html.AntiForgeryToken()
                 <input type="hidden" name="plan" value="year">
                 <button type="submit" class="pr-btn pr-btn-year w-100">
-                    <i class="bi bi-qr-code-scan me-1"></i> @(isPro ? "Gia hạn thêm 1 năm" : "Đăng ký 1 năm")
+                    <i class="fa-solid fa-qrcode me-1"></i> @(isPro ? "Gia hạn thêm 1 năm" : "Đăng ký 1 năm")
                 </button>
             </form>
         }

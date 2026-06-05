@@ -75,24 +75,24 @@
                                     <div>
                                         <a href="/Map/Details/@p.Id" class="admin-place-link">@p.Name</a>
                                         @if (!string.IsNullOrEmpty(p.Address))
-                                        { <div class="admin-sub"><i class="bi bi-geo-alt" style="color:#ef4444"></i> @p.Address</div> }
+                                        { <div class="admin-sub"><i class="fa-solid fa-location-dot" style="color:#ef4444"></i> @p.Address</div> }
                                     </div>
                                 </div>
                             </td>
                             <td><span class="admin-cat-badge @cC">@cL</span></td>
                             <td><span class="admin-sub">@(p.CreatedByUserId?.Length > 8 ? p.CreatedByUserId[..8] + "…" : (p.CreatedByUserId ?? "—"))</span></td>
                             <td>
-                                @if (p.IsApproved) { <span class="abadge abadge-green"><i class="bi bi-check-circle-fill"></i> Đã duyệt</span> }
-                                else               { <span class="abadge abadge-orange"><i class="bi bi-hourglass-split"></i> Chờ duyệt</span> }
+                                @if (p.IsApproved) { <span class="abadge abadge-green"><i class="fa-solid fa-circle-check"></i> Đã duyệt</span> }
+                                else               { <span class="abadge abadge-orange"><i class="fa-solid fa-hourglass-half"></i> Chờ duyệt</span> }
                             </td>
                             <td>
-                                @if (p.Visibility == "public") { <span class="abadge abadge-blue"><i class="bi bi-globe2"></i> Công khai</span> }
-                                else                           { <span class="abadge abadge-gray"><i class="bi bi-lock-fill"></i> Cá nhân</span> }
+                                @if (p.Visibility == "public") { <span class="abadge abadge-blue"><i class="fa-solid fa-globe"></i> Công khai</span> }
+                                else                           { <span class="abadge abadge-gray"><i class="fa-solid fa-lock"></i> Cá nhân</span> }
                             </td>
                             <td>
                                 <div class="admin-actions">
-                                    <a href="/Map/Details/@p.Id"     class="aact-btn aact-view" title="Xem"><i class="bi bi-eye-fill"></i></a>
-                                    <a href="/Admin/EditPlace/@p.Id"  class="aact-btn aact-edit" title="Sửa"><i class="bi bi-pencil-fill"></i></a>
+                                    <a href="/Map/Details/@p.Id"     class="aact-btn aact-view" title="Xem"><i class="fa-solid fa-eye"></i></a>
+                                    <a href="/Admin/EditPlace/@p.Id"  class="aact-btn aact-edit" title="Sửa"><i class="fa-solid fa-pen"></i></a>
                                     <form method="post" action="/Admin/ToggleFeaturedPlace" class="d-inline">
                                         @Html.AntiForgeryToken()
                                         <input type="hidden" name="id" value="@p.Id">
@@ -105,20 +105,20 @@
                                         <form method="post" action="/Admin/ApprovePlace" class="d-inline">
                                             @Html.AntiForgeryToken()
                                             <input type="hidden" name="id" value="@p.Id">
-                                            <button type="submit" class="aact-btn aact-approve"><i class="bi bi-check-lg"></i> Duyệt</button>
+                                            <button type="submit" class="aact-btn aact-approve"><i class="fa-solid fa-check"></i> Duyệt</button>
                                         </form>
                                         <form method="post" action="/Admin/RejectPlace" class="d-inline"
                                               onsubmit="return confirm('Từ chối và xóa địa điểm này?')">
                                             @Html.AntiForgeryToken()
                                             <input type="hidden" name="id" value="@p.Id">
-                                            <button type="submit" class="aact-btn aact-reject"><i class="bi bi-x-lg"></i> Từ chối</button>
+                                            <button type="submit" class="aact-btn aact-reject"><i class="fa-solid fa-xmark"></i> Từ chối</button>
                                         </form>
                                     }
                                     <form method="post" action="/Admin/DeletePlace" class="d-inline"
                                           onsubmit="return confirm('Xóa vĩnh viễn địa điểm &quot;@p.Name&quot;?')">
                                         @Html.AntiForgeryToken()
                                         <input type="hidden" name="id" value="@p.Id">
-                                        <button type="submit" class="aact-btn aact-del" title="Xóa"><i class="bi bi-trash3-fill"></i></button>
+                                        <button type="submit" class="aact-btn aact-del" title="Xóa"><i class="fa-solid fa-trash"></i></button>
                                     </form>
                                 </div>
                             </td>

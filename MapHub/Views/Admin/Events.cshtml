@@ -70,12 +70,12 @@
                             </td>
                             <td>
                                 <div class="admin-actions">
-                                    <a href="/Admin/EditEvent/@ev.Id" class="aact-btn aact-edit"><i class="bi bi-pencil-fill"></i> Sửa</a>
+                                    <a href="/Admin/EditEvent/@ev.Id" class="aact-btn aact-edit"><i class="fa-solid fa-pen"></i> Sửa</a>
                                     <form method="post" action="/Admin/DeleteEvent"
                                           onsubmit="return confirm('Xóa sự kiện này?')" class="d-inline">
                                         @Html.AntiForgeryToken()
                                         <input type="hidden" name="id" value="@ev.Id">
-                                        <button type="submit" class="aact-btn aact-del"><i class="bi bi-trash3-fill"></i></button>
+                                        <button type="submit" class="aact-btn aact-del"><i class="fa-solid fa-trash"></i></button>
                                     </form>
                                 </div>
                             </td>

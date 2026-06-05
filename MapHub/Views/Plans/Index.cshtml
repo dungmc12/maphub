@@ -12,12 +12,12 @@
     <!-- Header -->
     <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
         <div>
-            <h2 class="mb-0"><i class="bi bi-calendar-week-fill" style="color:#8b5cf6"></i> Kế hoạch chuyến đi</h2>
+            <h2 class="mb-0"><i class="fa-solid fa-calendar-week" style="color:#8b5cf6"></i> Kế hoạch chuyến đi</h2>
             @if (!isPro)
             {
                 <p class="text-muted mt-1">Gói Free: @planCount / @maxPlans kế hoạch
                     — <a href="/Payments/Premium" style="color:#0891b2;font-weight:700">
-                        <i class="bi bi-lightning-charge-fill"></i> Nâng cấp Pro
+                        <i class="fa-solid fa-bolt"></i> Nâng cấp Pro
                     </a> để tạo không giới hạn</p>
             }
         </div>
@@ -25,7 +25,7 @@
             @if (isPro)
             {
                 <button class="btn-accent" onclick="openAiPlanModal()">
-                    <i class="bi bi-robot"></i> Tạo bằng AI
+                    <i class="fa-solid fa-robot"></i> Tạo bằng AI
                 </button>
             }
             @if (!atLimit)

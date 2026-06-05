@@ -80,15 +80,15 @@
                             }
                             else if (isPro)
                             {
-                                <span class="abadge abadge-gold"><i class="bi bi-lightning-charge-fill"></i> Pro</span>
+                                <span class="abadge abadge-gold"><i class="fa-solid fa-bolt"></i> Pro</span>
                             }
                             else
                             {
-                                <span class="abadge abadge-gray"><i class="bi bi-person-fill"></i> Người dùng</span>
+                                <span class="abadge abadge-gray"><i class="fa-solid fa-user"></i> Người dùng</span>
                             }
                         </td>
                         <td>
-                            <span class="admin-place-count"><i class="bi bi-geo-alt" style="color:#94a3b8"></i> @placeCount địa điểm</span>
+                            <span class="admin-place-count"><i class="fa-solid fa-location-dot" style="color:#94a3b8"></i> @placeCount địa điểm</span>
                         </td>
                         <td>
                             <div class="admin-actions" style="flex-wrap:wrap">
@@ -100,7 +100,7 @@
                                             @Html.AntiForgeryToken()
                                             <input type="hidden" name="userId" value="@u.Id">
                                             <input type="hidden" name="role"   value="Pro">
-                                            <button type="submit" class="aact-btn aact-pro"><i class="bi bi-lightning-charge-fill"></i> Cấp Pro</button>
+                                            <button type="submit" class="aact-btn aact-pro"><i class="fa-solid fa-bolt"></i> Cấp Pro</button>
                                         </form>
                                     }
                                     @if (isPro)
@@ -109,7 +109,7 @@
                                             @Html.AntiForgeryToken()
                                             <input type="hidden" name="userId" value="@u.Id">
                                             <input type="hidden" name="role"   value="User">
-                                            <button type="submit" class="aact-btn aact-reject"><i class="bi bi-lightning-slash"></i> Bỏ Pro</button>
+                                            <button type="submit" class="aact-btn aact-reject"><i class="fa-solid fa-bolt"></i> Bỏ Pro</button>
                                         </form>
                                     }
                                     @if (!isAdmin)
@@ -119,7 +119,7 @@
                                             @Html.AntiForgeryToken()
                                             <input type="hidden" name="userId" value="@u.Id">
                                             <input type="hidden" name="role"   value="Admin">
-                                            <button type="submit" class="aact-btn aact-admin-grant"><i class="bi bi-shield-fill"></i> Admin</button>
+                                            <button type="submit" class="aact-btn aact-admin-grant"><i class="fa-solid fa-shield-halved"></i> Admin</button>
                                         </form>
                                     }
                                     @if (isLocked)
@@ -127,7 +127,7 @@
                                         <form method="post" action="/Admin/UnlockUser" class="d-inline">
                                             @Html.AntiForgeryToken()
                                             <input type="hidden" name="userId" value="@u.Id">
-                                            <button type="submit" class="aact-btn aact-pro" title="Mở khóa"><i class="bi bi-unlock-fill"></i> Mở khóa</button>
+                                            <button type="submit" class="aact-btn aact-pro" title="Mở khóa"><i class="fa-solid fa-lock-open"></i> Mở khóa</button>
                                         </form>
                                     }
                                     else
@@ -136,7 +136,7 @@
                                             @Html.AntiForgeryToken()
                                             <input type="hidden" name="userId" value="@u.Id">
                                             <input type="hidden" name="reason" class="lock-reason">
-                                            <button type="submit" class="aact-btn aact-reject" title="Khóa tài khoản"><i class="bi bi-lock-fill"></i> Khóa</button>
+                                            <button type="submit" class="aact-btn aact-reject" title="Khóa tài khoản"><i class="fa-solid fa-lock"></i> Khóa</button>
                                         </form>
                                     }
                                 }

@@ -28,7 +28,7 @@
 
     <!-- Back -->
     <a href="/Plans" class="back-link">
-        <i class="bi bi-arrow-left-circle-fill" style="color:#8b5cf6"></i> Kế hoạch của tôi
+        <i class="fa-solid fa-circle-arrow-left" style="color:#8b5cf6"></i> Kế hoạch của tôi
     </a>
 
     <!-- Header -->
@@ -38,16 +38,16 @@
             <div class="plan-detail-meta">
                 @if (Model.StartDate.HasValue)
                 {
-                    <span><i class="bi bi-calendar3" style="color:#8b5cf6"></i>
+                    <span><i class="fa-solid fa-calendar" style="color:#8b5cf6"></i>
                         @Model.StartDate.Value.ToString("dd/MM/yyyy")
                         @(Model.EndDate.HasValue ? " → " + Model.EndDate.Value.ToString("dd/MM/yyyy") : "")
                         (@totalDays ngày)
                     </span>
                 }
-                <span><i class="bi bi-geo-alt-fill" style="color:#ef4444"></i> @Model.Items.Count địa điểm</span>
+                <span><i class="fa-solid fa-location-dot" style="color:#ef4444"></i> @Model.Items.Count địa điểm</span>
                 @if (Model.IsPublic)
                 {
-                    <span class="abadge abadge-green"><i class="bi bi-share-fill"></i> Đang chia sẻ</span>
+                    <span class="abadge abadge-green"><i class="fa-solid fa-share-nodes"></i> Đang chia sẻ</span>
                 }
             </div>
         </div>
@@ -70,7 +70,7 @@
     @if (Model.IsPublic && !string.IsNullOrEmpty(Model.ShareToken))
     {
         <div class="share-url-bar mb-3">
-            <i class="bi bi-link-45deg" style="color:#8b5cf6;font-size:1.1rem"></i>
+            <i class="fa-solid fa-link" style="color:#8b5cf6;font-size:1.1rem"></i>
             <span>Link chia sẻ:</span>
             <input type="text" readonly class="share-url-input"
                    value="@($"{Context.Request.Scheme}://{Context.Request.Host}/Plans/Shared/{Model.ShareToken}")"
@@ -84,13 +84,13 @@
         <!-- Notes / Description panel -->
         <div class="plan-notes-panel mb-4">
             <button class="plan-notes-toggle" onclick="toggleNotes()" type="button">
-                <i class="bi bi-journal-text" style="color:#f59e0b"></i>
+                <i class="fa-solid fa-book" style="color:#f59e0b"></i>
                 <span>Ghi chú kế hoạch</span>
                 @if (!string.IsNullOrEmpty(Model.Description))
                 {
                     <span class="plan-notes-preview">@Model.Description[..Math.Min(60, Model.Description.Length)]@(Model.Description.Length > 60 ? "…" : "")</span>
                 }
-                <i class="bi bi-chevron-down ms-auto" id="notesChevron"></i>
+                <i class="fa-solid fa-chevron-down ms-auto" id="notesChevron"></i>
             </button>
             <div id="notesBody" style="display:none;padding:.75rem 1rem;border-top:1px solid var(--line)">
                 <form method="post" action="/Plans/UpdateDescription">
@@ -99,7 +99,7 @@
                     <textarea name="description" class="form-control mb-2" rows="4"
                               placeholder="Ghi chú về kế hoạch: phương tiện, ngân sách, lưu ý chung...">@Model.Description</textarea>
                     <button type="submit" class="aact-btn aact-approve">
-                        <i class="bi bi-floppy-fill"></i> Lưu ghi chú
+                        <i class="fa-solid fa-floppy-disk"></i> Lưu ghi chú
                     </button>
                 </form>
             </div>
@@ -118,7 +118,7 @@
                         int dayKey = group.Key;
                         <div class="plan-day-block">
                             <div class="plan-day-header">
-                                <i class="bi bi-calendar-event-fill" style="color:#8b5cf6"></i>
+                                <i class="fa-solid fa-calendar-day" style="color:#8b5cf6"></i>
                                 @DayLabel(dayKey)
                                 <span class="plan-day-count">@group.Count() địa điểm</span>
                             </div>
@@ -149,7 +149,7 @@
                                                 @if (!string.IsNullOrEmpty(item.ArrivalTime))
                                                 {
                                                     <span class="plan-item-time">
-                                                        <i class="bi bi-clock-fill" style="color:#f59e0b"></i>
+                                                        <i class="fa-solid fa-clock" style="color:#f59e0b"></i>
                                                         @item.ArrivalTime
                                                         @(!string.IsNullOrEmpty(item.LeaveTime) ? " → " + item.LeaveTime : "")
                                                     </span>
@@ -158,13 +158,13 @@
                                             @if (!string.IsNullOrEmpty(item.Note))
                                             {
                                                 <div class="plan-item-note">
-                                                    <i class="bi bi-sticky-fill" style="color:#a78bfa"></i> @item.Note
+                                                    <i class="fa-solid fa-note-sticky" style="color:#a78bfa"></i> @item.Note
                                                 </div>
                                             }
                                             @if (openHrs.Any())
                                             {
                                                 <div class="plan-item-hours">
-                                                    <i class="bi bi-door-open-fill" style="color:#22c55e"></i>
+                                                    <i class="fa-solid fa-door-open" style="color:#22c55e"></i>
                                                     @string.Join(" · ", openHrs.Select(a => a.Label))
                                                 </div>
                                             }
@@ -174,7 +174,7 @@
                                             <div class="plan-item-actions">
                                                 <button type="button" class="aact-btn aact-edit"
                                                         onclick="showEdit(@item.Id)" title="Sửa">
-                                                    <i class="bi bi-pencil-fill"></i>
+                                                    <i class="fa-solid fa-pen"></i>
                                                 </button>
                                                 <form method="post" action="/Plans/RemoveItem">
                                                     @Html.AntiForgeryToken()
@@ -182,7 +182,7 @@
                                                     <input type="hidden" name="itemId"  value="@item.Id">
                                                     <button type="submit" class="aact-btn aact-del"
                                                             onclick="return confirm('Xóa địa điểm này khỏi kế hoạch?')">
-                                                        <i class="bi bi-trash3-fill"></i>
+                                                        <i class="fa-solid fa-trash"></i>
                                                     </button>
                                                 </form>
                                             </div>
@@ -201,7 +201,7 @@
                                                 <div class="plan-edit-grid">
                                                     <div>
                                                         <label class="plan-edit-label">
-                                                            <i class="bi bi-calendar-event" style="color:#8b5cf6"></i> Ngày
+                                                            <i class="fa-solid fa-calendar-day" style="color:#8b5cf6"></i> Ngày
                                                         </label>
                                                         <select name="dayNumber" class="plan-edit-input"
                                                                 onchange="onDayChange(this)">
@@ -216,7 +216,7 @@
                                                     </div>
                                                     <div>
                                                         <label class="plan-edit-label">
-                                                            <i class="bi bi-clock-fill" style="color:#f59e0b"></i> Giờ đến
+                                                            <i class="fa-solid fa-clock" style="color:#f59e0b"></i> Giờ đến
                                                         </label>
                                                         <input type="time" name="arrivalTime"
                                                                class="plan-edit-input arrival-input"
@@ -225,7 +225,7 @@
                                                     </div>
                                                     <div>
                                                         <label class="plan-edit-label">
-                                                            <i class="bi bi-clock" style="color:#94a3b8"></i> Giờ rời
+                                                            <i class="fa-solid fa-clock" style="color:#94a3b8"></i> Giờ rời
                                                             <span class="plan-time-hint" id="hint-@item.Id"></span>
                                                         </label>
                                                         <input type="time" name="leaveTime"
@@ -235,7 +235,7 @@
                                                     </div>
                                                     <div class="plan-edit-full">
                                                         <label class="plan-edit-label">
-                                                            <i class="bi bi-sticky-fill" style="color:#a78bfa"></i> Ghi chú địa điểm
+                                                            <i class="fa-solid fa-note-sticky" style="color:#a78bfa"></i> Ghi chú địa điểm
                                                         </label>
                                                         <input type="text" name="note" class="plan-edit-input"
                                                                value="@item.Note"
@@ -245,14 +245,14 @@
                                                 @if (openHrs.Any())
                                                 {
                                                     <div class="plan-edit-hours">
-                                                        <i class="bi bi-door-open-fill" style="color:#22c55e"></i>
+                                                        <i class="fa-solid fa-door-open" style="color:#22c55e"></i>
                                                         <strong>Giờ mở cửa:</strong>
                                                         @foreach (var h in openHrs) { <span>@h.Label</span> }
                                                     </div>
                                                 }
                                                 <div class="d-flex gap-2 mt-2">
                                                     <button type="submit" class="aact-btn aact-approve">
-                                                        <i class="bi bi-floppy-fill"></i> Lưu
+                                                        <i class="fa-solid fa-floppy-disk"></i> Lưu
                                                     </button>
                                                     <button type="button" class="aact-btn" onclick="hideEdit(@item.Id)">
                                                         Hủy
@@ -270,7 +270,7 @@
                 {
                     <div class="plan-empty-hero">
                         <div class="plan-empty-icon-wrap">
-                            <i class="bi bi-geo-alt-fill"></i>
+                            <i class="fa-solid fa-location-dot"></i>
                         </div>
                         <h4>Kế hoạch chưa có địa điểm nào</h4>
                         <p>Tìm và thêm địa điểm từ bảng bên cạnh, hoặc <a href="/Map">vào bản đồ</a>.</p>
@@ -284,7 +284,7 @@
                 <div class="col-lg-5">
                     <div class="plan-add-panel">
                         <h5 class="plan-section-heading">
-                            <i class="bi bi-plus-circle-fill" style="color:#0891b2"></i> Thêm địa điểm
+                            <i class="fa-solid fa-circle-plus" style="color:#0891b2"></i> Thêm địa điểm
                         </h5>
                         <input id="planSearchInput" class="plan-search-input" placeholder="🔍 Tìm tên, địa chỉ...">
                         <div class="plan-cat-chips">
@@ -312,7 +312,7 @@
     else
     {
         <div class="plans-empty">
-            <div class="plans-empty-icon"><i class="bi bi-geo-alt" style="color:#94a3b8;font-size:3rem"></i></div>
+            <div class="plans-empty-icon"><i class="fa-solid fa-location-dot" style="color:#94a3b8;font-size:3rem"></i></div>
             <h5>Kế hoạch chưa có địa điểm nào</h5>
         </div>
     }
@@ -474,10 +474,10 @@ function toggleNotes() {
     const chev = document.getElementById('notesChevron');
     if (body.style.display === 'none') {
         body.style.display = 'block';
-        chev.className = 'bi bi-chevron-up ms-auto';
+        chev.className = 'fa-solid fa-chevron-up ms-auto';
     } else {
         body.style.display = 'none';
-        chev.className = 'bi bi-chevron-down ms-auto';
+        chev.className = 'fa-solid fa-chevron-down ms-auto';
     }
 }
 
@@ -566,7 +566,7 @@ function renderPlanPlaces(places) {
                 <input type="hidden" name="__RequestVerificationToken" value="${token}">
                 <input type="hidden" name="planId"  value="${PLAN_ID}">
                 <input type="hidden" name="placeId" value="${p.id}">
-                <button type="submit" class="plan-add-btn"><i class="bi bi-plus-lg"></i></button>
+                <button type="submit" class="plan-add-btn"><i class="fa-solid fa-plus"></i></button>
             </form>
         </div>`).join('');
 }

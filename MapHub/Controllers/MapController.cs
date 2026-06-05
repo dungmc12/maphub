@@ -59,7 +59,12 @@ public class MapController : Controller
             query = query.Where(p => p.Category != null && p.Category.ToLower() == category.ToLower());
 
         if (!string.IsNullOrWhiteSpace(q))
-            query = query.Where(p => p.Name.Contains(q) || (p.Address != null && p.Address.Contains(q)));
+        {
+            // So khớp không phân biệt hoa/thường (PostgreSQL Contains mặc định phân biệt hoa/thường)
+            var ql = q.ToLower();
+            query = query.Where(p => p.Name.ToLower().Contains(ql)
+                                  || (p.Address != null && p.Address.ToLower().Contains(ql)));
+        }
 
         // Lọc theo ngân sách: giá khởi điểm trong tầm tiền (địa điểm miễn phí/chưa rõ giá vẫn hiện)
         if (maxPrice.HasValue)

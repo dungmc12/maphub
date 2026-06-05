@@ -19,7 +19,7 @@
         <div class="col-lg-8">
 
             <!-- Back link -->
-            <a href="/Map" class="back-link"><i class="bi bi-arrow-left-circle-fill" style="color:#3b82f6"></i> Quay lại bản đồ</a>
+            <a href="/Map" class="back-link"><i class="fa-solid fa-circle-arrow-left" style="color:#3b82f6"></i> Quay lại bản đồ</a>
 
             <!-- Title -->
             <div class="d-flex align-items-start gap-3 mt-2 mb-3 flex-wrap">
@@ -30,7 +30,7 @@
                         bool isSavedDetail = ViewBag.IsSaved ?? false;
                         <button type="button" id="saveBtn" onclick="toggleSaveDetail(@Model.Id)"
                                 class="btn btn-sm @(isSavedDetail ? "btn-danger" : "btn-outline-danger") mb-2">
-                            @(isSavedDetail ? "❤️ Đã lưu" : "🤍 Lưu địa điểm")
+                            @Html.Raw(isSavedDetail ? "<i class=\"fa-solid fa-heart\"></i> Đã lưu" : "<i class=\"fa-regular fa-heart\"></i> Lưu địa điểm")
                         </button>
                     }
                     <div class="place-detail-meta-row">
@@ -63,7 +63,7 @@
                     </div>
                     @if (!string.IsNullOrEmpty(Model.Address))
                     {
-                        <p class="place-detail-address"><i class="bi bi-geo-alt-fill" style="color:#ef4444"></i> @Model.Address</p>
+                        <p class="place-detail-address"><i class="fa-solid fa-location-dot" style="color:#ef4444"></i> @Model.Address</p>
                     }
                 </div>
             </div>
@@ -141,7 +141,7 @@
             else
             {
                 <div class="detail-no-img mb-4">
-                    <i class="bi bi-camera-fill" style="color:#94a3b8;font-size:1.5rem"></i>
+                    <i class="fa-solid fa-camera" style="color:#94a3b8;font-size:1.5rem"></i>
                     <span style="color:#94a3b8">Chưa có ảnh cho địa điểm này</span>
                 </div>
             }
@@ -173,7 +173,7 @@
                     @if (User.Identity?.IsAuthenticated == true)
                     {
                         <button class="btn-accent btn-sm-accent" onclick="document.getElementById('reviewForm').scrollIntoView({behavior:'smooth'})">
-                            <i class="bi bi-pencil-fill"></i> Viết đánh giá
+                            <i class="fa-solid fa-pen"></i> Viết đánh giá
                         </button>
                     }
                 </div>
@@ -213,7 +213,7 @@
                     {
                         <div class="review-card" id="review-@rv.Id">
                             <div class="review-header">
-                                <div class="review-avatar"><i class="bi bi-person-fill" style="color:#6366f1"></i></div>
+                                <div class="review-avatar"><i class="fa-solid fa-user" style="color:#6366f1"></i></div>
                                 <div>
                                     <div class="review-user">Người dùng</div>
                                     <div class="review-date">@rv.CreatedAt.ToString("dd/MM/yyyy")</div>
@@ -243,11 +243,11 @@
                             }
                             @if (!string.IsNullOrEmpty(rv.FoodReview))
                             {
-                                <p class="review-sub"><em><i class="bi bi-egg-fried" style="color:#f59e0b"></i> @rv.FoodReview</em></p>
+                                <p class="review-sub"><em><i class="fa-solid fa-utensils" style="color:#f59e0b"></i> @rv.FoodReview</em></p>
                             }
                             @if (!string.IsNullOrEmpty(rv.StaffReview))
                             {
-                                <p class="review-sub"><em><i class="bi bi-person-check-fill" style="color:#6366f1"></i> @rv.StaffReview</em></p>
+                                <p class="review-sub"><em><i class="fa-solid fa-user-check" style="color:#6366f1"></i> @rv.StaffReview</em></p>
                             }
                             @if (!string.IsNullOrEmpty(rv.PhotoUrl))
                             {
@@ -267,7 +267,7 @@
                 @if (User.Identity?.IsAuthenticated == true)
                 {
                     <div id="reviewForm" class="review-form-box mt-4">
-                        <h5><i class="bi bi-pencil-square" style="color:#0891b2"></i> Viết đánh giá của bạn</h5>
+                        <h5><i class="fa-solid fa-pen-to-square" style="color:#0891b2"></i> Viết đánh giá của bạn</h5>
                         <form method="post" action="/Map/AddReview" enctype="multipart/form-data">
                             @Html.AntiForgeryToken()
                             <input type="hidden" name="placeId" value="@Model.Id">
@@ -308,7 +308,7 @@
                                        placeholder="Nhận xét về nhân viên (tùy chọn)">
                             }
                             <div class="mb-3">
-                                <label class="form-label"><i class="bi bi-camera-fill" style="color:#3b82f6"></i> Ảnh đính kèm <small class="text-muted">(tùy chọn, tối đa 5MB)</small></label>
+                                <label class="form-label"><i class="fa-solid fa-camera" style="color:#3b82f6"></i> Ảnh đính kèm <small class="text-muted">(tùy chọn, tối đa 5MB)</small></label>
                                 <input type="file" name="photo" class="form-control" accept="image/*">
                             </div>
                             <button type="submit" class="btn-accent">Gửi đánh giá</button>
@@ -328,14 +328,14 @@
                     @if (!string.IsNullOrEmpty(Model.Phone))
                     {
                         <li>
-                            <i class="bi bi-telephone-fill" style="color:#22c55e;font-size:1rem"></i>
+                            <i class="fa-solid fa-phone" style="color:#22c55e;font-size:1rem"></i>
                             <a href="tel:@Model.Phone">@Model.Phone</a>
                         </li>
                     }
                     @if (!string.IsNullOrEmpty(Model.WebsiteUrl))
                     {
                         <li>
-                            <i class="bi bi-globe2" style="color:#3b82f6;font-size:1rem"></i>
+                            <i class="fa-solid fa-globe" style="color:#3b82f6;font-size:1rem"></i>
                             <a href="@Model.WebsiteUrl" target="_blank" rel="nofollow noopener">Trang web</a>
                         </li>
                     }
@@ -345,7 +345,7 @@
                             ? $"{Model.MinPrice!.Value:N0}đ – {Model.MaxPrice!.Value:N0}đ"
                             : $"Từ {Model.MinPrice!.Value:N0}đ";
                         <li>
-                            <i class="bi bi-cash-coin" style="color:#f59e0b;font-size:1rem"></i>
+                            <i class="fa-solid fa-coins" style="color:#f59e0b;font-size:1rem"></i>
                             <span style="color:#16a34a;font-weight:700">@priceStr</span>
                         </li>
                     }
@@ -354,12 +354,12 @@
                 <div class="info-actions mt-3">
                     <button class="btn-accent w-100 mb-2"
                             onclick="window.open('https://www.google.com/maps/dir/?api=1&destination=@Model.Latitude,@Model.Longitude','_blank')">
-                        <i class="bi bi-navigation-fill"></i> Chỉ đường
+                        <i class="fa-solid fa-location-arrow"></i> Chỉ đường
                     </button>
                     @if (User.Identity?.IsAuthenticated == true)
                     {
                         <a href="/Plans" class="btn-ghost w-100">
-                            <i class="bi bi-calendar-plus-fill" style="color:#8b5cf6"></i> Thêm vào kế hoạch
+                            <i class="fa-solid fa-calendar-plus" style="color:#8b5cf6"></i> Thêm vào kế hoạch
                         </a>
                     }
                 </div>
@@ -410,8 +410,8 @@ function toggleSaveDetail(id) {
     }).then(r => r.json()).then(d => {
         if (!d.ok) return;
         const btn = document.getElementById('saveBtn');
-        if (d.saved) { btn.className = 'btn btn-sm btn-danger mb-2'; btn.textContent = '❤️ Đã lưu'; }
-        else { btn.className = 'btn btn-sm btn-outline-danger mb-2'; btn.textContent = '🤍 Lưu địa điểm'; }
+        if (d.saved) { btn.className = 'btn btn-sm btn-danger mb-2'; btn.innerHTML = '<i class="fa-solid fa-heart"></i> Đã lưu'; }
+        else { btn.className = 'btn btn-sm btn-outline-danger mb-2'; btn.innerHTML = '<i class="fa-regular fa-heart"></i> Lưu địa điểm'; }
     }).catch(() => {});
 }
 

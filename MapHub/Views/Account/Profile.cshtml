@@ -4,11 +4,13 @@
     var email = ViewBag.Email as string;
     bool hasPassword = ViewBag.HasPassword ?? true;
     var tier = Model.Tier ?? "free";
-    var tierLabel = tier == "admin" ? "👑 Admin" : tier == "pro" ? "⚡ Pro" : "Miễn phí";
+    var tierLabel = tier == "admin"
+        ? "<i class=\"fa-solid fa-crown\"></i> Admin"
+        : tier == "pro" ? "<i class=\"fa-solid fa-bolt\"></i> Pro" : "Miễn phí";
 }
 
 <div class="container-xl py-4" style="max-width:680px">
-    <h2 class="mb-4">👤 Hồ sơ của tôi</h2>
+    <h2 class="mb-4"><i class="fa-solid fa-user"></i> Hồ sơ của tôi</h2>
 
     @if (TempData["ProfileMsg"] != null)
     {
@@ -31,7 +33,7 @@
             <div>
                 <div class="fw-bold fs-5">@(string.IsNullOrEmpty(Model.DisplayName) ? email : Model.DisplayName)</div>
                 <div class="text-muted small">@email</div>
-                <span class="badge bg-secondary mt-1">@tierLabel</span>
+                <span class="badge bg-secondary mt-1">@Html.Raw(tierLabel)</span>
                 @if (tier == "pro" && Model.ProExpiresAt != null)
                 {
                     <span class="text-muted small ms-1">· hết hạn @Model.ProExpiresAt.Value.ToLocalTime().ToString("dd/MM/yyyy")</span>
@@ -50,13 +52,13 @@
                 <input type="url" name="avatarUrl" class="form-control" value="@Model.AvatarUrl"
                        placeholder="https://... (dán link ảnh)" oninput="document.getElementById('avatarPreview').src = this.value || 'https://placehold.co/80x80?text=CS'">
             </div>
-            <button type="submit" class="btn-accent">💾 Lưu hồ sơ</button>
+            <button type="submit" class="btn-accent"><i class="fa-solid fa-floppy-disk"></i> Lưu hồ sơ</button>
         </form>
     </div>
 
     <!-- Đổi mật khẩu -->
     <div class="info-card" style="padding:1.25rem">
-        <h5 class="mb-3">🔒 @(hasPassword ? "Đổi mật khẩu" : "Tạo mật khẩu")</h5>
+        <h5 class="mb-3"><i class="fa-solid fa-lock"></i> @(hasPassword ? "Đổi mật khẩu" : "Tạo mật khẩu")</h5>
         @if (!hasPassword)
         {
             <p class="text-muted small">Tài khoản của bạn đăng nhập bằng Google và chưa có mật khẩu. Tạo mật khẩu để đăng nhập trực tiếp bằng email.</p>

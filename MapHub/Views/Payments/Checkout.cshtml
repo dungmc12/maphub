@@ -63,14 +63,14 @@
     <div class="ck-card">
 
         <div class="ck-hd">
-            <h5><i class="bi bi-qr-code-scan me-1"></i> Thanh toán qua chuyển khoản</h5>
+            <h5><i class="fa-solid fa-qrcode me-1"></i> Thanh toán qua chuyển khoản</h5>
             <small>Gói @ViewBag.PlanLabel · <strong>@Model.Amount.ToString("#,##0")đ</strong></small>
         </div>
 
         <ol class="ck-steps">
             <li><strong>Bước 1:</strong> Quét mã QR bằng app ngân hàng bất kỳ</li>
             <li><strong>Bước 2:</strong> Chuyển khoản đúng số tiền, ghi nội dung <strong style="color:#e11d48">@Model.Code</strong></li>
-            <li><strong>Bước 3:</strong> Trang này tự cập nhật khi hệ thống nhận được tiền ✅</li>
+            <li><strong>Bước 3:</strong> Trang này tự cập nhật khi hệ thống nhận được tiền <i class="fa-solid fa-circle-check" style="color:#16a34a"></i></li>
         </ol>
 
         <!-- QR -->
@@ -84,7 +84,7 @@
                  font-size:.8rem;color:#ef4444;text-align:center;padding:1rem">
                 Không tải được QR<br>Dùng số TK bên dưới
             </div>
-            <div class="ck-qr-hint"><i class="bi bi-phone me-1"></i>Mở app ngân hàng → Quét mã QR</div>
+            <div class="ck-qr-hint"><i class="fa-solid fa-mobile-screen me-1"></i>Mở app ngân hàng → Quét mã QR</div>
         </div>
 
         <!-- Bank info -->
@@ -97,13 +97,13 @@
                 <span>Nội dung CK</span>
                 <span>
                     <span class="ck-code" id="ckCode">@Model.Code</span>
-                    <button class="ck-copy" onclick="copyCode()">📋 Copy</button>
+                    <button class="ck-copy" onclick="copyCode()"><i class="fa-regular fa-copy"></i> Copy</button>
                 </span>
             </div>
         </div>
 
         <div class="ck-warn">
-            ⚠️ <strong>Bắt buộc ghi đúng nội dung: @Model.Code</strong><br>
+            <i class="fa-solid fa-triangle-exclamation" style="color:#b45309"></i> <strong>Bắt buộc ghi đúng nội dung: @Model.Code</strong><br>
             Sai nội dung hệ thống sẽ không nhận được giao dịch của bạn.
         </div>
 
@@ -111,7 +111,7 @@
         @if (alreadyPaid)
         {
             <div class="ck-success">
-                <div class="ck-success-icon">✅</div>
+                <div class="ck-success-icon"><i class="fa-solid fa-circle-check" style="color:#16a34a"></i></div>
                 <div class="ck-success-title">Đã kích hoạt Pro!</div>
                 <div class="ck-success-sub">Tài khoản của bạn đã được nâng cấp thành công.</div>
                 <a href="/" class="btn btn-sm btn-success mt-2">Về trang chủ</a>
@@ -136,7 +136,7 @@
                 <div style="margin:0 1.4rem 1.5rem; text-align:center">
                     <button type="button" onclick="devConfirm()"
                             style="font-size:.78rem;padding:.4rem .8rem;border:1px dashed #cbd5e1;border-radius:8px;background:#fff;cursor:pointer;color:#94a3b8">
-                        🧪 Giả lập đã thanh toán (chỉ DEV)
+                        <i class="fa-solid fa-flask"></i> Giả lập đã thanh toán (chỉ DEV)
                     </button>
                 </div>
             }
@@ -153,8 +153,8 @@
 function copyCode() {
     const code = document.getElementById('ckCode').textContent.trim();
     navigator.clipboard.writeText(code).then(function() {
-        event.target.textContent = '✅ Đã copy';
-        setTimeout(() => event.target.innerHTML = '📋 Copy', 2000);
+        event.target.innerHTML = '<i class="fa-solid fa-check"></i> Đã copy';
+        setTimeout(() => event.target.innerHTML = '<i class="fa-regular fa-copy"></i> Copy', 2000);
     });
 }
 
@@ -212,7 +212,7 @@ function devConfirm() {
             .then(d => {
                 if (d.paid) {
                     document.getElementById('waitBox').innerHTML =
-                        '<div class="ck-success-icon">✅</div>' +
+                        '<div class="ck-success-icon"><i class="fa-solid fa-circle-check" style="color:#16a34a"></i></div>' +
                         '<div class="ck-success-title" style="color:#15803d;font-weight:800;font-size:1.05rem;margin:.3rem 0 .2rem">Thanh toán thành công!</div>' +
                         '<div class="ck-success-sub">Tài khoản của bạn đã lên Pro. Đang chuyển hướng…</div>';
                     document.getElementById('waitBox').className = 'ck-success';
