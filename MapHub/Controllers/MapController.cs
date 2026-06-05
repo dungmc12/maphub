@@ -113,6 +113,29 @@ public class MapController : Controller
         var uid = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
         ViewBag.IsSaved = uid != null && await _context.UserListItems
             .AnyAsync(i => i.PlaceId == id && _context.UserLists.Any(l => l.Id == i.ListId && l.UserId == uid));
+
+        // Tên + avatar người đánh giá (kiểu Google: ưu tiên tên hiển thị, không có thì lấy phần trước @ của email)
+        var reviewerIds = place.Reviews.Select(r => r.UserId).Distinct().ToList();
+        var profiles = await _context.UserProfiles
+            .Where(p => reviewerIds.Contains(p.UserId))
+            .Select(p => new { p.UserId, p.DisplayName, p.AvatarUrl })
+            .ToListAsync();
+        var emails = await _context.Users
+            .Where(u => reviewerIds.Contains(u.Id))
+            .Select(u => new { u.Id, u.Email })
+            .ToListAsync();
+
+        var authors = new Dictionary<string, (string Name, string? Avatar)>();
+        foreach (var rid in reviewerIds)
+        {
+            var prof = profiles.FirstOrDefault(p => p.UserId == rid);
+            var email = emails.FirstOrDefault(e => e.Id == rid)?.Email;
+            var name = !string.IsNullOrWhiteSpace(prof?.DisplayName)
+                ? prof!.DisplayName!
+                : (!string.IsNullOrWhiteSpace(email) ? email!.Split('@')[0] : "Người dùng");
+            authors[rid] = (name, prof?.AvatarUrl);
+        }
+        ViewBag.ReviewAuthors = authors;
         return View(place);
     }
 

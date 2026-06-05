@@ -155,10 +155,18 @@ public class AccountController : Controller
         var info = await _signInManager.GetExternalLoginInfoAsync();
         if (info == null) return RedirectToAction(nameof(Login));
 
+        // Tên hiển thị từ Google (để đánh giá hiện đúng tên người dùng, giống Google reviews)
+        var googleName = info.Principal.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value
+                         ?? info.Principal.FindFirst(System.Security.Claims.ClaimTypes.GivenName)?.Value;
+
         // Thử login bằng external account đã liên kết
         var result = await _signInManager.ExternalLoginSignInAsync(info.LoginProvider, info.ProviderKey, isPersistent: false);
         if (result.Succeeded)
+        {
+            var linked = await _userManager.FindByLoginAsync(info.LoginProvider, info.ProviderKey);
+            if (linked != null) await EnsureDisplayNameAsync(linked, googleName);
             return LocalRedirect(NormalizeReturnUrl(returnUrl));
+        }
         if (result.IsLockedOut)
         {
             TempData["LoginError"] = await LockedMessageAsync(info.Principal.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value);
@@ -193,8 +201,27 @@ public class AccountController : Controller
         }
 
         await _userManager.AddLoginAsync(user, info);
+        await EnsureDisplayNameAsync(user, googleName);
         await _signInManager.SignInAsync(user, isPersistent: false);
         return LocalRedirect(NormalizeReturnUrl(returnUrl));
+    }
+
+    // Lưu tên hiển thị (từ Google) vào hồ sơ nếu hồ sơ chưa có tên — để đánh giá hiện đúng tên người dùng
+    private async Task EnsureDisplayNameAsync(ApplicationUser user, string? displayName)
+    {
+        if (string.IsNullOrWhiteSpace(displayName)) return;
+        var profile = await _context.UserProfiles.FindAsync(user.Id);
+        if (profile == null)
+        {
+            _context.UserProfiles.Add(new UserProfile { UserId = user.Id, DisplayName = displayName.Trim() });
+            await _context.SaveChangesAsync();
+        }
+        else if (string.IsNullOrWhiteSpace(profile.DisplayName))
+        {
+            profile.DisplayName = displayName.Trim();
+            profile.UpdatedAt = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+        }
     }
 
     private async Task<string> LockedMessageAsync(string? email)
