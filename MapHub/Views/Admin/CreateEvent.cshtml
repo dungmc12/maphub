@@ -55,6 +55,13 @@
                     <div class="form-text">Chọn để nút "Xem địa điểm" hiển thị trên trang chủ</div>
                 </div>
                 <div class="col-12">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="toggleEventMap()">
+                        🗺️ Chọn địa điểm trên bản đồ (tuỳ chọn)
+                    </button>
+                    <div id="eventPickMap" style="height:280px;border-radius:10px;overflow:hidden;display:none;margin-top:.5rem"></div>
+                    <div id="eventPickLabel" class="form-text"></div>
+                </div>
+                <div class="col-12">
                     <label class="form-label fw-semibold">Ảnh banner</label>
                     <input type="file" name="BannerFile" class="form-control mb-2" accept="image/*"
                            onchange="previewBanner(this)">
@@ -89,6 +96,43 @@ function previewBanner(input) {
         reader.onload = e => { preview.src = e.target.result; preview.style.display = 'block'; };
         reader.readAsDataURL(input.files[0]);
     }
+}
+
+// ── Chọn địa điểm liên quan trên bản đồ (tuỳ chọn) ──
+var eventPlaces = [
+@if (ViewBag.Places != null)
+{
+    var inv = System.Globalization.CultureInfo.InvariantCulture;
+    foreach (var p in (dynamic)ViewBag.Places)
+    {
+        <text>{ id: @p.Id, name: "@(((string)p.Name).Replace("\\", "\\\\").Replace("\"", "\\\""))", lat: @(((decimal)p.Latitude).ToString(inv)), lng: @(((decimal)p.Longitude).ToString(inv)) },</text>
+    }
+}
+];
+var eventMap = null;
+function toggleEventMap() {
+    const box = document.getElementById('eventPickMap');
+    const show = box.style.display === 'none';
+    box.style.display = show ? 'block' : 'none';
+    if (show && !eventMap) {
+        eventMap = L.map('eventPickMap').setView([21.0285, 105.8542], 12);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(eventMap);
+        const bounds = [];
+        eventPlaces.forEach(p => {
+            const m = L.marker([p.lat, p.lng]).addTo(eventMap).bindPopup(
+                `<b>${p.name}</b><br><button type="button" class="btn btn-sm btn-accent" style="font-size:12px;margin-top:4px" onclick="pickEventPlace(${p.id})">Chọn địa điểm này</button>`);
+            bounds.push([p.lat, p.lng]);
+        });
+        if (bounds.length) eventMap.fitBounds(bounds, { padding: [30, 30], maxZoom: 14 });
+    }
+    if (show && eventMap) setTimeout(() => eventMap.invalidateSize(), 120);
+}
+function pickEventPlace(id) {
+    const sel = document.querySelector('select[name="PlaceId"]');
+    sel.value = id;
+    const opt = sel.options[sel.selectedIndex];
+    document.getElementById('eventPickLabel').innerHTML =
+        '✅ Đã chọn: <strong>' + (opt ? opt.textContent : id) + '</strong>';
 }
 </script>
 }

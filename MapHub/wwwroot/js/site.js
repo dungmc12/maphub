@@ -999,3 +999,39 @@
 		aiStatus.classList.toggle("error", !!isError);
 	}
 })();
+
+// ── Tùy biến mọi ô chọn file → nút "📷 Chọn ảnh" + tên file (đồng bộ toàn site) ──
+(function () {
+	function enhanceFileInputs(root) {
+		(root || document).querySelectorAll('input[type="file"]:not([data-enhanced])').forEach(function (input) {
+			input.setAttribute("data-enhanced", "1");
+			input.style.display = "none";
+
+			var wrap = document.createElement("div");
+			wrap.style.cssText = "display:flex;align-items:center;gap:.6rem;flex-wrap:wrap";
+
+			var btn = document.createElement("button");
+			btn.type = "button";
+			btn.textContent = "📷 Chọn ảnh";
+			btn.style.cssText = "padding:.45rem .9rem;border:1px solid #e2e8f0;border-radius:8px;background:#fff;cursor:pointer;font-weight:600;font-size:.9rem;color:#475569";
+
+			var name = document.createElement("span");
+			name.textContent = "Chưa chọn ảnh";
+			name.style.cssText = "font-size:.85rem;color:#94a3b8";
+
+			input.parentNode.insertBefore(wrap, input);
+			wrap.appendChild(btn);
+			wrap.appendChild(name);
+			wrap.appendChild(input);
+
+			btn.addEventListener("click", function () { input.click(); });
+			input.addEventListener("change", function () {
+				var has = input.files && input.files.length;
+				name.textContent = has ? input.files[0].name : "Chưa chọn ảnh";
+				name.style.color = has ? "#16a34a" : "#94a3b8";
+			});
+		});
+	}
+	document.addEventListener("DOMContentLoaded", function () { enhanceFileInputs(document); });
+	document.addEventListener("shown.bs.modal", function (e) { enhanceFileInputs(e.target); });
+})();

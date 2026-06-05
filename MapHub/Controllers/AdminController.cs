@@ -111,7 +111,7 @@ public class AdminController : Controller
         ViewBag.Places = await _context.Places
             .Where(p => p.Visibility == "public" && p.IsApproved)
             .OrderBy(p => p.Name)
-            .Select(p => new { p.Id, p.Name })
+            .Select(p => new { p.Id, p.Name, p.Latitude, p.Longitude })
             .ToListAsync();
         return View(new Event { StartAt = DateTime.Now });
     }
