@@ -298,6 +298,11 @@
                             <button class="plan-cat-btn" data-cat="education">🎓</button>
                             <button class="plan-cat-btn" data-cat="hotel">🏨</button>
                         </div>
+                        <div class="d-flex gap-2 my-2">
+                            <button type="button" id="planViewList" class="btn btn-sm btn-accent" onclick="togglePlanView('list')">📋 Danh sách</button>
+                            <button type="button" id="planViewMap" class="btn btn-sm btn-outline-secondary" onclick="togglePlanView('map')">🗺️ Chọn trên bản đồ</button>
+                        </div>
+                        <div id="planPickMap" style="height:340px;border-radius:10px;overflow:hidden;display:none;margin-bottom:.5rem"></div>
                         <div id="planPlaceGrid" class="plan-place-grid"></div>
                     </div>
                 </div>
@@ -493,10 +498,52 @@ async function loadPlanPlaces(cat, q) {
     if (p.length) url += '?' + p.join('&');
     try {
         const places = await fetch(url).then(r => r.json());
+        planPlaces = places;
         renderPlanPlaces(places);
+        if (planView === 'map') renderPlanMap();
     } catch {
         grid.innerHTML = '<p class="text-muted p-3 text-center">Không tải được danh sách.</p>';
     }
+}
+
+// ── Chọn địa điểm trên bản đồ ───────────────────────────────────────────────
+let planPlaces = [], planPickMap = null, planPickMarkers = [], planView = 'list';
+
+function togglePlanView(mode) {
+    planView = mode;
+    document.getElementById('planViewList').className = 'btn btn-sm ' + (mode === 'list' ? 'btn-accent' : 'btn-outline-secondary');
+    document.getElementById('planViewMap').className  = 'btn btn-sm ' + (mode === 'map'  ? 'btn-accent' : 'btn-outline-secondary');
+    document.getElementById('planPlaceGrid').style.display = mode === 'list' ? '' : 'none';
+    document.getElementById('planPickMap').style.display   = mode === 'map'  ? 'block' : 'none';
+    if (mode === 'map') {
+        if (!planPickMap) {
+            planPickMap = L.map('planPickMap').setView([21.0285, 105.8542], 12);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(planPickMap);
+        }
+        setTimeout(() => { planPickMap.invalidateSize(); renderPlanMap(); }, 120);
+    }
+}
+
+function renderPlanMap() {
+    if (!planPickMap) return;
+    planPickMarkers.forEach(m => planPickMap.removeLayer(m));
+    planPickMarkers = [];
+    const token = document.querySelector('#csrfHolder input[name="__RequestVerificationToken"]')?.value ?? '';
+    const bounds = [];
+    planPlaces.forEach(p => {
+        if (p.latitude == null || p.longitude == null) return;
+        const popup = `<b>${p.name}</b><br><small>${p.address || ''}</small>
+            <form method="post" action="/Plans/AddItem" style="margin-top:6px">
+                <input type="hidden" name="__RequestVerificationToken" value="${token}">
+                <input type="hidden" name="planId"  value="${PLAN_ID}">
+                <input type="hidden" name="placeId" value="${p.id}">
+                <button type="submit" class="btn btn-sm btn-accent" style="font-size:12px">➕ Thêm vào kế hoạch</button>
+            </form>`;
+        const m = L.marker([p.latitude, p.longitude]).addTo(planPickMap).bindPopup(popup);
+        planPickMarkers.push(m);
+        bounds.push([p.latitude, p.longitude]);
+    });
+    if (bounds.length) planPickMap.fitBounds(bounds, { padding: [30, 30], maxZoom: 14 });
 }
 
 function renderPlanPlaces(places) {
