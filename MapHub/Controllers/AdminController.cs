@@ -145,7 +145,7 @@ public class AdminController : Controller
         ViewBag.Places = await _context.Places
             .Where(p => p.Visibility == "public" && p.IsApproved)
             .OrderBy(p => p.Name)
-            .Select(p => new { p.Id, p.Name })
+            .Select(p => new { p.Id, p.Name, p.Latitude, p.Longitude })
             .ToListAsync();
         return View(ev);
     }
@@ -160,6 +160,8 @@ public class AdminController : Controller
         existing.Title       = ev.Title;
         existing.Description = ev.Description;
         existing.PlaceId     = ev.PlaceId;
+        existing.Latitude    = ev.Latitude;
+        existing.Longitude   = ev.Longitude;
         existing.StartAt     = DateTime.SpecifyKind(ev.StartAt, DateTimeKind.Utc);
         existing.EndAt       = ev.EndAt.HasValue ? DateTime.SpecifyKind(ev.EndAt.Value, DateTimeKind.Utc) : null;
         existing.Status      = ev.Status;
