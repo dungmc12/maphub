@@ -286,13 +286,19 @@ public class MapController : Controller
             .ToListAsync();
 
         // Địa điểm đã LƯU (yêu thích) — của bất kỳ ai, lưu qua UserList/UserListItem
-        var saved = await _context.UserListItems
+        var savedIds = await _context.UserListItems
             .Where(i => _context.UserLists.Any(l => l.Id == i.ListId && l.UserId == currentUserId))
             .OrderByDescending(i => i.AddedAt)
-            .Select(i => i.Place!)
-            .Where(p => p != null)
+            .Select(i => i.PlaceId)
+            .ToListAsync();
+        var savedLoaded = await _context.Places
+            .Where(p => savedIds.Contains(p.Id))
             .Include(p => p.Images.Where(im => im.IsPrimary))
             .ToListAsync();
+        var saved = savedIds
+            .Select(sid => savedLoaded.FirstOrDefault(p => p.Id == sid))
+            .Where(p => p != null)
+            .ToList();
 
         var profile = await _context.UserProfiles.FindAsync(currentUserId);
         ViewBag.MaxPlaces  = profile?.MaxPlaces ?? 3;

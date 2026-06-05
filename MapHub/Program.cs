@@ -175,6 +175,32 @@ using (var scope = app.Services.CreateScope())
         app.Logger.LogError(ex, "Auto-migration Events lat/lng lỗi");
     }
 
+    // Tạo bảng lưu địa điểm yêu thích nếu chưa có (UserLists / UserListItems)
+    try
+    {
+        if (dbProvider == "postgres")
+            await context.Database.ExecuteSqlRawAsync(
+                "CREATE TABLE IF NOT EXISTS \"UserLists\" (" +
+                "\"Id\" serial PRIMARY KEY, \"UserId\" text NOT NULL, \"Name\" text NOT NULL, " +
+                "\"Description\" text NULL, \"CreatedAt\" timestamptz NOT NULL DEFAULT now()); " +
+                "CREATE TABLE IF NOT EXISTS \"UserListItems\" (" +
+                "\"ListId\" integer NOT NULL, \"PlaceId\" integer NOT NULL, " +
+                "\"AddedAt\" timestamptz NOT NULL DEFAULT now(), " +
+                "PRIMARY KEY (\"ListId\", \"PlaceId\"));");
+        else
+            await context.Database.ExecuteSqlRawAsync(
+                "IF OBJECT_ID('UserLists') IS NULL CREATE TABLE UserLists (" +
+                "Id int IDENTITY(1,1) PRIMARY KEY, UserId nvarchar(450) NOT NULL, Name nvarchar(max) NOT NULL, " +
+                "Description nvarchar(max) NULL, CreatedAt datetime2 NOT NULL DEFAULT SYSUTCDATETIME()); " +
+                "IF OBJECT_ID('UserListItems') IS NULL CREATE TABLE UserListItems (" +
+                "ListId int NOT NULL, PlaceId int NOT NULL, AddedAt datetime2 NOT NULL DEFAULT SYSUTCDATETIME(), " +
+                "CONSTRAINT PK_UserListItems PRIMARY KEY (ListId, PlaceId));");
+    }
+    catch (Exception ex)
+    {
+        app.Logger.LogError(ex, "Auto-migration UserLists lỗi");
+    }
+
     await DataSeeder.SeedAsync(context);
 
     // Tạo roles
