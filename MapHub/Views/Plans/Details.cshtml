@@ -289,18 +289,18 @@
                         <input id="planSearchInput" class="plan-search-input" placeholder="🔍 Tìm tên, địa chỉ...">
                         <div class="plan-cat-chips">
                             <button class="plan-cat-btn active" data-cat="">Tất cả</button>
-                            <button class="plan-cat-btn" data-cat="restaurant">🍽️</button>
-                            <button class="plan-cat-btn" data-cat="cafe">☕</button>
-                            <button class="plan-cat-btn" data-cat="entertainment">🎮</button>
-                            <button class="plan-cat-btn" data-cat="culture">🏛️</button>
-                            <button class="plan-cat-btn" data-cat="nature">🌿</button>
-                            <button class="plan-cat-btn" data-cat="temple">⛩️</button>
-                            <button class="plan-cat-btn" data-cat="education">🎓</button>
-                            <button class="plan-cat-btn" data-cat="hotel">🏨</button>
+                            <button class="plan-cat-btn" data-cat="restaurant" title="Nhà hàng"><i class="fa-solid fa-utensils"></i></button>
+                            <button class="plan-cat-btn" data-cat="cafe" title="Cà phê"><i class="fa-solid fa-mug-hot"></i></button>
+                            <button class="plan-cat-btn" data-cat="entertainment" title="Vui chơi"><i class="fa-solid fa-gamepad"></i></button>
+                            <button class="plan-cat-btn" data-cat="culture" title="Văn hóa"><i class="fa-solid fa-landmark"></i></button>
+                            <button class="plan-cat-btn" data-cat="nature" title="Thiên nhiên"><i class="fa-solid fa-leaf"></i></button>
+                            <button class="plan-cat-btn" data-cat="temple" title="Tâm linh"><i class="fa-solid fa-place-of-worship"></i></button>
+                            <button class="plan-cat-btn" data-cat="education" title="Giáo dục"><i class="fa-solid fa-graduation-cap"></i></button>
+                            <button class="plan-cat-btn" data-cat="hotel" title="Lưu trú"><i class="fa-solid fa-hotel"></i></button>
                         </div>
                         <div class="d-flex gap-2 my-2">
-                            <button type="button" id="planViewList" class="btn btn-sm btn-accent" onclick="togglePlanView('list')">📋 Danh sách</button>
-                            <button type="button" id="planViewMap" class="btn btn-sm btn-outline-secondary" onclick="togglePlanView('map')">🗺️ Chọn trên bản đồ</button>
+                            <button type="button" id="planViewList" class="btn btn-sm btn-accent" onclick="togglePlanView('list')"><i class="fa-solid fa-list"></i> Danh sách</button>
+                            <button type="button" id="planViewMap" class="btn btn-sm btn-outline-secondary" onclick="togglePlanView('map')"><i class="fa-solid fa-map"></i> Chọn trên bản đồ</button>
                         </div>
                         <div id="planPickMap" style="height:340px;border-radius:10px;overflow:hidden;display:none;margin-bottom:.5rem"></div>
                         <div id="planPlaceGrid" class="plan-place-grid"></div>
@@ -361,7 +361,7 @@ function showConflictWarning(form, currentId, dayNum, arrival, leave) {
     }
     const conflicts = getConflicts(currentId, dayNum, arrival, leave);
     if (conflicts.length > 0) {
-        warn.innerHTML = '⚠️ <strong>Trùng giờ với:</strong> '
+        warn.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> <strong>Trùng giờ với:</strong> '
             + conflicts.map(c => `<em>${c.name}</em> (${c.arrival}${c.leave ? '→'+c.leave : ''})`).join(', ');
         warn.style.display = 'block';
     } else {
@@ -410,7 +410,7 @@ function checkLeaveTime(leaveInput) {
 
     if (arrival && leave) {
         if (leave <= arrival) {
-            if (hint) { hint.textContent = '⚠️ Phải sau ' + arrival; hint.style.color = '#ef4444'; }
+            if (hint) { hint.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Phải sau ' + arrival; hint.style.color = '#ef4444'; }
             leaveInput.style.borderColor = '#ef4444';
         } else {
             const [ah, am] = arrival.split(':').map(Number);
@@ -537,7 +537,7 @@ function renderPlanMap() {
                 <input type="hidden" name="__RequestVerificationToken" value="${token}">
                 <input type="hidden" name="planId"  value="${PLAN_ID}">
                 <input type="hidden" name="placeId" value="${p.id}">
-                <button type="submit" class="btn btn-sm btn-accent" style="font-size:12px">➕ Thêm vào kế hoạch</button>
+                <button type="submit" class="btn btn-sm btn-accent" style="font-size:12px"><i class="fa-solid fa-plus"></i> Thêm vào kế hoạch</button>
             </form>`;
         const m = L.marker([p.latitude, p.longitude]).addTo(planPickMap).bindPopup(popup);
         planPickMarkers.push(m);

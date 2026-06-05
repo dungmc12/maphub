@@ -36,7 +36,7 @@
             }
             else
             {
-                <a href="/Payments/Premium" class="btn-ghost">🔒 Nâng cấp để tạo thêm</a>
+                <a href="/Payments/Premium" class="btn-ghost"><i class="fa-solid fa-lock"></i> Nâng cấp để tạo thêm</a>
             }
         </div>
     </div>
@@ -52,18 +52,18 @@
                         <h5 class="plan-card-title">@plan.Title</h5>
                         @if (plan.IsPublic)
                         {
-                            <span class="badge bg-success ms-2">🔗 Đang chia sẻ</span>
+                            <span class="badge bg-success ms-2"><i class="fa-solid fa-share-nodes"></i> Đang chia sẻ</span>
                         }
                     </div>
                     <div class="plan-card-body">
                         @if (plan.StartDate.HasValue)
                         {
                             <p class="plan-date">
-                                📅 @plan.StartDate.Value.ToString("dd/MM/yyyy")
+                                <i class="fa-solid fa-calendar"></i> @plan.StartDate.Value.ToString("dd/MM/yyyy")
                                 @if (plan.EndDate.HasValue) { <span> → @plan.EndDate.Value.ToString("dd/MM/yyyy")</span> }
                             </p>
                         }
-                        <p class="plan-places">📍 @plan.Items.Count địa điểm</p>
+                        <p class="plan-places"><i class="fa-solid fa-location-dot"></i> @plan.Items.Count địa điểm</p>
 
                         @if (plan.Items.Any())
                         {
@@ -85,14 +85,14 @@
                             @Html.AntiForgeryToken()
                             <input type="hidden" name="id" value="@plan.Id">
                             <button type="submit" class="btn-ghost btn-sm-ghost" title="@(plan.IsPublic ? "Tắt chia sẻ" : "Tạo link chia sẻ")">
-                                @(plan.IsPublic ? "🔗 Tắt chia sẻ" : "📤 Chia sẻ")
+                                @Html.Raw(plan.IsPublic ? "<i class=\"fa-solid fa-link-slash\"></i> Tắt chia sẻ" : "<i class=\"fa-solid fa-share-nodes\"></i> Chia sẻ")
                             </button>
                         </form>
                         <form method="post" action="/Plans/Delete" class="d-inline"
                               onsubmit="return confirm('Xóa kế hoạch này?')">
                             @Html.AntiForgeryToken()
                             <input type="hidden" name="id" value="@plan.Id">
-                            <button type="submit" class="btn-danger-ghost btn-sm-ghost">🗑️</button>
+                            <button type="submit" class="btn-danger-ghost btn-sm-ghost"><i class="fa-solid fa-trash"></i></button>
                         </form>
                     </div>
                     @if (plan.IsPublic && !string.IsNullOrEmpty(plan.ShareToken))
@@ -110,7 +110,7 @@
     else
     {
         <div class="plans-empty">
-            <div class="plans-empty-icon">🗺️</div>
+            <div class="plans-empty-icon"><i class="fa-solid fa-map"></i></div>
             <h4>Bạn chưa có kế hoạch nào</h4>
             <p>Tạo kế hoạch để lưu các địa điểm muốn ghé thăm và chia sẻ với bạn bè!</p>
             @if (!atLimit)
@@ -127,8 +127,8 @@
 <div id="createPlanModal" class="custom-modal-overlay" style="display:none" onclick="if(event.target===this)this.style.display='none'">
     <div class="custom-modal-box">
         <div class="custom-modal-header">
-            <h5>📋 Tạo kế hoạch mới</h5>
-            <button onclick="document.getElementById('createPlanModal').style.display='none'">✕</button>
+            <h5><i class="fa-solid fa-clipboard-list"></i> Tạo kế hoạch mới</h5>
+            <button onclick="document.getElementById('createPlanModal').style.display='none'"><i class="fa-solid fa-xmark"></i></button>
         </div>
         <form method="post" action="/Plans/Create" id="createPlanForm" onsubmit="return validatePlanDates()">
             @Html.AntiForgeryToken()
@@ -150,7 +150,7 @@
                     </div>
                 </div>
                 <div id="dateError" class="text-danger small mt-1" style="display:none">
-                    ⚠️ Ngày về phải sau hoặc bằng ngày khởi hành.
+                    <i class="fa-solid fa-triangle-exclamation"></i> Ngày về phải sau hoặc bằng ngày khởi hành.
                 </div>
             </div>
             <div class="custom-modal-footer">
@@ -167,8 +167,8 @@
     <div id="aiPlanModal" class="custom-modal-overlay" style="display:none" onclick="if(event.target===this)this.style.display='none'">
         <div class="custom-modal-box" style="width:min(680px,96vw);max-height:90vh;overflow-y:auto">
             <div class="custom-modal-header">
-                <h5>🤖 AI tạo kế hoạch</h5>
-                <button onclick="document.getElementById('aiPlanModal').style.display='none'">✕</button>
+                <h5><i class="fa-solid fa-robot"></i> AI tạo kế hoạch</h5>
+                <button onclick="document.getElementById('aiPlanModal').style.display='none'"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <div class="custom-modal-body">
                 <div class="mb-3">
@@ -193,14 +193,14 @@
                     <input type="text" id="aiPlanTitle" class="form-control form-control-sm mb-2"
                            placeholder="Tên kế hoạch (VD: Cắm trại Đồng Mô 3 ngày)">
                     <button type="button" class="btn-accent w-100" onclick="saveAiPlan()">
-                        💾 Lưu kế hoạch này
+                        <i class="fa-solid fa-floppy-disk"></i> Lưu kế hoạch này
                     </button>
                     <div id="aiSaveMsg" style="display:none;margin-top:.5rem"></div>
                 </div>
             </div>
             <div class="custom-modal-footer">
                 <button type="button" class="btn-ghost" onclick="document.getElementById('aiPlanModal').style.display='none'">Đóng</button>
-                <button type="button" id="btnAiGenerate" class="btn-accent" onclick="generateAiPlan()">🤖 Tạo lịch trình</button>
+                <button type="button" id="btnAiGenerate" class="btn-accent" onclick="generateAiPlan()"><i class="fa-solid fa-robot"></i> Tạo lịch trình</button>
             </div>
         </div>
     </div>
@@ -235,12 +235,12 @@ function validatePlanDates() {
     const end   = document.getElementById('planEndDate').value;
     const err   = document.getElementById('dateError');
     if (start && startEl.min && start < startEl.min) {
-        err.textContent = '⚠️ Ngày khởi hành phải từ hôm nay trở đi.';
+        err.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Ngày khởi hành phải từ hôm nay trở đi.';
         err.style.display = 'block';
         return false;
     }
     if (start && end && end < start) {
-        err.textContent = '⚠️ Ngày về phải sau hoặc bằng ngày khởi hành.';
+        err.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Ngày về phải sau hoặc bằng ngày khởi hành.';
         err.style.display = 'block';
         return false;
     }
@@ -262,10 +262,10 @@ async function generateAiPlan() {
     if (!dest) { alert('Vui lòng nhập địa điểm muốn đến!'); return; }
 
     const genBtn = document.getElementById('btnAiGenerate');
-    genBtn.disabled = true; genBtn.textContent = '⏳ Đang tạo…';
+    genBtn.disabled = true; genBtn.innerHTML = '<i class="fa-solid fa-hourglass-half"></i> Đang tạo…';
     document.getElementById('aiSaveRow').style.display = 'none';
     result.style.display = 'block';
-    result.innerHTML = '<div class="text-muted"><em>🤖 AI đang lập kế hoạch… (có thể mất 10-20 giây)</em></div>';
+    result.innerHTML = '<div class="text-muted"><em><i class="fa-solid fa-robot"></i> AI đang lập kế hoạch… (có thể mất 10-20 giây)</em></div>';
 
     try {
         const r = await fetch('/Plans/AiGenerate', {
@@ -286,7 +286,7 @@ async function generateAiPlan() {
             document.getElementById('aiSaveMsg').style.display = 'none';
             const saveBtn = saveRow.querySelector('.btn-accent');
             saveBtn.style.display = ''; saveBtn.disabled = false;
-            saveBtn.textContent = '💾 Lưu kế hoạch này';
+            saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Lưu kế hoạch này';
             // Gợi ý tên kế hoạch
             const titleInput = document.getElementById('aiPlanTitle');
             if (!titleInput.value) titleInput.value = `Kế hoạch ${dest} ${days} ngày`;
@@ -294,7 +294,7 @@ async function generateAiPlan() {
     } catch {
         result.innerHTML = '<div class="text-danger">Lỗi kết nối AI. Vui lòng thử lại.</div>';
     } finally {
-        genBtn.disabled = false; genBtn.textContent = '🤖 Tạo lịch trình';
+        genBtn.disabled = false; genBtn.innerHTML = '<i class="fa-solid fa-robot"></i> Tạo lịch trình';
     }
 }
 
@@ -376,12 +376,12 @@ async function saveAiPlan() {
     const msgEl = document.getElementById('aiSaveMsg');
     if (d.ok) {
         msgEl.style.display = 'block';
-        msgEl.innerHTML = `<div class="alert alert-success py-2">✅ Đã lưu ${places.length} địa điểm! <a href="/Plans/Details/${d.id}" class="fw-bold">Xem kế hoạch →</a></div>`;
+        msgEl.innerHTML = `<div class="alert alert-success py-2"><i class="fa-solid fa-circle-check"></i> Đã lưu ${places.length} địa điểm! <a href="/Plans/Details/${d.id}" class="fw-bold">Xem kế hoạch →</a></div>`;
         btn.style.display = 'none';
     } else {
         msgEl.style.display = 'block';
         msgEl.innerHTML = `<div class="alert alert-warning py-2">${d.msg}</div>`;
-        btn.disabled = false; btn.textContent = '💾 Lưu kế hoạch này';
+        btn.disabled = false; btn.textContent = '<i class="fa-solid fa-floppy-disk"></i> Lưu kế hoạch này';
     }
 }
 
@@ -389,7 +389,7 @@ function formatPlan(text) {
     return text
         .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
         .replace(/\[([^\]]+)\]\((\/[^)]+)\)/g,
-            '<a href="$2" style="color:#7c3aed;font-weight:600;text-decoration:underline">$1 🗺️</a>')
+            '<a href="$2" style="color:#7c3aed;font-weight:600;text-decoration:underline">$1 <i class="fa-solid fa-map"></i></a>')
         .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
         .replace(/\n/g, '<br>');
 }
