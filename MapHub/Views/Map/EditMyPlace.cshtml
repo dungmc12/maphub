@@ -77,6 +77,14 @@
                     <input type="file" name="imageFile" class="form-control mb-2" accept="image/*" onchange="previewImg(this)">
                     <input type="url" name="newImageUrl" class="form-control" placeholder="Hoặc URL ảnh mới (để trống = giữ nguyên)">
                 </div>
+                <div class="col-12">
+                    <label class="form-label fw-semibold"><i class="fa-solid fa-images"></i> Thêm nhiều ảnh khác <small class="text-muted">(không bắt buộc, chọn nhiều)</small></label>
+                    <input type="file" name="moreImages" class="form-control form-control-sm" accept="image/*" multiple>
+                </div>
+                <div class="col-12">
+                    <label class="form-label fw-semibold"><i class="fa-solid fa-utensils"></i> Ảnh thực đơn / menu <small class="text-muted">(không bắt buộc, chọn nhiều)</small></label>
+                    <input type="file" name="menuImages" class="form-control form-control-sm" accept="image/*" multiple>
+                </div>
             </div>
         </div>
         <div class="d-flex gap-2">

@@ -302,7 +302,8 @@ public class AdminController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> AddPlace(Place place, string? imageUrl, IFormFile? imageFile, int[]? tagIds)
+    public async Task<IActionResult> AddPlace(Place place, string? imageUrl, IFormFile? imageFile, int[]? tagIds,
+        IFormFile[]? moreImages = null, IFormFile[]? menuImages = null)
     {
         place.IsApproved      = true;
         place.CreatedByUserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
@@ -327,8 +328,11 @@ public class AdminController : Controller
             resolvedUrl = imageUrl;
         if (resolvedUrl != null)
             _context.PlaceImages.Add(new PlaceImage { PlaceId = place.Id, Url = resolvedUrl, IsPrimary = true });
-
         await _context.SaveChangesAsync();
+
+        // Nhiều ảnh khác + ảnh menu (không bắt buộc)
+        await AddPlaceImagesAsync(place.Id, moreImages, menuImages, place.CreatedByUserId);
+
         TempData["Success"] = $"Đã thêm địa điểm: {place.Name}";
         return RedirectToAction(nameof(Index));
     }
@@ -350,7 +354,8 @@ public class AdminController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> EditPlace(int id, string name, string? category, string? about,
         string? address, string? phone, string? websiteUrl, decimal? minPrice, decimal? maxPrice,
-        string visibility, string? newImageUrl, IFormFile? imageFile, int[]? tagIds, bool isFeatured = false)
+        string visibility, string? newImageUrl, IFormFile? imageFile, int[]? tagIds, bool isFeatured = false,
+        IFormFile[]? moreImages = null, IFormFile[]? menuImages = null)
     {
         var place = await _context.Places.Include(p => p.Images).FirstOrDefaultAsync(p => p.Id == id);
         if (place == null) return NotFound();
@@ -388,8 +393,11 @@ public class AdminController : Controller
             if (primary != null) primary.Url = resolvedUrl;
             else _context.PlaceImages.Add(new PlaceImage { PlaceId = place.Id, Url = resolvedUrl, IsPrimary = true });
         }
-
         await _context.SaveChangesAsync();
+
+        // Bổ sung nhiều ảnh khác + ảnh menu (không bắt buộc)
+        await AddPlaceImagesAsync(place.Id, moreImages, menuImages, place.CreatedByUserId);
+
         TempData["Success"] = $"Đã cập nhật: {place.Name}";
         return RedirectToAction(nameof(Index));
     }
@@ -645,6 +653,26 @@ public class AdminController : Controller
     // Lưu ảnh thành base64 data URL trong DB (bền với Render redeploy, không dùng /uploads ephemeral)
     private async Task<string> SaveUploadAsync(IFormFile file, string folder)
         => await ImageHelper.ToDataUrlAsync(file) ?? string.Empty;
+
+    // Thêm nhiều ảnh (thường + menu) cho địa điểm, lưu base64. Ảnh thường đầu tiên thành ảnh đại diện nếu chưa có.
+    private async Task AddPlaceImagesAsync(int placeId, IFormFile[]? moreImages, IFormFile[]? menuImages, string? userId)
+    {
+        foreach (var f in moreImages ?? Array.Empty<IFormFile>())
+        {
+            var url = await ImageHelper.ToDataUrlAsync(f);
+            if (url == null) continue;
+            var hasPrimary = await _context.PlaceImages.AnyAsync(i => i.PlaceId == placeId && i.IsPrimary);
+            _context.PlaceImages.Add(new PlaceImage { PlaceId = placeId, Url = url, IsPrimary = !hasPrimary, IsMenu = false, UploadedByUserId = userId });
+            await _context.SaveChangesAsync();
+        }
+        foreach (var f in menuImages ?? Array.Empty<IFormFile>())
+        {
+            var url = await ImageHelper.ToDataUrlAsync(f);
+            if (url == null) continue;
+            _context.PlaceImages.Add(new PlaceImage { PlaceId = placeId, Url = url, IsPrimary = false, IsMenu = true, UploadedByUserId = userId });
+        }
+        await _context.SaveChangesAsync();
+    }
 }
 
 public record RevenueRow(int Id, decimal Amount, string PlanType, string? Code, string? Provider, DateTime? PaidAt, string? Email);

@@ -408,7 +408,8 @@ public class MapController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> EditMyPlace(int id, string name, string? category, string? about,
         string? address, string? phone, decimal? minPrice, decimal? maxPrice, string visibility,
-        decimal latitude, decimal longitude, string? newImageUrl, IFormFile? imageFile)
+        decimal latitude, decimal longitude, string? newImageUrl, IFormFile? imageFile,
+        IFormFile[]? moreImages = null, IFormFile[]? menuImages = null)
     {
         var currentUserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
         var place = await _context.Places.Include(p => p.Images).FirstOrDefaultAsync(p => p.Id == id);
@@ -435,10 +436,33 @@ public class MapController : Controller
             if (primary != null) primary.Url = resolvedUrl;
             else _context.PlaceImages.Add(new PlaceImage { PlaceId = place.Id, Url = resolvedUrl, IsPrimary = true, UploadedByUserId = currentUserId });
         }
-
         await _context.SaveChangesAsync();
+
+        // Bổ sung nhiều ảnh khác + ảnh menu (không bắt buộc)
+        await AddPlaceImagesAsync(place.Id, moreImages, menuImages, currentUserId);
+
         TempData["Success"] = $"Đã cập nhật \"{place.Name}\".";
         return RedirectToAction(nameof(MyPlaces));
+    }
+
+    // Thêm nhiều ảnh (thường + menu) cho địa điểm, lưu base64 (bền với Render redeploy)
+    private async Task AddPlaceImagesAsync(int placeId, IFormFile[]? moreImages, IFormFile[]? menuImages, string? userId)
+    {
+        foreach (var f in moreImages ?? Array.Empty<IFormFile>())
+        {
+            var url = await ImageHelper.ToDataUrlAsync(f);
+            if (url == null) continue;
+            var hasPrimary = await _context.PlaceImages.AnyAsync(i => i.PlaceId == placeId && i.IsPrimary);
+            _context.PlaceImages.Add(new PlaceImage { PlaceId = placeId, Url = url, IsPrimary = !hasPrimary, IsMenu = false, UploadedByUserId = userId });
+            await _context.SaveChangesAsync();
+        }
+        foreach (var f in menuImages ?? Array.Empty<IFormFile>())
+        {
+            var url = await ImageHelper.ToDataUrlAsync(f);
+            if (url == null) continue;
+            _context.PlaceImages.Add(new PlaceImage { PlaceId = placeId, Url = url, IsPrimary = false, IsMenu = true, UploadedByUserId = userId });
+        }
+        await _context.SaveChangesAsync();
     }
 }
 
