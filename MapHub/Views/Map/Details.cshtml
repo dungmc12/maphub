@@ -215,7 +215,13 @@
                             <div class="review-header">
                                 <div class="review-avatar"><i class="fa-solid fa-user" style="color:#6366f1"></i></div>
                                 <div>
-                                    <div class="review-user">Người dùng</div>
+                                    <div class="review-user">
+                                        @(currentUserId == rv.UserId ? "Bạn" : "Người dùng")
+                                        @if (currentUserId == rv.UserId)
+                                        {
+                                            <span style="font-size:.7rem;font-weight:700;color:#0891b2;background:#cffafe;border-radius:999px;padding:.05rem .4rem;margin-left:.3rem">Đánh giá của bạn</span>
+                                        }
+                                    </div>
                                     <div class="review-date">@rv.CreatedAt.ToString("dd/MM/yyyy")</div>
                                 </div>
                                 <div class="review-stars ms-auto">
@@ -223,10 +229,19 @@
                                 </div>
                                 @if (currentUserId == rv.UserId || isAdmin)
                                 {
-                                    <button type="button" onclick="deleteReview(@rv.Id, this)" title="Xóa đánh giá"
-                                            style="background:none;border:none;color:#dc2626;cursor:pointer;font-size:1rem;margin-left:.4rem">
-                                        🗑️
-                                    </button>
+                                    <div style="display:flex;gap:.35rem;margin-left:.5rem">
+                                        @if (currentUserId == rv.UserId)
+                                        {
+                                            <button type="button" onclick="toggleEditReview(@rv.Id)" title="Sửa đánh giá"
+                                                    style="display:inline-flex;align-items:center;gap:.25rem;background:#eff6ff;border:1px solid #bfdbfe;color:#1d4ed8;cursor:pointer;font-size:.78rem;font-weight:600;border-radius:7px;padding:.2rem .5rem">
+                                                <i class="fa-solid fa-pen"></i> Sửa
+                                            </button>
+                                        }
+                                        <button type="button" onclick="deleteReview(@rv.Id, this)" title="Xóa đánh giá"
+                                                style="display:inline-flex;align-items:center;gap:.25rem;background:#fef2f2;border:1px solid #fecaca;color:#dc2626;cursor:pointer;font-size:.78rem;font-weight:600;border-radius:7px;padding:.2rem .5rem">
+                                            <i class="fa-solid fa-trash"></i> Xóa
+                                        </button>
+                                    </div>
                                 }
                             </div>
                             <div class="review-ratings-row">
@@ -254,6 +269,58 @@
                                 <img src="@rv.PhotoUrl" alt="Ảnh đánh giá"
                                      onerror="this.onerror=null;this.style.display='none'"
                                      style="max-width:100%;max-height:220px;border-radius:10px;margin-top:8px;object-fit:cover">
+                            }
+
+                            @if (currentUserId == rv.UserId || isAdmin)
+                            {
+                                <!-- Form sửa đánh giá (ẩn, mở bằng nút Sửa) -->
+                                <form method="post" action="/Map/EditReview" enctype="multipart/form-data"
+                                      id="editForm-@rv.Id" style="display:none;margin-top:.7rem;border-top:1px dashed var(--line);padding-top:.7rem">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="id" value="@rv.Id">
+                                    <div class="row g-2 mb-2">
+                                        <div class="col-4">
+                                            <label class="form-label mb-1" style="font-size:.78rem">Chất lượng</label>
+                                            <select name="qualityRating" class="form-select form-select-sm" required>
+                                                @for (int s = 5; s >= 1; s--)
+                                                { <option value="@s" selected="@(rv.QualityRating == s)">@s ★</option> }
+                                            </select>
+                                        </div>
+                                        <div class="col-4">
+                                            <label class="form-label mb-1" style="font-size:.78rem">Nhân viên</label>
+                                            <select name="serviceRating" class="form-select form-select-sm" required>
+                                                @for (int s = 5; s >= 1; s--)
+                                                { <option value="@s" selected="@(rv.ServiceRating == s)">@s ★</option> }
+                                            </select>
+                                        </div>
+                                        @if (isRestaurantLike)
+                                        {
+                                            <div class="col-4">
+                                                <label class="form-label mb-1" style="font-size:.78rem">Đồ ăn/uống</label>
+                                                <select name="foodRating" class="form-select form-select-sm">
+                                                    <option value="">--</option>
+                                                    @for (int s = 5; s >= 1; s--)
+                                                    { <option value="@s" selected="@(rv.FoodRating == s)">@s ★</option> }
+                                                </select>
+                                            </div>
+                                        }
+                                    </div>
+                                    <textarea name="content" class="form-control form-control-sm mb-2" rows="2"
+                                              placeholder="Chia sẻ trải nghiệm của bạn...">@rv.Content</textarea>
+                                    @if (isRestaurantLike)
+                                    {
+                                        <input type="text" name="foodReview" class="form-control form-control-sm mb-2"
+                                               value="@rv.FoodReview" placeholder="Nhận xét về đồ ăn/uống (tùy chọn)">
+                                        <input type="text" name="staffReview" class="form-control form-control-sm mb-2"
+                                               value="@rv.StaffReview" placeholder="Nhận xét về nhân viên (tùy chọn)">
+                                    }
+                                    <label class="form-label mb-1" style="font-size:.78rem"><i class="fa-solid fa-camera"></i> Đổi ảnh <small class="text-muted">(bỏ trống để giữ ảnh cũ)</small></label>
+                                    <input type="file" name="photo" class="form-control form-control-sm mb-2" accept="image/*">
+                                    <div class="d-flex gap-2">
+                                        <button type="submit" class="btn-accent btn-sm-accent"><i class="fa-solid fa-floppy-disk"></i> Lưu thay đổi</button>
+                                        <button type="button" class="btn-ghost btn-sm-ghost" onclick="toggleEditReview(@rv.Id)">Hủy</button>
+                                    </div>
+                                </form>
                             }
                         </div>
                     }
@@ -416,6 +483,14 @@ function toggleSaveDetail(id) {
 }
 
 // Xóa đánh giá real-time (không reload trang)
+function toggleEditReview(id) {
+    const f = document.getElementById('editForm-' + id);
+    if (!f) return;
+    const open = f.style.display !== 'none';
+    f.style.display = open ? 'none' : 'block';
+    if (!open) f.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
 function deleteReview(id, btn) {
     if (!confirm('Xóa đánh giá này?')) return;
     const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';

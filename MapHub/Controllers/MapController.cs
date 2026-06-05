@@ -255,6 +255,35 @@ public class MapController : Controller
         return Ok(new { success = true });
     }
 
+    // Sửa đánh giá (chỉ chủ đánh giá hoặc Admin)
+    [Authorize]
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> EditReview(int id, byte qualityRating, byte serviceRating,
+        byte? foodRating, string? content, string? foodReview, string? staffReview, IFormFile? photo)
+    {
+        var review = await _context.PlaceReviews.FindAsync(id);
+        if (review == null) return NotFound();
+
+        var currentUserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (review.UserId != currentUserId && !User.IsInRole("Admin"))
+            return Forbid();
+
+        review.QualityRating = qualityRating;
+        review.ServiceRating = serviceRating;
+        review.FoodRating    = foodRating;
+        review.Content       = content;
+        review.FoodReview    = foodReview;
+        review.StaffReview   = staffReview;
+
+        // Chỉ thay ảnh khi người dùng tải ảnh mới (không chọn thì giữ ảnh cũ)
+        var newPhoto = await ImageHelper.ToDataUrlAsync(photo);
+        if (newPhoto != null) review.PhotoUrl = newPhoto;
+
+        await _context.SaveChangesAsync();
+        return RedirectToAction(nameof(Details), new { id = review.PlaceId });
+    }
+
     [Authorize]
     [HttpGet]
     public async Task<IActionResult> MyPlaces()
