@@ -1,15 +1,20 @@
 using MapHub.Models;
+using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
 namespace MapHub.Data;
 
-public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
+// IDataProtectionKeyContext: lưu DataProtection keys vào DB để cookie đăng nhập KHÔNG bị
+// vô hiệu mỗi lần Render restart/redeploy (key tạo mới sẽ làm hỏng mọi cookie cũ → đăng xuất).
+public class ApplicationDbContext : IdentityDbContext<ApplicationUser>, IDataProtectionKeyContext
 {
     public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
         : base(options)
     {
     }
+
+    public DbSet<Microsoft.AspNetCore.DataProtection.EntityFrameworkCore.DataProtectionKey> DataProtectionKeys => Set<Microsoft.AspNetCore.DataProtection.EntityFrameworkCore.DataProtectionKey>();
 
     public DbSet<UserProfile> UserProfiles => Set<UserProfile>();
     public DbSet<Payment> Payments => Set<Payment>();

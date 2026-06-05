@@ -1,6 +1,7 @@
 using MapHub.Data;
 using MapHub.Models;
 using MapHub.Services;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -72,7 +73,7 @@ builder.Services
         options.SignIn.RequireConfirmedAccount = false;
         options.User.RequireUniqueEmail = true;
         options.Password.RequireDigit = true;
-        options.Password.RequiredLength = 6;
+        options.Password.RequiredLength = 8;          // khớp với RegisterInputModel + giảm khả năng trùng mật khẩu đã rò rỉ
         options.Password.RequireNonAlphanumeric = false;
         options.Password.RequireUppercase = false;
     })
@@ -83,7 +84,16 @@ builder.Services.ConfigureApplicationCookie(options =>
 {
     options.LoginPath = "/Account/Login";
     options.AccessDeniedPath = "/Account/Login";
+    // "Ghi nhớ đăng nhập": cookie persistent sống 30 ngày, trượt hạn mỗi lần dùng
+    options.ExpireTimeSpan = TimeSpan.FromDays(30);
+    options.SlidingExpiration = true;
 });
+
+// Lưu DataProtection keys vào DB (bền qua mỗi lần Render restart/redeploy) + tên app cố định.
+// Nếu không, key tạo mới mỗi lần khởi động → mọi cookie đăng nhập bị vô hiệu = "Ghi nhớ" vô tác dụng.
+builder.Services.AddDataProtection()
+    .PersistKeysToDbContext<ApplicationDbContext>()
+    .SetApplicationName("CityScout");
 
 // Role/Pro thay đổi có hiệu lực trong ~1 phút (tự làm mới claims trong cookie) thay vì 30 phút mặc định
 builder.Services.Configure<SecurityStampValidatorOptions>(o =>
@@ -199,6 +209,23 @@ using (var scope = app.Services.CreateScope())
     catch (Exception ex)
     {
         app.Logger.LogError(ex, "Auto-migration UserLists lỗi");
+    }
+
+    // Bảng lưu DataProtection keys (EnsureCreated không tự thêm vào DB đã tồn tại)
+    try
+    {
+        if (dbProvider == "postgres")
+            await context.Database.ExecuteSqlRawAsync(
+                "CREATE TABLE IF NOT EXISTS \"DataProtectionKeys\" (" +
+                "\"Id\" serial PRIMARY KEY, \"FriendlyName\" text NULL, \"Xml\" text NULL);");
+        else
+            await context.Database.ExecuteSqlRawAsync(
+                "IF OBJECT_ID('DataProtectionKeys') IS NULL CREATE TABLE DataProtectionKeys (" +
+                "Id int IDENTITY(1,1) PRIMARY KEY, FriendlyName nvarchar(max) NULL, Xml nvarchar(max) NULL);");
+    }
+    catch (Exception ex)
+    {
+        app.Logger.LogError(ex, "Auto-migration DataProtectionKeys lỗi");
     }
 
     await DataSeeder.SeedAsync(context);
