@@ -605,7 +605,8 @@ function renderPlaces(list) {
         const card = document.createElement('div');
         card.className = 'place-list-card';
         card.innerHTML = `
-            <img src="${p.primaryImage}" alt="${p.name}" class="place-list-img" loading="lazy">
+            <img src="${p.primaryImage}" alt="${p.name}" class="place-list-img" loading="lazy"
+                 onerror="this.onerror=null;this.src='https://placehold.co/120x120?text=No+Img'">
             <div class="place-list-info">
                 <div class="place-list-name">${p.name}</div>
                 <div class="place-list-cat">${categoryLabel(p.category)} · 💰 ${priceLabel(p.minPrice, p.maxPrice)}</div>

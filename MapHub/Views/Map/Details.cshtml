@@ -91,7 +91,8 @@
                             {
                                 <div class="carousel-item @(ci == 0 ? "active" : "")">
                                     <img src="@img.Url" class="d-block w-100 gallery-main-img"
-                                         alt="@img.Caption" onclick="openLightbox(this.src)">
+                                         alt="@img.Caption" onclick="openLightbox(this.src)"
+                                         onerror="this.onerror=null;this.src='https://placehold.co/800x400?text=Ảnh+không+còn'">
                                     @if (!string.IsNullOrEmpty(img.Caption))
                                     {
                                         <div class="carousel-caption d-none d-md-block bg-dark bg-opacity-50 rounded p-1">
@@ -250,6 +251,7 @@
                             @if (!string.IsNullOrEmpty(rv.PhotoUrl))
                             {
                                 <img src="@rv.PhotoUrl" alt="Ảnh đánh giá"
+                                     onerror="this.onerror=null;this.style.display='none'"
                                      style="max-width:100%;max-height:220px;border-radius:10px;margin-top:8px;object-fit:cover">
                             }
                         </div>
