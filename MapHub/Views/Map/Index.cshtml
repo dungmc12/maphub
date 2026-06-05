@@ -53,16 +53,13 @@
                        placeholder="🔍  Tìm tên, địa chỉ...">
             </div>
 
-            <!-- Budget filter (Ngân sách) -->
-            <div class="sidebar-search-box" style="margin-top:.45rem">
-                <select id="budgetFilter" class="sidebar-search-input"
-                        style="cursor:pointer;appearance:auto" onchange="filterBudget(this.value)">
-                    <option value="">💰 Mọi mức giá</option>
-                    <option value="50000">Dưới 50.000đ</option>
-                    <option value="100000">Dưới 100.000đ</option>
-                    <option value="200000">Dưới 200.000đ</option>
-                    <option value="500000">Dưới 500.000đ</option>
-                </select>
+            <!-- Budget filter (thanh kéo, thay cho dropdown) -->
+            <div class="sidebar-search-box" style="margin-top:.55rem">
+                <label style="font-size:.83rem;color:#475569;display:block;margin-bottom:.25rem">
+                    💰 Ngân sách tối đa: <strong id="budgetLabel" style="color:#e06d1b">Mọi mức giá</strong>
+                </label>
+                <input type="range" id="budgetRange" class="form-range" min="0" max="2000000" step="50000"
+                       value="2000000" oninput="onBudgetSlide()">
             </div>
 
             <!-- District filter (Quận/Huyện) -->
@@ -205,6 +202,26 @@ else if (isAuth)
                             <label class="form-label fw-semibold">Giới thiệu / Mô tả</label>
                             <textarea id="newAbout" class="form-control" rows="2"
                                       placeholder="Không gian, món đặc trưng, lưu ý khi đến..."></textarea>
+                        </div>
+                        <!-- Tags -->
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">🏷️ Tags</label>
+                            @{ var allTagsAdd = ViewBag.AllTags as List<MapHub.Models.Tag> ?? new List<MapHub.Models.Tag>(); }
+                            @if (allTagsAdd.Any())
+                            {
+                                <div class="d-flex flex-wrap gap-2">
+                                    @foreach (var tag in allTagsAdd)
+                                    {
+                                        <label style="display:inline-flex;align-items:center;gap:.35rem;padding:.3rem .7rem;border:1px solid #e2e8f0;border-radius:20px;cursor:pointer;font-size:.88rem">
+                                            <input type="checkbox" class="new-tag-cb" value="@tag.Id"> @tag.Name
+                                        </label>
+                                    }
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="form-text">Chưa có tag nào (Admin tạo ở Admin → Tags).</div>
+                            }
                         </div>
                         <!-- Giá: nhập tay HOẶC kéo thanh (0 – 2 triệu) -->
                         <div class="col-12">
@@ -450,9 +467,14 @@ let currentBudget = '';
 let openNowOnly = false;
 let currentDistrict = '';
 
-function filterBudget(v) {
-    currentBudget = v;
-    loadPlaces(currentCat, document.getElementById('searchInput').value.trim());
+let _budgetTimer = null;
+function onBudgetSlide() {
+    const v = parseInt(document.getElementById('budgetRange').value);
+    const label = document.getElementById('budgetLabel');
+    if (v >= 2000000) { label.textContent = 'Mọi mức giá'; currentBudget = ''; }
+    else { label.textContent = 'Dưới ' + v.toLocaleString('vi-VN') + 'đ'; currentBudget = v; }
+    clearTimeout(_budgetTimer);
+    _budgetTimer = setTimeout(() => loadPlaces(currentCat, document.getElementById('searchInput').value.trim()), 300);
 }
 
 function filterOpenNow(checked) {
@@ -703,7 +725,8 @@ async function submitPlace() {
         ImageUrl:   document.getElementById('newImageUrl').value,
         Visibility: document.getElementById('newVisibility').value,
         Latitude:   lat,
-        Longitude:  lng
+        Longitude:  lng,
+        TagIds:     Array.from(document.querySelectorAll('.new-tag-cb:checked')).map(cb => parseInt(cb.value))
     };
 
     const res = await fetch('/Map/AddPlace', {

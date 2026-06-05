@@ -17,8 +17,9 @@ public class MapController : Controller
         _env = env;
     }
 
-    public IActionResult Index(string? cat = null)
+    public async Task<IActionResult> Index(string? cat = null)
     {
+        ViewBag.AllTags = await _context.Tags.OrderBy(t => t.Name).ToListAsync();
         // SEO: mỗi danh mục có tiêu đề + mô tả + H1 + canonical riêng (tránh trùng nội dung)
         var (label, desc) = (cat ?? "").ToLower() switch
         {
@@ -131,6 +132,15 @@ public class MapController : Controller
 
         _context.Places.Add(place);
         await _context.SaveChangesAsync();
+
+        // Gán tags đã chọn
+        if (dto.TagIds?.Any() == true)
+        {
+            var validTagIds = (await _context.Tags.Where(t => dto.TagIds.Contains(t.Id)).Select(t => t.Id).ToListAsync());
+            foreach (var tid in validTagIds)
+                _context.PlaceTags.Add(new PlaceTag { PlaceId = place.Id, TagId = tid });
+            await _context.SaveChangesAsync();
+        }
 
         // Lưu ảnh đầu tiên nếu có URL
         if (!string.IsNullOrWhiteSpace(dto.ImageUrl))
@@ -358,4 +368,5 @@ public class PlaceDto
     public decimal Latitude { get; set; }
     public decimal Longitude { get; set; }
     public string? ImageUrl { get; set; }
+    public List<int>? TagIds { get; set; }
 }
