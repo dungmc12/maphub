@@ -235,6 +235,35 @@ public class MapController : Controller
         return Ok(new { url = dataUrl });
     }
 
+    // Xóa 1 ảnh của địa điểm (chỉ chủ địa điểm hoặc Admin). Nếu xóa ảnh đại diện thì chọn ảnh khác thay.
+    [Authorize]
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> DeleteImage(int id)
+    {
+        var img = await _context.PlaceImages.Include(i => i.Place).FirstOrDefaultAsync(i => i.Id == id);
+        if (img == null) return NotFound();
+
+        var currentUserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (img.Place?.CreatedByUserId != currentUserId && !User.IsInRole("Admin"))
+            return Forbid();
+
+        var placeId = img.PlaceId;
+        var wasPrimary = img.IsPrimary;
+        _context.PlaceImages.Remove(img);
+        await _context.SaveChangesAsync();
+
+        // Xóa ảnh đại diện → chọn ảnh thường khác làm đại diện (để thẻ/danh sách vẫn có ảnh)
+        if (wasPrimary)
+        {
+            var next = await _context.PlaceImages
+                .Where(i => i.PlaceId == placeId && !i.IsMenu)
+                .OrderBy(i => i.Id).FirstOrDefaultAsync();
+            if (next != null) { next.IsPrimary = true; await _context.SaveChangesAsync(); }
+        }
+        return Ok(new { success = true });
+    }
+
     [Authorize]
     [HttpPost]
     [ValidateAntiForgeryToken]

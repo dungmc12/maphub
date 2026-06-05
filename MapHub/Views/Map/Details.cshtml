@@ -14,7 +14,6 @@
     // Tách ảnh thường (carousel chính) và ảnh thực đơn/menu (hiển thị riêng như Google Maps)
     var galleryImages = Model.Images.Where(i => !i.IsMenu).ToList();
     var menuImages    = Model.Images.Where(i => i.IsMenu).ToList();
-    bool canManagePlace = currentUserId != null && (Model.CreatedByUserId == currentUserId || isAdmin);
 }
 @Html.AntiForgeryToken()
 
@@ -164,31 +163,6 @@
                                  onerror="this.onerror=null;this.src='https://placehold.co/200x200?text=x'"
                                  style="width:140px;height:140px;object-fit:cover;border-radius:10px;cursor:zoom-in;border:1px solid var(--line)">
                         }
-                    </div>
-                </div>
-            }
-
-            <!-- Thêm ảnh (chủ địa điểm / admin) — như Google Maps, không bắt buộc -->
-            @if (canManagePlace)
-            {
-                <div class="detail-section">
-                    <h4 class="detail-section-title"><i class="fa-solid fa-images"></i> Thêm ảnh</h4>
-                    <p class="text-muted" style="font-size:.86rem;margin-bottom:.6rem">Không bắt buộc — thêm ảnh thực tế hoặc ảnh thực đơn của địa điểm.</p>
-                    <div class="row g-2" style="max-width:560px">
-                        <div class="col-12">
-                            <label class="form-label mb-1" style="font-size:.85rem"><i class="fa-solid fa-image"></i> Ảnh địa điểm <small class="text-muted">(chọn nhiều)</small></label>
-                            <input type="file" id="addMoreImages" class="form-control form-control-sm" accept="image/*" multiple>
-                        </div>
-                        <div class="col-12">
-                            <label class="form-label mb-1" style="font-size:.85rem"><i class="fa-solid fa-utensils"></i> Ảnh thực đơn / menu <small class="text-muted">(chọn nhiều)</small></label>
-                            <input type="file" id="addMenuImages" class="form-control form-control-sm" accept="image/*" multiple>
-                        </div>
-                        <div class="col-12">
-                            <button type="button" class="btn-accent btn-sm-accent" onclick="uploadMorePhotos(@Model.Id, this)">
-                                <i class="fa-solid fa-upload"></i> Tải ảnh lên
-                            </button>
-                            <span id="uploadMoreMsg" style="margin-left:.5rem;font-size:.85rem"></span>
-                        </div>
                     </div>
                 </div>
             }
@@ -542,30 +516,6 @@ function toggleSaveDetail(id) {
 }
 
 // Xóa đánh giá real-time (không reload trang)
-// Thêm nhiều ảnh (thường + menu) cho địa điểm đã có — như Google Maps
-async function uploadMorePhotos(placeId, btn) {
-    const more = document.getElementById('addMoreImages').files;
-    const menu = document.getElementById('addMenuImages').files;
-    if (!more.length && !menu.length) { alert('Hãy chọn ít nhất 1 ảnh.'); return; }
-    const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
-    const msg = document.getElementById('uploadMoreMsg');
-    btn.disabled = true; msg.style.color = '#64748b'; msg.textContent = 'Đang tải lên…';
-    const uploadOne = async (file, isMenu) => {
-        const fd = new FormData();
-        fd.append('placeId', placeId); fd.append('image', file); fd.append('isMenu', isMenu);
-        const r = await fetch('/Map/UploadImage', { method: 'POST', headers: { 'RequestVerificationToken': token }, body: fd });
-        if (!r.ok) throw new Error();
-    };
-    try {
-        for (const f of more) await uploadOne(f, false);
-        for (const f of menu) await uploadOne(f, true);
-        msg.style.color = '#15803d'; msg.textContent = 'Đã tải lên! Đang làm mới…';
-        setTimeout(() => location.reload(), 800);
-    } catch {
-        btn.disabled = false; msg.style.color = '#dc2626'; msg.textContent = 'Lỗi tải ảnh, thử lại.';
-    }
-}
-
 function toggleEditReview(id) {
     const f = document.getElementById('editForm-' + id);
     if (!f) return;

@@ -102,6 +102,25 @@
                            placeholder="Hoặc URL ảnh mới (để trống = giữ nguyên)">
                     <div class="form-text">Tải file lên hoặc nhập URL — file được ưu tiên</div>
                 </div>
+                @if (Model.Images.Any())
+                {
+                    <div class="col-12">
+                        <label class="form-label fw-semibold">Ảnh hiện tại <small class="text-muted">— bấm × để xóa</small></label>
+                        <div style="display:flex;flex-wrap:wrap;gap:.5rem">
+                            @foreach (var im in Model.Images.OrderByDescending(i => i.IsPrimary))
+                            {
+                                <div id="imgtile-@im.Id" style="position:relative;width:96px;height:96px">
+                                    <img src="@im.Url" onerror="this.onerror=null;this.src='https://placehold.co/96x96?text=x'"
+                                         style="width:96px;height:96px;object-fit:cover;border-radius:8px;border:1px solid var(--line)">
+                                    @if (im.IsPrimary) { <span style="position:absolute;left:3px;top:3px;font-size:.6rem;font-weight:700;background:#16a34a;color:#fff;border-radius:4px;padding:0 4px">đại diện</span> }
+                                    @if (im.IsMenu) { <span style="position:absolute;left:3px;bottom:3px;font-size:.6rem;font-weight:700;background:#0891b2;color:#fff;border-radius:4px;padding:0 4px">menu</span> }
+                                    <button type="button" onclick="deletePlaceImage(@im.Id)" title="Xóa ảnh"
+                                            style="position:absolute;top:-7px;right:-7px;width:22px;height:22px;border-radius:50%;border:none;background:#dc2626;color:#fff;cursor:pointer;font-size:.85rem;line-height:1;font-weight:700">×</button>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
                 <div class="col-12">
                     <label class="form-label fw-semibold"><i class="fa-solid fa-images"></i> Thêm nhiều ảnh khác <small class="text-muted">(không bắt buộc, chọn nhiều)</small></label>
                     <input type="file" name="moreImages" class="form-control form-control-sm" accept="image/*" multiple>
@@ -138,6 +157,17 @@ function previewImg(input) {
         reader.onload = e => { preview.src = e.target.result; preview.style.display = 'block'; };
         reader.readAsDataURL(input.files[0]);
     }
+}
+function deletePlaceImage(id) {
+    if (!confirm('Xóa ảnh này?')) return;
+    const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
+    fetch('/Map/DeleteImage', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'RequestVerificationToken': token },
+        body: 'id=' + encodeURIComponent(id)
+    })
+    .then(r => { if (!r.ok) throw new Error(); const t = document.getElementById('imgtile-' + id); if (t) t.remove(); })
+    .catch(() => alert('Không xóa được ảnh. Thử lại.'));
 }
 </script>
 }
