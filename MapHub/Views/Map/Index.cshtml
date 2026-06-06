@@ -329,6 +329,7 @@ else if (isAuth)
 <script>
 let map, allPlaces = [], markers = [], miniMap, miniMarker, routingControl;
 let currentCat = '';
+let focusPlaceId = null;   // khi mở /Map?place=id → chỉ hiện đúng 1 địa điểm
 let currentWeather = null;
 let weatherFetchTimeout = null;
 const isPro = @(isPro ? "true" : "false");   // Pro/Admin mới được xem thời tiết
@@ -402,6 +403,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const si = document.getElementById('searchInput');
         if (si) si.value = urlQ;
     }
+    // Read ?place= → mở bản đồ chỉ hiện đúng 1 địa điểm (từ "Địa điểm của tôi" → Xem)
+    const urlPlace = new URLSearchParams(window.location.search).get('place');
+    if (urlPlace) { focusPlaceId = parseInt(urlPlace) || null; currentCat = ''; }
+
     loadPlaces(currentCat, urlQ.trim());
     restoreChatHistory();   // hiện lại 5 đoạn chat gần nhất
 });
@@ -626,8 +631,9 @@ function renderPlaces(list) {
     markers = [];
     const container = document.getElementById('placeList');
 
-    // Lọc client-side: ngân sách + đang mở cửa + quận/huyện (theo địa chỉ)
+    // Lọc client-side: focus 1 địa điểm (từ /Map?place=) + ngân sách + đang mở cửa + quận/huyện
     let view = list;
+    if (focusPlaceId != null) view = view.filter(p => p.id === focusPlaceId);
     if (currentBudget !== '' && currentBudget != null) {
         // Giá khởi điểm của địa điểm (min, hoặc max nếu thiếu min). Địa điểm chưa rõ giá bị ẩn khi đặt ngân sách.
         view = view.filter(p => {
@@ -639,11 +645,19 @@ function renderPlaces(list) {
     if (currentDistrict) view = view.filter(p => (p.address || '').toLowerCase().includes(currentDistrict.toLowerCase()));
 
     if (!view.length) {
-        container.innerHTML = '<p class="text-muted text-center p-3">Không tìm thấy địa điểm nào.</p>';
+        container.innerHTML = focusPlaceId != null
+            ? '<div class="p-3 text-center"><p class="text-muted mb-2">Không tìm thấy địa điểm này.</p><button class="btn-accent btn-sm-accent" onclick="clearFocus()">Xem tất cả địa điểm</button></div>'
+            : '<p class="text-muted text-center p-3">Không tìm thấy địa điểm nào.</p>';
         return;
     }
 
     container.innerHTML = '';
+    if (focusPlaceId != null) {
+        const bar = document.createElement('div');
+        bar.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:.5rem;padding:.55rem .75rem;margin-bottom:.6rem;background:var(--accent-soft);border-radius:12px;font-size:.85rem;font-weight:600;color:var(--accent-dark)';
+        bar.innerHTML = '<span>Đang xem 1 địa điểm của bạn</span><button onclick="clearFocus()" style="border:none;background:#fff;border-radius:8px;padding:.25rem .6rem;font-weight:600;cursor:pointer;color:var(--accent)">Xem tất cả</button>';
+        container.appendChild(bar);
+    }
     view.forEach((p, _idx) => {
         const suit = currentWeather
             ? getWeatherSuitability(currentWeather.weatherCode, p.category)
@@ -692,6 +706,19 @@ function renderPlaces(list) {
         card.style.animationDelay = Math.min(_idx, 12) * 30 + 'ms';   // stagger entrance
         container.appendChild(card);
     });
+
+    // Focus 1 địa điểm (từ /Map?place=) → căn giữa + mở popup
+    if (focusPlaceId != null && markers.length && view.length) {
+        map.setView([view[0].latitude, view[0].longitude], 16);
+        setTimeout(() => markers[0].openPopup(), 250);
+    }
+}
+
+// Bỏ chế độ chỉ-1-địa-điểm → hiện tất cả lại
+function clearFocus() {
+    focusPlaceId = null;
+    if (history.replaceState) history.replaceState(null, '', '/Map');
+    renderPlaces(allPlaces);
 }
 
 function categoryLabel(cat) {
@@ -707,6 +734,7 @@ function categoryLabel(cat) {
 
 // ── Filters ───────────────────────────────────────────────────────────────
 function filterCat(btn, cat) {
+    focusPlaceId = null;   // chọn danh mục = thoát chế độ chỉ-1-địa-điểm
     document.querySelectorAll('.map-tag').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     currentCat = cat;
@@ -714,6 +742,7 @@ function filterCat(btn, cat) {
 }
 
 document.getElementById('searchInput').addEventListener('input', function() {
+    focusPlaceId = null;   // gõ tìm kiếm = thoát chế độ chỉ-1-địa-điểm
     clearTimeout(this._t);
     this._t = setTimeout(() => loadPlaces(currentCat, this.value.trim()), 350);
 });

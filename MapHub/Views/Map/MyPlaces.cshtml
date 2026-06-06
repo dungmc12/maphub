@@ -84,7 +84,7 @@
                              onerror="this.onerror=null;this.src='https://placehold.co/400x300?text=No+Img'"
                              style="width:100%;height:160px;object-fit:cover;border-radius:10px 10px 0 0">
                         <div style="padding:.85rem">
-                            <div class="fw-bold mb-1">@p.Name</div>
+                            <div class="fw-bold mb-1"><a href="/Map/Details/@p.Id" style="color:inherit;text-decoration:none">@p.Name</a></div>
                             <div class="text-muted small mb-1">
                                 @switch(p.Category?.ToLower())
                                 {
@@ -114,7 +114,7 @@
                                 { <span class="badge bg-secondary">🔒 Cá nhân</span> }
                             </div>
                             <div class="d-flex gap-1 mt-2 flex-wrap align-items-center">
-                                <a href="/Map/Details/@p.Id" class="btn btn-sm btn-outline-secondary" title="Xem">👁️</a>
+                                <a href="/Map?place=@p.Id" class="btn btn-sm btn-outline-secondary" title="Xem trên bản đồ">👁️</a>
                                 <a href="/Map/EditMyPlace/@p.Id" class="btn btn-sm btn-outline-primary" title="Sửa">✏️</a>
                                 <a href="@dir" target="_blank" rel="noopener" class="btn btn-sm btn-outline-success" title="Chỉ đường (Google Maps)">🧭</a>
                                 <form method="post" action="/Map/DeleteMyPlace"
