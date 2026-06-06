@@ -145,6 +145,12 @@
         </div>
         <div id="chatBody" class="chat-widget-body">
             <div class="chat-msg ai"><em>Xin chào! Tôi có thể giúp bạn tìm địa điểm ăn uống, vui chơi tại Hà Nội. Hỏi thử nhé!</em></div>
+            <div class="chat-chips">
+                <button type="button" class="chat-chip" onclick="chatChip('Đi chơi tối nay ở Hà Nội')">Đi chơi tối nay</button>
+                <button type="button" class="chat-chip" onclick="chatChip('Quán cà phê yên tĩnh để học bài')">Cà phê học tập</button>
+                <button type="button" class="chat-chip" onclick="chatChip('Địa điểm chụp ảnh đẹp ở Hà Nội')">Chụp ảnh đẹp</button>
+                <button type="button" class="chat-chip" onclick="chatChip('Địa điểm vui chơi cho gia đình')">Cho gia đình</button>
+            </div>
         </div>
         <div class="chat-widget-footer">
             <input type="text" id="chatInput" class="chat-input-box" placeholder="Hỏi AI..."
@@ -373,7 +379,13 @@ document.addEventListener('DOMContentLoaded', () => {
             btn.classList.add('active');
         }
     }
-    loadPlaces(currentCat);
+    // Read ?q= từ thanh tìm kiếm trang chủ → điền sẵn + lọc
+    const urlQ = new URLSearchParams(window.location.search).get('q') || '';
+    if (urlQ) {
+        const si = document.getElementById('searchInput');
+        if (si) si.value = urlQ;
+    }
+    loadPlaces(currentCat, urlQ.trim());
     restoreChatHistory();   // hiện lại 5 đoạn chat gần nhất
 });
 
@@ -874,6 +886,16 @@ function clearChatHistory() {
     try { localStorage.removeItem(CHAT_KEY); } catch {}
     const body = document.getElementById('chatBody');
     if (body) body.innerHTML = '<div class="chat-msg ai"><em>Đã xoá lịch sử. Hỏi gì cứ hỏi nhé!</em></div>';
+}
+
+// Chip gợi ý → điền câu hỏi + gửi luôn
+function chatChip(text) {
+    const input = document.getElementById('chatInput');
+    if (!input) return;
+    input.value = text;
+    const chips = document.querySelector('.chat-chips');
+    if (chips) chips.remove();
+    sendChat();
 }
 
 async function sendChat() {
