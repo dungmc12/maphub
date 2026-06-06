@@ -1307,18 +1307,38 @@ body.map-view { overflow: hidden; height: 100vh; }
 
 /* ── Responsive ───────────────────────────────────────────────────────── */
 @media (max-width: 768px) {
-  .map-sidebar-panel { width: 100%; height: 45vh; border-right: none; border-bottom: 1px solid var(--line); }
-  .map-shell-wrap    { flex-direction: column; }
+  /* Bản đồ: sidebar XẾP TRÊN, map XẾP DƯỚI (trước đây nằm cùng hàng → map văng ra ngoài) */
+  .map-body          { flex-direction: column; }
+  .map-sidebar-panel { width: 100%; height: 42vh; flex: 0 0 auto; border-right: none; border-bottom: 1px solid var(--line); }
+  .map-body > #map   { width: 100%; flex: 1 1 auto; min-height: 0; }
   .hero-slide        { height: 280px; }
   .hero-slide-overlay { padding: 1.5rem; }
   .hero-event-title  { font-size: 1.2rem; }
-  .top-nav a.nav-premium, .top-nav a.nav-admin { display: none; }
   .plan-comparison   { grid-template-columns: 1fr; }
 }
+
+/* ── Header responsive — nav vừa màn hình, không tràn ngang ────────────── */
+@media (max-width: 640px) {
+  .app-shell  { width: 94vw; }
+  .brand-text { display: none; }                 /* chỉ giữ logo CS */
+  .top-nav    { gap: .1rem; min-width: 0; }
+  .nav-link2  { padding: .45rem .5rem; font-size: .86rem; }
+  .nav-avatar-wrap { margin-left: .15rem; }
+  .nav-avatar { padding: .2rem .35rem .2rem .25rem; }
+}
+@media (max-width: 440px) {
+  /* Nav cuộn ngang TRONG header (không làm cả trang trượt ngang) */
+  .nav-row   { gap: .35rem; }
+  .top-nav   { overflow-x: auto; flex-wrap: nowrap; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+  .top-nav::-webkit-scrollbar { display: none; }
+  .nav-link2 { font-size: .84rem; padding: .45rem .42rem; white-space: nowrap; }
+  .btn-sm-accent { padding: .4rem .6rem; white-space: nowrap; }
+}
 @media (max-width: 480px) {
-  .category-strip .cat-chip { min-width: 62px; font-size: .74rem; }
   .places-grid { grid-template-columns: 1fr 1fr; }
   .news-grid   { grid-template-columns: 1fr; }
+  .guide-grid  { grid-template-columns: 1fr; }
+  .hero-search { width: 94vw; }
 }
 
 /* ── Premium / Pricing page ───────────────────────────────────────────── */

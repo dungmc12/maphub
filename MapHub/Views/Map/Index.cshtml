@@ -8,7 +8,7 @@
 
 <h1 class="visually-hidden">@(ViewBag.H1 ?? "Bản đồ địa điểm tại Hà Nội — CityScout")</h1>
 
-<div class="map-shell-wrap d-flex flex-column" style="height: calc(100vh - 56px);">
+<div class="map-shell-wrap d-flex flex-column" style="height: calc(100vh - 60px);">
 
     <!-- ── MAP TAG BAR ────────────────────────────────────────────────────── -->
     <div class="map-tagbar">
@@ -42,7 +42,7 @@
     </div>
 
     <!-- ── MAIN AREA: SIDEBAR + MAP ──────────────────────────────────────── -->
-    <div class="d-flex flex-grow-1" style="min-height:0;">
+    <div class="d-flex flex-grow-1 map-body" style="min-height:0;">
 
         <!-- Sidebar -->
         <div id="mapSidebar" class="map-sidebar-panel">
@@ -357,6 +357,11 @@ document.addEventListener('DOMContentLoaded', () => {
         attribution: '© <a href="https://openstreetmap.org">OpenStreetMap</a> contributors',
         maxZoom: 19
     }).addTo(map);
+
+    // Mobile: đảm bảo map nhận đúng kích thước (sau khi layout xếp cột) + khi xoay/đổi cỡ
+    setTimeout(() => map.invalidateSize(), 200);
+    window.addEventListener('resize', () => map.invalidateSize());
+    window.addEventListener('orientationchange', () => setTimeout(() => map.invalidateSize(), 300));
 
     addWeatherControl();
 
