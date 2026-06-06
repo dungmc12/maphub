@@ -509,6 +509,11 @@ public class AdminController : Controller
         ViewBag.LockedUserIds = lockedUserIds;
         ViewBag.LockReasons   = lockReasons;
         ViewBag.Q           = q;
+        // KPI tổng quan (theo toàn bộ, không theo tìm kiếm)
+        ViewBag.TotalUsers  = await _userManager.Users.CountAsync();
+        ViewBag.ProCount    = proUserIds.Count;
+        ViewBag.AdminCount  = adminUserIds.Count;
+        ViewBag.LockedCount = await _context.Users.CountAsync(u => u.LockoutEnd != null && u.LockoutEnd > DateTimeOffset.UtcNow);
         return View(users);
     }
 

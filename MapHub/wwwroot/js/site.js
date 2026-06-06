@@ -1078,7 +1078,21 @@
 		});
 	}
 
-	function init() { initReveal(); initTilt(); }
+	// Animated counters (.kpi-num[data-count], data-money="1" để format tiền)
+	function initCounters() {
+		document.querySelectorAll(".kpi-num[data-count]").forEach((el) => {
+			if (el._counted) return; el._counted = true;
+			const target = parseFloat(el.dataset.count) || 0;
+			const money = el.dataset.money === "1";
+			const fmt = (v) => money ? Math.round(v).toLocaleString("vi-VN") + "đ" : Math.round(v).toLocaleString("vi-VN");
+			if (reduce) { el.textContent = fmt(target); return; }
+			const dur = 900, t0 = performance.now();
+			function tick(now) { const p = Math.min((now - t0) / dur, 1); el.textContent = fmt(target * (1 - Math.pow(1 - p, 3))); if (p < 1) requestAnimationFrame(tick); }
+			requestAnimationFrame(tick);
+		});
+	}
+
+	function init() { initReveal(); initTilt(); initCounters(); }
 	if (document.readyState !== "loading") init();
 	else document.addEventListener("DOMContentLoaded", init);
 })();

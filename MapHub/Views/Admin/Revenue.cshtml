@@ -110,20 +110,7 @@
 <script src="https://cdn.jsdelivr.net/npm/apexcharts@3.49.0/dist/apexcharts.min.js"></script>
 <script>
 (function () {
-    // Animated counters
-    document.querySelectorAll('.kpi-num[data-count]').forEach(el => {
-        const target = parseFloat(el.dataset.count) || 0;
-        const money = el.dataset.money === '1';
-        const dur = 900, t0 = performance.now();
-        const fmt = v => money ? Math.round(v).toLocaleString('vi-VN') + 'đ' : Math.round(v).toLocaleString('vi-VN');
-        function tick(now) {
-            const p = Math.min((now - t0) / dur, 1);
-            el.textContent = fmt(target * (1 - Math.pow(1 - p, 3)));
-            if (p < 1) requestAnimationFrame(tick);
-        }
-        requestAnimationFrame(tick);
-    });
-
+    // Animated counters do site.js xử lý chung (.kpi-num[data-count])
     const ink = '#64748B', accent = '#0891B2';
     const trendData = @Html.Raw(ViewBag.TrendData ?? "[]");
     const trendLabels = @Html.Raw(ViewBag.TrendLabels ?? "[]");

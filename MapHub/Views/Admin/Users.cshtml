@@ -30,13 +30,21 @@
         </form>
     </div>
 
+    <!-- KPI tổng quan -->
+    <div class="kpi-grid">
+        <div class="kpi-card"><div class="kpi-label">Tổng tài khoản</div><div class="kpi-num" data-count="@(ViewBag.TotalUsers ?? 0)">@(ViewBag.TotalUsers ?? 0)</div></div>
+        <div class="kpi-card kpi-accent"><div class="kpi-label">Thành viên Pro</div><div class="kpi-num" data-count="@(ViewBag.ProCount ?? 0)">@(ViewBag.ProCount ?? 0)</div></div>
+        <div class="kpi-card"><div class="kpi-label">Quản trị viên</div><div class="kpi-num" data-count="@(ViewBag.AdminCount ?? 0)">@(ViewBag.AdminCount ?? 0)</div></div>
+        <div class="kpi-card"><div class="kpi-label">Đang bị khóa</div><div class="kpi-num" data-count="@(ViewBag.LockedCount ?? 0)">@(ViewBag.LockedCount ?? 0)</div></div>
+    </div>
+
     @if (!string.IsNullOrEmpty(TempData["Success"]?.ToString()))
     {
-        <div class="admin-alert admin-alert-success">✅ @TempData["Success"]</div>
+        <div class="admin-alert admin-alert-success">@TempData["Success"]</div>
     }
     @if (!string.IsNullOrEmpty(TempData["Error"]?.ToString()))
     {
-        <div class="admin-alert admin-alert-error">⚠️ @TempData["Error"]</div>
+        <div class="admin-alert admin-alert-error">@TempData["Error"]</div>
     }
 
     <div class="admin-table-wrap">
@@ -62,12 +70,17 @@
 
                     <tr class="@(isSelf ? "admin-row-self" : "")" style="@(isLocked ? "opacity:.7" : "")">
                         <td>
-                            <div class="admin-user-email">
-                                @u.Email
-                                @if (isSelf) { <span class="admin-self-tag">(bạn)</span> }
-                                @if (isLocked) { <span class="abadge abadge-red" title="@(lockReasons.TryGetValue(u.Id, out var lr) ? lr : "")">🔒 Bị khóa</span> }
+                            <div class="tx-user" style="align-items:flex-start">
+                                <span class="tx-av" style="@(isAdmin ? "background:linear-gradient(145deg,#ef4444,#f59e0b)" : isPro ? "background:linear-gradient(145deg,#0891b2,#38bdf8)" : "background:linear-gradient(145deg,#94a3b8,#cbd5e1)")">@((u.Email ?? "?").Trim()[..1].ToString().ToUpper())</span>
+                                <div>
+                                    <div class="admin-user-email">
+                                        @u.Email
+                                        @if (isSelf) { <span class="admin-self-tag">(bạn)</span> }
+                                        @if (isLocked) { <span class="abadge abadge-red" title="@(lockReasons.TryGetValue(u.Id, out var lr) ? lr : "")">Bị khóa</span> }
+                                    </div>
+                                    <div class="admin-sub">ID: @u.Id[..8]…</div>
+                                </div>
                             </div>
-                            <div class="admin-sub">ID: @u.Id[..8]…</div>
                             @if (isLocked && lockReasons.TryGetValue(u.Id, out var reason))
                             {
                                 <div class="admin-sub" style="color:#dc2626">Lý do: @reason</div>
