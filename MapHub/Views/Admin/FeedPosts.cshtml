@@ -34,6 +34,8 @@
                         <th>Bài viết</th>
                         <th>Loại</th>
                         <th>Ngày đăng</th>
+                        <th>Trạng thái</th>
+                        <th class="text-end">Lượt xem</th>
                         <th>Hành động</th>
                     </tr>
                 </thead>
@@ -52,10 +54,10 @@
                                 }
                             </td>
                             <td>
-                                <div class="admin-place-link">
-                                    @if (post.IsPinned) { <span style="color:#92400e">📌 </span> }
+                                <a href="/bai-viet/@(string.IsNullOrEmpty(post.Slug) ? post.Id.ToString() : post.Slug)" target="_blank" class="admin-place-link">
+                                    @if (post.IsPinned) { <i class="fa-solid fa-thumbtack" style="color:#92400e"></i> }
                                     @post.Title
-                                </div>
+                                </a>
                                 @if (!string.IsNullOrEmpty(post.Summary))
                                 {
                                     <div class="admin-sub">@(post.Summary.Length > 80 ? post.Summary[..80] + "…" : post.Summary)</div>
@@ -64,12 +66,21 @@
                             <td>
                                 @switch (post.Type)
                                 {
-                                    case "guide": <span class="abadge abadge-green">📖 Cẩm nang</span> break;
-                                    case "tip":   <span class="abadge abadge-gold">💡 Mẹo hay</span>   break;
-                                    default:      <span class="abadge abadge-blue">📰 Tin tức</span>    break;
+                                    case "guide":   <span class="abadge abadge-green">Cẩm nang</span> break;
+                                    case "tip":     <span class="abadge abadge-gold">Mẹo hay</span>   break;
+                                    case "toplist": <span class="abadge abadge-orange">Top list</span> break;
+                                    case "review":  <span class="abadge abadge-blue">Review</span>    break;
+                                    default:        <span class="abadge abadge-gray">Tin tức</span>   break;
                                 }
                             </td>
-                            <td><span class="admin-sub">@post.PublishedAt.ToString("dd/MM/yyyy")</span></td>
+                            <td><span class="admin-sub">@post.PublishedAt.ToLocalTime().ToString("dd/MM/yyyy")</span></td>
+                            <td>
+                                @if (post.PublishedAt > DateTime.UtcNow)
+                                { <span class="abadge abadge-gray">Lên lịch</span> }
+                                else
+                                { <span class="abadge abadge-green">Đã đăng</span> }
+                            </td>
+                            <td class="text-end"><strong>@post.ViewCount</strong></td>
                             <td>
                                 <div class="admin-actions">
                                     <form method="post" action="/Admin/TogglePinFeedPost" class="d-inline">

@@ -168,10 +168,15 @@ public class FeedPost
     [Key]
     public int Id { get; set; }
     public string Title { get; set; } = null!;
+    public string? Slug { get; set; }                 // đường dẫn thân thiện
     public string? Summary { get; set; }
+    public string? Content { get; set; }              // nội dung Markdown
     public string? CoverImageUrl { get; set; }
-    public string Type { get; set; } = "news";  // news | guide | tip
+    public string Type { get; set; } = "news";        // news | guide | tip | toplist | review
     public int? EventId { get; set; }
+    public string? SeoTitle { get; set; }
+    public string? SeoDescription { get; set; }
+    public int ViewCount { get; set; }
     public DateTime PublishedAt { get; set; } = DateTime.UtcNow;
     public bool IsPinned { get; set; }
 

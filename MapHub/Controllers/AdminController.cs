@@ -233,6 +233,7 @@ public class AdminController : Controller
     public async Task<IActionResult> CreateFeedPost(FeedPost post, IFormFile? imageFile)
     {
         post.PublishedAt = DateTime.UtcNow;
+        post.Slug = MakeSlug(string.IsNullOrWhiteSpace(post.Slug) ? post.Title : post.Slug);
         // Ảnh bìa: ưu tiên file upload, sau đó URL
         if (imageFile != null && imageFile.Length > 0)
             post.CoverImageUrl = await SaveUploadAsync(imageFile, "feed");
@@ -282,8 +283,12 @@ public class AdminController : Controller
         var existing = await _context.FeedPosts.FindAsync(post.Id);
         if (existing == null) return NotFound();
         existing.Title         = post.Title;
+        existing.Slug          = MakeSlug(string.IsNullOrWhiteSpace(post.Slug) ? post.Title : post.Slug);
         existing.Summary       = post.Summary;
+        existing.Content       = post.Content;
         existing.Type          = post.Type;
+        existing.SeoTitle      = post.SeoTitle;
+        existing.SeoDescription= post.SeoDescription;
         existing.IsPinned      = post.IsPinned;
         existing.EventId       = post.EventId;
         // Ảnh bìa: file mới ưu tiên, rồi URL, để trống = giữ nguyên
@@ -679,6 +684,19 @@ public class AdminController : Controller
     // Lưu ảnh thành base64 data URL trong DB (bền với Render redeploy, không dùng /uploads ephemeral)
     private async Task<string> SaveUploadAsync(IFormFile file, string folder)
         => await ImageHelper.ToDataUrlAsync(file) ?? string.Empty;
+
+    // Tạo slug thân thiện từ tiêu đề (bỏ dấu tiếng Việt)
+    private static string MakeSlug(string? s)
+    {
+        if (string.IsNullOrWhiteSpace(s)) return Guid.NewGuid().ToString("n")[..8];
+        var sb = new System.Text.StringBuilder();
+        foreach (var c in s.Normalize(System.Text.NormalizationForm.FormD))
+            if (System.Globalization.CharUnicodeInfo.GetUnicodeCategory(c) != System.Globalization.UnicodeCategory.NonSpacingMark)
+                sb.Append(c);
+        var t = sb.ToString().Normalize(System.Text.NormalizationForm.FormC).ToLowerInvariant().Replace('đ', 'd');
+        t = System.Text.RegularExpressions.Regex.Replace(t, "[^a-z0-9]+", "-").Trim('-');
+        return string.IsNullOrEmpty(t) ? Guid.NewGuid().ToString("n")[..8] : t;
+    }
 
     // Thêm nhiều ảnh (thường + menu + video) cho địa điểm, lưu base64. Ảnh thường đầu tiên thành ảnh đại diện nếu chưa có.
     private async Task AddPlaceImagesAsync(int placeId, IFormFile[]? moreImages, IFormFile[]? menuImages, string? userId, IFormFile? videoFile = null)

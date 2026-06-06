@@ -1,3 +1,4 @@
+using Markdig;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using MapHub.Data;
@@ -63,5 +64,35 @@ public class HomeController : Controller
         ViewBag.Events = events;
         ViewBag.FeedPosts = feedPosts;
         return View(featuredPlaces);
+    }
+
+    // Trang đọc bài viết kiểu Medium — public, theo slug (fallback id)
+    [Route("bai-viet/{slug}")]
+    public async Task<IActionResult> Article(string slug)
+    {
+        var post = await _context.FeedPosts.Include(f => f.Event)
+            .FirstOrDefaultAsync(f => f.Slug == slug);
+        if (post == null && int.TryParse(slug, out var pid))
+            post = await _context.FeedPosts.Include(f => f.Event).FirstOrDefaultAsync(f => f.Id == pid);
+        if (post == null) return NotFound();
+
+        // Đếm lượt xem (không chặn render)
+        post.ViewCount += 1;
+        try { await _context.SaveChangesAsync(); } catch { }
+
+        // Render Markdown → HTML
+        var pipeline = new Markdig.MarkdownPipelineBuilder().UseAdvancedExtensions().UseSoftlineBreakAsHardlineBreak().Build();
+        ViewBag.BodyHtml = string.IsNullOrWhiteSpace(post.Content)
+            ? (string.IsNullOrWhiteSpace(post.Summary) ? "" : "<p>" + System.Net.WebUtility.HtmlEncode(post.Summary) + "</p>")
+            : Markdig.Markdown.ToHtml(post.Content, pipeline);
+
+        // Bài liên quan (cùng loại, mới nhất)
+        ViewBag.Related = await _context.FeedPosts
+            .Where(f => f.Id != post.Id && f.Type == post.Type)
+            .OrderByDescending(f => f.PublishedAt)
+            .Take(3).ToListAsync();
+
+        ViewData["MetaDescription"] = post.SeoDescription ?? post.Summary;
+        return View(post);
     }
 }

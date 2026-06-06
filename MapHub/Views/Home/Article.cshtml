@@ -1,0 +1,76 @@
+@model MapHub.Models.FeedPost
+@{
+    ViewData["Title"] = Model.SeoTitle ?? Model.Title;
+    var related = ViewBag.Related as List<MapHub.Models.FeedPost> ?? new List<MapHub.Models.FeedPost>();
+    string TypeLabel(string t) => t switch {
+        "guide" => "Cẩm nang", "tip" => "Mẹo hay", "toplist" => "Top list", "review" => "Review", _ => "Tin tức"
+    };
+    var cover = string.IsNullOrEmpty(Model.CoverImageUrl) ? $"https://picsum.photos/seed/post{Model.Id}/1600/800" : Model.CoverImageUrl;
+}
+
+<article class="article">
+    <!-- Hero cover -->
+    <div class="article-hero" style="background-image:url('@cover')">
+        <div class="article-hero-grad"></div>
+        <div class="article-hero-inner">
+            <span class="article-kicker">@TypeLabel(Model.Type)</span>
+            <h1 class="article-title">@Model.Title</h1>
+        </div>
+    </div>
+
+    <div class="article-body-wrap">
+        <!-- Meta -->
+        <div class="article-meta">
+            <span>@Model.PublishedAt.ToLocalTime().ToString("dd MMMM yyyy")</span>
+            <span class="article-dot">·</span>
+            <span>@Model.ViewCount lượt xem</span>
+            @if (Model.Event != null)
+            {
+                <span class="article-dot">·</span>
+                <span>Sự kiện: <a href="/Map/Details/@Model.Event.PlaceId">@Model.Event.Title</a></span>
+            }
+        </div>
+
+        @if (!string.IsNullOrEmpty(Model.Summary))
+        {
+            <p class="article-lead">@Model.Summary</p>
+        }
+
+        <!-- Markdown body -->
+        <div class="article-prose">
+            @Html.Raw(ViewBag.BodyHtml)
+        </div>
+
+        <div class="article-foot">
+            <a href="/" class="back-link">← Về trang chủ</a>
+            <a href="/Map" class="btn-accent btn-sm-accent">Khám phá bản đồ</a>
+        </div>
+    </div>
+
+    @if (related.Any())
+    {
+        <div class="article-related">
+            <div class="container-xl">
+                <h3 class="section-title mb-3">Bài viết liên quan</h3>
+                <div class="news-grid">
+                    @foreach (var r in related)
+                    {
+                        var rcover = string.IsNullOrEmpty(r.CoverImageUrl) ? $"https://picsum.photos/seed/post{r.Id}/600/360" : r.CoverImageUrl;
+                        <a class="news-card reveal" href="/bai-viet/@(string.IsNullOrEmpty(r.Slug) ? r.Id.ToString() : r.Slug)" style="text-decoration:none;color:inherit">
+                            <div class="news-card-img"><img src="@rcover" alt="@r.Title" loading="lazy"></div>
+                            <div class="news-card-body">
+                                <span class="news-type-badge">@TypeLabel(r.Type)</span>
+                                <h5 class="news-card-title mt-2">@r.Title</h5>
+                                @if (!string.IsNullOrEmpty(r.Summary))
+                                {
+                                    <p class="news-card-summary">@r.Summary</p>
+                                }
+                                <div class="news-date">@r.PublishedAt.ToLocalTime().ToString("dd/MM/yyyy")</div>
+                            </div>
+                        </a>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+</article>

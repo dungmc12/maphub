@@ -225,6 +225,26 @@ using (var scope = app.Services.CreateScope())
         app.Logger.LogError(ex, "Auto-migration UserLists lỗi");
     }
 
+    // Thêm cột mở rộng cho FeedPosts (Slug, Content, SEO, ViewCount)
+    try
+    {
+        if (dbProvider == "postgres")
+            await context.Database.ExecuteSqlRawAsync(
+                "ALTER TABLE \"FeedPosts\" ADD COLUMN IF NOT EXISTS \"Slug\" text NULL; " +
+                "ALTER TABLE \"FeedPosts\" ADD COLUMN IF NOT EXISTS \"Content\" text NULL; " +
+                "ALTER TABLE \"FeedPosts\" ADD COLUMN IF NOT EXISTS \"SeoTitle\" text NULL; " +
+                "ALTER TABLE \"FeedPosts\" ADD COLUMN IF NOT EXISTS \"SeoDescription\" text NULL; " +
+                "ALTER TABLE \"FeedPosts\" ADD COLUMN IF NOT EXISTS \"ViewCount\" integer NOT NULL DEFAULT 0;");
+        else
+            await context.Database.ExecuteSqlRawAsync(
+                "IF COL_LENGTH('FeedPosts','Slug') IS NULL ALTER TABLE FeedPosts ADD Slug nvarchar(max) NULL; " +
+                "IF COL_LENGTH('FeedPosts','Content') IS NULL ALTER TABLE FeedPosts ADD Content nvarchar(max) NULL; " +
+                "IF COL_LENGTH('FeedPosts','SeoTitle') IS NULL ALTER TABLE FeedPosts ADD SeoTitle nvarchar(max) NULL; " +
+                "IF COL_LENGTH('FeedPosts','SeoDescription') IS NULL ALTER TABLE FeedPosts ADD SeoDescription nvarchar(max) NULL; " +
+                "IF COL_LENGTH('FeedPosts','ViewCount') IS NULL ALTER TABLE FeedPosts ADD ViewCount int NOT NULL DEFAULT 0;");
+    }
+    catch (Exception ex) { app.Logger.LogError(ex, "Auto-migration FeedPosts mở rộng lỗi"); }
+
     // Thêm cột VideoUrl cho PlaceReviews nếu chưa có
     try
     {

@@ -14,15 +14,21 @@
             <div class="row g-3">
                 <div class="col-12">
                     <label class="form-label fw-semibold">Tiêu đề *</label>
-                    <input type="text" name="Title" class="form-control" required
+                    <input type="text" name="Title" id="postTitle" class="form-control" required
                            placeholder="VD: Top 10 Quán Cà Phê Đẹp Nhất Hà Nội 2026" value="@Model.Title">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">Slug <small class="text-muted">(để trống = tự tạo)</small></label>
+                    <input type="text" name="Slug" id="postSlug" class="form-control" placeholder="top-10-quan-ca-phe-ha-noi" value="@Model.Slug">
                 </div>
                 <div class="col-md-6">
                     <label class="form-label fw-semibold">Loại bài viết</label>
                     <select name="Type" class="form-select">
-                        <option value="news" selected="@(Model.Type == "news" || Model.Type == null)">📰 Tin tức</option>
-                        <option value="guide" selected="@(Model.Type == "guide")">📖 Cẩm nang</option>
-                        <option value="tip" selected="@(Model.Type == "tip")">💡 Mẹo hay</option>
+                        <option value="news" selected="@(Model.Type == "news" || Model.Type == null)">Tin tức</option>
+                        <option value="guide" selected="@(Model.Type == "guide")">Cẩm nang</option>
+                        <option value="tip" selected="@(Model.Type == "tip")">Mẹo hay</option>
+                        <option value="toplist" selected="@(Model.Type == "toplist")">Top list</option>
+                        <option value="review" selected="@(Model.Type == "review")">Review địa điểm</option>
                     </select>
                 </div>
                 <div class="col-md-6">
@@ -40,8 +46,13 @@
                 </div>
                 <div class="col-12">
                     <label class="form-label fw-semibold">Tóm tắt</label>
-                    <textarea name="Summary" class="form-control" rows="3"
+                    <textarea name="Summary" class="form-control" rows="2"
                               placeholder="Mô tả ngắn hiển thị trên trang chủ (1-2 câu)...">@Model.Summary</textarea>
+                </div>
+                <div class="col-12">
+                    <label class="form-label fw-semibold">Nội dung <small class="text-muted">(Markdown: # tiêu đề, **đậm**, - danh sách, ![](url) ảnh)</small></label>
+                    <textarea name="Content" class="form-control" rows="12" style="font-family:ui-monospace,monospace;font-size:.9rem"
+                              placeholder="## Mở đầu&#10;Nội dung bài viết...&#10;&#10;## Phần 1&#10;- Ý 1&#10;- Ý 2">@Model.Content</textarea>
                 </div>
                 <div class="col-12">
                     <label class="form-label fw-semibold">Ảnh bìa</label>
@@ -51,12 +62,20 @@
                            placeholder="Hoặc dán URL ảnh: https://..." value="@Model.CoverImageUrl">
                     <div class="form-text">Tải ảnh từ máy HOẶC dán URL (file ưu tiên). Khuyến nghị 800×450px (16:9).</div>
                 </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">SEO Title <small class="text-muted">(để trống = dùng tiêu đề)</small></label>
+                    <input type="text" name="SeoTitle" class="form-control" value="@Model.SeoTitle" placeholder="Tiêu đề hiển thị trên Google">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">SEO Description</label>
+                    <input type="text" name="SeoDescription" class="form-control" value="@Model.SeoDescription" placeholder="Mô tả ngắn cho Google (≤160 ký tự)">
+                </div>
                 <div class="col-12">
                     <div class="form-check">
                         <input class="form-check-input" type="checkbox" name="IsPinned" value="true"
                                id="isPinned" @(Model.IsPinned ? "checked" : "")>
                         <label class="form-check-label fw-semibold" for="isPinned">
-                            📌 Ghim bài viết (hiển thị ưu tiên trên trang chủ)
+                            Ghim bài viết (hiển thị ưu tiên trên trang chủ)
                         </label>
                     </div>
                 </div>
@@ -79,5 +98,15 @@ function previewCover(input) {
         reader.readAsDataURL(input.files[0]);
     }
 }
+// Tự gợi ý slug từ tiêu đề (chỉ khi slug đang trống / chưa sửa tay)
+(function () {
+    const title = document.getElementById('postTitle'), slug = document.getElementById('postSlug');
+    if (!title || !slug) return;
+    let touched = slug.value.trim().length > 0;
+    slug.addEventListener('input', () => touched = true);
+    const sl = s => s.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd')
+        .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+    title.addEventListener('input', () => { if (!touched) slug.value = sl(title.value); });
+})();
 </script>
 }

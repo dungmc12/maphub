@@ -18,11 +18,17 @@
                     <input type="text" name="Title" class="form-control" required value="@Model.Title">
                 </div>
                 <div class="col-md-6">
+                    <label class="form-label fw-semibold">Slug</label>
+                    <input type="text" name="Slug" class="form-control" value="@Model.Slug" placeholder="tu-tao-neu-de-trong">
+                </div>
+                <div class="col-md-6">
                     <label class="form-label fw-semibold">Loại bài viết</label>
                     <select name="Type" class="form-select">
-                        <option value="news"  selected="@(Model.Type == "news")">📰 Tin tức</option>
-                        <option value="guide" selected="@(Model.Type == "guide")">📖 Cẩm nang</option>
-                        <option value="tip"   selected="@(Model.Type == "tip")">💡 Mẹo hay</option>
+                        <option value="news"  selected="@(Model.Type == "news")">Tin tức</option>
+                        <option value="guide" selected="@(Model.Type == "guide")">Cẩm nang</option>
+                        <option value="tip"   selected="@(Model.Type == "tip")">Mẹo hay</option>
+                        <option value="toplist" selected="@(Model.Type == "toplist")">Top list</option>
+                        <option value="review" selected="@(Model.Type == "review")">Review địa điểm</option>
                     </select>
                 </div>
                 <div class="col-md-6">
@@ -40,7 +46,11 @@
                 </div>
                 <div class="col-12">
                     <label class="form-label fw-semibold">Tóm tắt</label>
-                    <textarea name="Summary" class="form-control" rows="3">@Model.Summary</textarea>
+                    <textarea name="Summary" class="form-control" rows="2">@Model.Summary</textarea>
+                </div>
+                <div class="col-12">
+                    <label class="form-label fw-semibold">Nội dung <small class="text-muted">(Markdown)</small></label>
+                    <textarea name="Content" class="form-control" rows="12" style="font-family:ui-monospace,monospace;font-size:.9rem">@Model.Content</textarea>
                 </div>
                 <div class="col-12">
                     <label class="form-label fw-semibold">Ảnh bìa</label>
@@ -58,14 +68,26 @@
                            placeholder="Hoặc URL ảnh (để trống = giữ nguyên)" value="@Model.CoverImageUrl">
                     <div class="form-text">Tải ảnh mới từ máy HOẶC URL, hoặc để trống để giữ ảnh cũ.</div>
                 </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">SEO Title</label>
+                    <input type="text" name="SeoTitle" class="form-control" value="@Model.SeoTitle">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">SEO Description</label>
+                    <input type="text" name="SeoDescription" class="form-control" value="@Model.SeoDescription">
+                </div>
                 <div class="col-12">
                     <div class="form-check">
                         <input class="form-check-input" type="checkbox" name="IsPinned" value="true"
                                id="isPinned" @(Model.IsPinned ? "checked" : "")>
                         <label class="form-check-label fw-semibold" for="isPinned">
-                            📌 Ghim bài viết (hiển thị ưu tiên trên trang chủ)
+                            Ghim bài viết (hiển thị ưu tiên trên trang chủ)
                         </label>
                     </div>
+                </div>
+                <div class="col-12">
+                    <a href="/bai-viet/@(string.IsNullOrEmpty(Model.Slug) ? Model.Id.ToString() : Model.Slug)" target="_blank" class="btn-ghost btn-sm-ghost">Xem bài viết →</a>
+                    <small class="text-muted ms-2">@Model.ViewCount lượt xem</small>
                 </div>
             </div>
         </div>

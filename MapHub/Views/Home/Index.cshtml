@@ -175,16 +175,17 @@
         <div class="news-grid reveal">
             @foreach (var post in feedList)
             {
-                <div class="news-card">
+                var postUrl = "/bai-viet/" + (string.IsNullOrEmpty(post.Slug) ? post.Id.ToString() : post.Slug);
+                <a class="news-card" href="@postUrl" style="text-decoration:none;color:inherit">
                     <div class="news-card-img">
                         <img src="@(post.CoverImageUrl ?? "https://picsum.photos/seed/news-default/800/400")"
                              alt="@post.Title" loading="lazy">
                         <span class="news-type-badge @(post.Type == "guide" ? "badge-guide" : post.Type == "tip" ? "badge-tip" : "")">
-                            @(post.Type == "guide" ? "📖 Cẩm nang" : post.Type == "tip" ? "💡 Mẹo hay" : "📢 Tin tức")
+                            @(post.Type == "guide" ? "Cẩm nang" : post.Type == "tip" ? "Mẹo hay" : post.Type == "toplist" ? "Top list" : post.Type == "review" ? "Review" : "Tin tức")
                         </span>
                         @if (post.IsPinned)
                         {
-                            <span class="news-pin-badge">📌</span>
+                            <span class="news-pin-badge"><i class="fa-solid fa-thumbtack"></i></span>
                         }
                     </div>
                     <div class="news-card-body">
@@ -195,10 +196,10 @@
                         }
                         <div class="news-card-footer">
                             <span class="news-date">@post.PublishedAt.ToString("dd/MM/yyyy")</span>
-                            <a href="/Map" class="news-read-more">Xem bản đồ →</a>
+                            <span class="news-read-more">Đọc bài →</span>
                         </div>
                     </div>
-                </div>
+                </a>
             }
         </div>
     </div>
