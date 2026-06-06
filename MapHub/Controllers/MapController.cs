@@ -110,8 +110,24 @@ public class MapController : Controller
     {
         var url = await _context.PlaceImages.AsNoTracking()
             .Where(i => i.Id == id).Select(i => i.Url).FirstOrDefaultAsync();
-        if (string.IsNullOrEmpty(url)) return NotFound();
+        return ServeMedia(url);
+    }
 
+    // Phục vụ ảnh/video của ĐÁNH GIÁ qua endpoint (cache) thay vì nhúng base64 vào HTML
+    // → trang chi tiết nhẹ, tải nhanh kể cả khi review có video.
+    [HttpGet]
+    public async Task<IActionResult> ReviewMedia(int id, string kind = "photo")
+    {
+        var url = kind == "video"
+            ? await _context.PlaceReviews.AsNoTracking().Where(r => r.Id == id).Select(r => r.VideoUrl).FirstOrDefaultAsync()
+            : await _context.PlaceReviews.AsNoTracking().Where(r => r.Id == id).Select(r => r.PhotoUrl).FirstOrDefaultAsync();
+        return ServeMedia(url);
+    }
+
+    // Giải mã data:URL base64 → file có cache; URL ngoài thì redirect.
+    private IActionResult ServeMedia(string? url)
+    {
+        if (string.IsNullOrEmpty(url)) return NotFound();
         if (url.StartsWith("data:", StringComparison.OrdinalIgnoreCase))
         {
             var comma = url.IndexOf(',');
@@ -121,25 +137,41 @@ public class MapController : Controller
             {
                 var bytes = Convert.FromBase64String(url[(comma + 1)..]);
                 Response.Headers["Cache-Control"] = "public, max-age=2592000, immutable";
-                // enableRangeProcessing để video tua/seek được
                 return File(bytes, string.IsNullOrWhiteSpace(mime) ? "image/jpeg" : mime, enableRangeProcessing: true);
             }
             catch { return NotFound(); }
         }
-        return Redirect(url);   // URL ngoài hoặc /uploads cũ
+        return Redirect(url);
     }
 
     [HttpGet]
     public async Task<IActionResult> Details(int id)
     {
         var place = await _context.Places
-            .Include(p => p.Images)
-            .Include(p => p.Reviews)
+            .AsNoTracking()
             .Include(p => p.PlaceTags).ThenInclude(pt => pt.Tag)
             .Include(p => p.Attributes)
             .FirstOrDefaultAsync(p => p.Id == id);
 
         if (place == null) return NotFound();
+
+        // Ảnh: chỉ lấy Id + cờ, KHÔNG kéo base64 Url (view dùng /Map/Image/{id}) → trang nhẹ
+        place.Images = await _context.PlaceImages.AsNoTracking()
+            .Where(i => i.PlaceId == id)
+            .Select(i => new PlaceImage { Id = i.Id, PlaceId = i.PlaceId, IsPrimary = i.IsPrimary, IsMenu = i.IsMenu, IsVideo = i.IsVideo, Caption = i.Caption, Url = "" })
+            .ToListAsync();
+
+        // Đánh giá: giữ trường text, nhưng ảnh/video base64 chỉ giữ CỜ (view dùng /Map/ReviewMedia/{id})
+        place.Reviews = await _context.PlaceReviews.AsNoTracking()
+            .Where(r => r.PlaceId == id)
+            .OrderByDescending(r => r.CreatedAt)
+            .Select(r => new PlaceReview {
+                Id = r.Id, PlaceId = r.PlaceId, UserId = r.UserId,
+                QualityRating = r.QualityRating, ServiceRating = r.ServiceRating, FoodRating = r.FoodRating,
+                Content = r.Content, FoodReview = r.FoodReview, StaffReview = r.StaffReview, CreatedAt = r.CreatedAt,
+                PhotoUrl = r.PhotoUrl != null ? "1" : null,
+                VideoUrl = r.VideoUrl != null ? "1" : null
+            }).ToListAsync();
 
         var uid = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
         ViewBag.IsSaved = uid != null && await _context.UserListItems
