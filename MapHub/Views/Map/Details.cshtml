@@ -554,7 +554,12 @@ document.addEventListener('DOMContentLoaded', () => {
         carousel.addEventListener('slid.bs.carousel', e => {
             document.querySelectorAll('.gallery-thumb').forEach(t => t.classList.remove('active'));
             const active = document.querySelector(`.gallery-thumb[data-index="${e.to}"]`);
-            if (active) { active.classList.add('active'); active.scrollIntoView({inline:'nearest',behavior:'smooth'}); }
+            if (active) {
+                active.classList.add('active');
+                // Chỉ cuộn NGANG trong dải thumbnail, KHÔNG cuộn dọc cả trang (trước đây tự trôi xuống review)
+                const strip = document.getElementById('galleryThumbs');
+                if (strip) strip.scrollTo({ left: active.offsetLeft - strip.clientWidth / 2 + active.clientWidth / 2, behavior: 'smooth' });
+            }
         });
     }
 });
