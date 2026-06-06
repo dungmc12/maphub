@@ -88,6 +88,7 @@ public class PlaceImage
     public string Url { get; set; } = null!;
     public bool IsPrimary { get; set; }
     public bool IsMenu { get; set; }              // Ảnh thực đơn/menu (hiển thị riêng như Google Maps)
+    public bool IsVideo { get; set; }             // Video ngắn của địa điểm
     public string? Caption { get; set; }
     public string? UploadedByUserId { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

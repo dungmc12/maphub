@@ -11,9 +11,10 @@
     bool isAdmin = User.IsInRole("Admin");
     var reviewAuthors = ViewBag.ReviewAuthors as Dictionary<string, (string Name, string? Avatar)>
                         ?? new Dictionary<string, (string Name, string? Avatar)>();
-    // Tách ảnh thường (carousel chính) và ảnh thực đơn/menu (hiển thị riêng như Google Maps)
-    var galleryImages = Model.Images.Where(i => !i.IsMenu).ToList();
-    var menuImages    = Model.Images.Where(i => i.IsMenu).ToList();
+    // Tách ảnh thường (carousel) / ảnh menu / video (hiển thị riêng như Google Maps)
+    var galleryImages = Model.Images.Where(i => !i.IsMenu && !i.IsVideo).ToList();
+    var menuImages    = Model.Images.Where(i => i.IsMenu && !i.IsVideo).ToList();
+    var videoItems    = Model.Images.Where(i => i.IsVideo).ToList();
 }
 @Html.AntiForgeryToken()
 
@@ -162,6 +163,22 @@
                             <img src="/Map/Image/@mi.Id?v=@Model.UpdatedAt.Ticks" alt="Ảnh menu" loading="lazy" onclick="openLightbox(this.src)"
                                  onerror="this.onerror=null;this.src='https://placehold.co/200x200?text=x'"
                                  style="width:140px;height:140px;object-fit:cover;border-radius:10px;cursor:zoom-in;border:1px solid var(--line)">
+                        }
+                    </div>
+                </div>
+            }
+
+            @if (videoItems.Any())
+            {
+                <div class="detail-section">
+                    <h4 class="detail-section-title"><i class="fa-solid fa-video"></i> Video</h4>
+                    <div style="display:flex;flex-wrap:wrap;gap:.8rem">
+                        @foreach (var v in videoItems)
+                        {
+                            <video controls preload="metadata" playsinline
+                                   style="width:min(100%,360px);max-height:260px;border-radius:12px;border:1px solid var(--line);background:#000">
+                                <source src="/Map/Image/@v.Id?v=@Model.UpdatedAt.Ticks">
+                            </video>
                         }
                     </div>
                 </div>

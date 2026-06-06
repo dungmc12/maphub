@@ -120,7 +120,8 @@ public class MapController : Controller
             {
                 var bytes = Convert.FromBase64String(url[(comma + 1)..]);
                 Response.Headers["Cache-Control"] = "public, max-age=2592000, immutable";
-                return File(bytes, string.IsNullOrWhiteSpace(mime) ? "image/jpeg" : mime);
+                // enableRangeProcessing để video tua/seek được
+                return File(bytes, string.IsNullOrWhiteSpace(mime) ? "image/jpeg" : mime, enableRangeProcessing: true);
             }
             catch { return NotFound(); }
         }
@@ -240,7 +241,7 @@ public class MapController : Controller
 
     [Authorize]
     [HttpPost]
-    public async Task<IActionResult> UploadImage(int placeId, IFormFile image, bool isMenu = false)
+    public async Task<IActionResult> UploadImage(int placeId, IFormFile image, bool isMenu = false, bool isVideo = false)
     {
         var place = await _context.Places.FindAsync(placeId);
         if (place == null) return NotFound();
@@ -249,18 +250,20 @@ public class MapController : Controller
         if (place.CreatedByUserId != currentUserId && !User.IsInRole("Admin"))
             return Forbid();
 
-        // Lưu thành base64 data URL (bền với Render redeploy)
-        var dataUrl = await ImageHelper.ToDataUrlAsync(image);
-        if (dataUrl == null) return BadRequest("Định dạng/kích thước ảnh không hợp lệ (≤5MB).");
+        // Lưu base64 data URL (bền với Render redeploy). Video dùng helper riêng (giới hạn 15MB).
+        var dataUrl = isVideo ? await ImageHelper.VideoToDataUrlAsync(image) : await ImageHelper.ToDataUrlAsync(image);
+        if (dataUrl == null)
+            return BadRequest(isVideo ? "Video không hợp lệ (chỉ mp4/webm/mov ≤15MB)." : "Định dạng/kích thước ảnh không hợp lệ (≤5MB).");
 
-        // Ảnh menu không bao giờ là ảnh đại diện; ảnh thường đầu tiên thì làm đại diện
+        // Video/ảnh menu không bao giờ là ảnh đại diện; ảnh thường đầu tiên thì làm đại diện
         var hasPrimary = await _context.PlaceImages.AnyAsync(i => i.PlaceId == placeId && i.IsPrimary);
         _context.PlaceImages.Add(new PlaceImage
         {
             PlaceId = placeId,
             Url = dataUrl,
-            IsPrimary = !isMenu && !hasPrimary,
+            IsPrimary = !isMenu && !isVideo && !hasPrimary,
             IsMenu = isMenu,
+            IsVideo = isVideo,
             UploadedByUserId = currentUserId
         });
         await _context.SaveChangesAsync();

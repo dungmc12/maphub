@@ -26,4 +26,27 @@ public static class ImageHelper
         await file.CopyToAsync(ms);
         return $"data:{mime};base64,{Convert.ToBase64String(ms.ToArray())}";
     }
+
+    private static readonly string[] AllowedVideoExt = { ".mp4", ".webm", ".mov", ".ogg" };
+
+    // Video ngắn → base64 data URL. Giới hạn dung lượng mặc định 15MB (kết hợp giới hạn thời lượng ở client).
+    public static async Task<string?> VideoToDataUrlAsync(IFormFile? file, long maxBytes = 15 * 1024 * 1024)
+    {
+        if (file == null || file.Length == 0 || file.Length > maxBytes) return null;
+
+        var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
+        if (!AllowedVideoExt.Contains(ext)) return null;
+
+        var mime = ext switch
+        {
+            ".webm" => "video/webm",
+            ".mov"  => "video/quicktime",
+            ".ogg"  => "video/ogg",
+            _       => "video/mp4"
+        };
+
+        using var ms = new MemoryStream();
+        await file.CopyToAsync(ms);
+        return $"data:{mime};base64,{Convert.ToBase64String(ms.ToArray())}";
+    }
 }

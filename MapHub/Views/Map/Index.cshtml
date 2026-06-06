@@ -313,6 +313,13 @@ else if (isAuth)
                             <div class="dz-empty"><span>Kéo thả ảnh thực đơn (cho quán ăn/cafe)</span></div>
                             <div class="dz-prev" id="dzPrev3"></div>
                         </div>
+
+                        <label class="form-label fw-semibold mt-2"><i class="bi bi-camera-video"></i> Video ngắn <small class="text-muted">(không bắt buộc · ≤30 giây · ≤15MB)</small></label>
+                        <div class="dropzone dz-sm" onclick="document.getElementById('newVideo').click()">
+                            <input type="file" id="newVideo" accept="video/mp4,video/webm,video/quicktime" hidden onchange="onVideoPick(this)">
+                            <div class="dz-empty"><span>Kéo thả video clip giới thiệu (mp4/webm)</span></div>
+                            <div class="dz-prev" id="dzPrevVid"></div>
+                        </div>
                     </div>
 
                     <!-- STEP 3 — Vị trí -->
@@ -829,6 +836,28 @@ function wizGo(dir) {
 }
 
 // ── Drag & drop upload + preview ───────────────────────────────────────────
+// Chọn video → kiểm tra ≤15MB và ≤30 giây (giống Google, không cho dài quá) + xem trước
+function onVideoPick(input) {
+    const f = input.files && input.files[0];
+    const prev = document.getElementById('dzPrevVid');
+    const dz = input.closest('.dropzone');
+    prev.innerHTML = ''; if (dz) dz.classList.remove('has-files');
+    if (!f) return;
+    if (f.size > 15 * 1024 * 1024) { alert('Video quá lớn (tối đa 15MB).'); input.value = ''; return; }
+    const url = URL.createObjectURL(f);
+    const probe = document.createElement('video');
+    probe.preload = 'metadata';
+    probe.onloadedmetadata = () => {
+        if (probe.duration > 31) { alert('Video quá dài (tối đa 30 giây). Hãy cắt ngắn lại.'); input.value = ''; URL.revokeObjectURL(url); return; }
+        const pv = document.createElement('video');
+        pv.src = url; pv.controls = true; pv.style.cssText = 'width:220px;border-radius:10px';
+        prev.appendChild(pv);
+        if (dz) dz.classList.add('has-files');
+    };
+    probe.onerror = () => { alert('Không đọc được video này.'); input.value = ''; URL.revokeObjectURL(url); };
+    probe.src = url;
+}
+
 function dzPreview(inputId, prevId) {
     const input = document.getElementById(inputId), prev = document.getElementById(prevId);
     if (!input || !prev) return;
@@ -844,7 +873,7 @@ function dzPreview(inputId, prevId) {
 }
 function dzInit() {
     document.querySelectorAll('#addPlaceModal .dropzone').forEach(dz => {
-        if (dz._bound) return; dz._bound = true;
+        if (dz._bound || !dz.dataset.dz) return; dz._bound = true;   // bỏ qua dropzone video (tự xử lý riêng)
         const input = document.getElementById(dz.dataset.dz), prev = dz.dataset.prev;
         ['dragenter','dragover'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.add('drag'); }));
         ['dragleave','dragend'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.remove('drag'); }));
@@ -957,6 +986,13 @@ async function submitPlace() {
             for (const f of document.getElementById('newMoreImages').files) await uploadOne(f, false);
             // 3) Ảnh menu/thực đơn (không bắt buộc)
             for (const f of document.getElementById('newMenuImages').files) await uploadOne(f, true);
+            // 4) Video ngắn (không bắt buộc)
+            const vid = document.getElementById('newVideo').files[0];
+            if (vid) {
+                const fd = new FormData();
+                fd.append('placeId', json.id); fd.append('image', vid); fd.append('isVideo', 'true');
+                try { await fetch('/Map/UploadImage', { method: 'POST', headers: { 'RequestVerificationToken': token }, body: fd }); } catch {}
+            }
         }
         bootstrap.Modal.getInstance(document.getElementById('addPlaceModal')).hide();
         const msg = data.Visibility === 'public'

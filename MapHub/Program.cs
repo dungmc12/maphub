@@ -249,10 +249,12 @@ using (var scope = app.Services.CreateScope())
     {
         if (dbProvider == "postgres")
             await context.Database.ExecuteSqlRawAsync(
-                "ALTER TABLE \"PlaceImages\" ADD COLUMN IF NOT EXISTS \"IsMenu\" boolean NOT NULL DEFAULT false;");
+                "ALTER TABLE \"PlaceImages\" ADD COLUMN IF NOT EXISTS \"IsMenu\" boolean NOT NULL DEFAULT false; " +
+                "ALTER TABLE \"PlaceImages\" ADD COLUMN IF NOT EXISTS \"IsVideo\" boolean NOT NULL DEFAULT false;");
         else
             await context.Database.ExecuteSqlRawAsync(
-                "IF COL_LENGTH('PlaceImages','IsMenu') IS NULL ALTER TABLE PlaceImages ADD IsMenu bit NOT NULL DEFAULT 0;");
+                "IF COL_LENGTH('PlaceImages','IsMenu') IS NULL ALTER TABLE PlaceImages ADD IsMenu bit NOT NULL DEFAULT 0; " +
+                "IF COL_LENGTH('PlaceImages','IsVideo') IS NULL ALTER TABLE PlaceImages ADD IsVideo bit NOT NULL DEFAULT 0;");
     }
     catch (Exception ex)
     {
