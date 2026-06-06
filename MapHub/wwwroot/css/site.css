@@ -1589,6 +1589,50 @@ body.map-view { overflow: hidden; height: 100vh; }
 .leaflet-marker-icon { transition: transform .15s var(--ease); }
 .leaflet-marker-icon:hover { transform: scale(1.18); z-index: 1000 !important; }
 
+/* ── Modal entrance animation ─────────────────────────────────────────── */
+.modal.fade .modal-dialog { transition: transform .22s var(--ease), opacity .22s var(--ease); transform: translateY(20px) scale(.96); opacity: 0; }
+.modal.show .modal-dialog { transform: none; opacity: 1; }
+.modal-content { border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow-soft); overflow: hidden; }
+.modal-header, .modal-footer { border-color: var(--line); }
+@keyframes modalIn { from { opacity:0; transform: translateY(16px) scale(.97); } to { opacity:1; transform:none; } }
+.custom-modal-box { animation: modalIn .22s var(--ease) both; }
+@media (prefers-reduced-motion: reduce) {
+  .modal.fade .modal-dialog { transition: none; transform: none; opacity: 1; }
+  .custom-modal-box { animation: none; }
+}
+
+/* ── Wizard stepper ───────────────────────────────────────────────────── */
+.wiz-head { display: flex; align-items: center; gap: .4rem; margin-bottom: 1.4rem; }
+.wiz-dot { display: flex; align-items: center; gap: .5rem; color: var(--ink-secondary); }
+.wiz-dot b { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: #E2E8F0; color: var(--ink-secondary); font-weight: 700; font-size: .88rem; flex-shrink: 0; transition: background .2s var(--ease), color .2s var(--ease); }
+.wiz-dot span { font-size: .85rem; font-weight: 600; white-space: nowrap; }
+.wiz-dot.active b { background: var(--accent); color: #fff; }
+.wiz-dot.active span { color: var(--ink-primary); }
+.wiz-dot.done b { background: var(--green); color: #fff; }
+.wiz-bar { flex: 1; height: 2px; background: var(--line); border-radius: 2px; min-width: 14px; }
+.wiz-step { display: none; animation: wizFade .25s var(--ease) both; }
+.wiz-step.active { display: block; }
+@keyframes wizFade { from { opacity:0; transform: translateX(8px); } to { opacity:1; transform:none; } }
+@media (max-width: 540px){ .wiz-dot span { display: none; } }
+
+/* ── Drag & drop dropzone ─────────────────────────────────────────────── */
+.dropzone { position: relative; border: 2px dashed #CBD5E1; border-radius: 14px; background: var(--bg-main); padding: 1.6rem 1rem; text-align: center; cursor: pointer; transition: border-color .15s var(--ease), background .15s var(--ease); }
+.dropzone.dz-sm { padding: 1rem; }
+.dropzone:hover { border-color: var(--accent); background: #F0FBFE; }
+.dropzone.drag { border-color: var(--accent); background: var(--accent-soft); }
+.dz-empty { display: flex; flex-direction: column; align-items: center; gap: .5rem; color: var(--ink-secondary); font-size: .9rem; }
+.dz-empty svg { color: var(--accent); }
+.dz-prev { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .2rem; }
+.dz-prev:not(:empty) { margin-top: .8rem; }
+.dz-thumb { width: 72px; height: 72px; object-fit: cover; border-radius: 10px; border: 1px solid var(--line); }
+.dropzone.has-files .dz-empty { display: none; }
+
+/* ── Tag pills (toggle) ───────────────────────────────────────────────── */
+.tag-pills { display: flex; flex-wrap: wrap; gap: .5rem; }
+.tag-pill { padding: .42rem .9rem; border-radius: var(--radius-pill); background: #F1F5F9; color: var(--ink-secondary); font-size: .86rem; font-weight: 500; cursor: pointer; user-select: none; transition: background .15s var(--ease), color .15s var(--ease); }
+.tag-pill:hover { background: #E2E8F0; }
+.tag-pill:has(input:checked) { background: var(--accent); color: #fff; }
+
 /* AI chat suggestion chips */
 .chat-chips { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .6rem; }
 .chat-chip {

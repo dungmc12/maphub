@@ -177,136 +177,148 @@ else if (isAuth)
                     <h5 class="modal-title"><i class="bi bi-geo-alt-fill"></i> Thêm Địa Điểm Mới</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="modal-body">
+                <div class="modal-body wiz">
                     @Html.AntiForgeryToken()
-                    <div class="row g-3">
-                        <!-- Tên & Danh mục -->
-                        <div class="col-md-7">
-                            <label class="form-label fw-semibold">Tên địa điểm <span class="text-danger">*</span></label>
-                            <input type="text" id="newName" class="form-control" placeholder="VD: Quán Phở Bắc" required>
-                        </div>
-                        <div class="col-md-5">
-                            <label class="form-label fw-semibold">Danh mục</label>
-                            <select id="newCategory" class="form-select">
-                                <optgroup label="Cá nhân">
-                                    <option value="home">🏠 Nhà riêng</option>
-                                    <option value="work">🏢 Công ty</option>
-                                    <option value="school">🏫 Trường học</option>
-                                    <option value="favorite">❤️ Quán ăn yêu thích</option>
-                                </optgroup>
-                                <optgroup label="Công khai">
-                                    <option value="restaurant">🍽️ Nhà hàng</option>
-                                    <option value="cafe">☕ Cà phê</option>
-                                    <option value="entertainment">🎯 Vui chơi</option>
-                                    <option value="hotel">🏨 Lưu trú</option>
-                                    <option value="culture">🏛️ Văn hóa / Bảo tàng</option>
-                                    <option value="temple">🛕 Tâm linh</option>
-                                    <option value="nature">🌿 Thiên nhiên</option>
-                                    <option value="education">🎓 Giáo dục</option>
-                                    <option value="other">📌 Khác</option>
-                                </optgroup>
-                            </select>
-                        </div>
-                        <!-- Địa chỉ & Điện thoại -->
-                        <div class="col-md-8">
-                            <label class="form-label fw-semibold">Địa chỉ</label>
-                            <input type="text" id="newAddress" class="form-control" placeholder="Số nhà, đường, quận…">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label fw-semibold">Điện thoại</label>
-                            <input type="text" id="newPhone" class="form-control" placeholder="024 xxxx xxxx">
-                        </div>
-                        <!-- Giới thiệu -->
-                        <div class="col-12">
-                            <label class="form-label fw-semibold">Giới thiệu / Mô tả</label>
-                            <textarea id="newAbout" class="form-control" rows="2"
-                                      placeholder="Không gian, món đặc trưng, lưu ý khi đến..."></textarea>
-                        </div>
-                        <!-- Tags -->
-                        <div class="col-12">
-                            <label class="form-label fw-semibold"><i class="bi bi-tags-fill"></i> Tags</label>
-                            @{ var allTagsAdd = ViewBag.AllTags as List<MapHub.Models.Tag> ?? new List<MapHub.Models.Tag>(); }
-                            @if (allTagsAdd.Any())
-                            {
-                                <div class="d-flex flex-wrap gap-2">
-                                    @foreach (var tag in allTagsAdd)
-                                    {
-                                        <label style="display:inline-flex;align-items:center;gap:.35rem;padding:.3rem .7rem;border:1px solid #e2e8f0;border-radius:20px;cursor:pointer;font-size:.88rem">
-                                            <input type="checkbox" class="new-tag-cb" value="@tag.Id"> @tag.Name
-                                        </label>
-                                    }
-                                </div>
-                            }
-                            else
-                            {
-                                <div class="form-text">Chưa có tag nào (Admin tạo ở Admin → Tags).</div>
-                            }
-                        </div>
-                        <!-- Giá: nhập số Từ – Đến -->
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold">Giá từ (đ)</label>
-                            <input type="number" id="newMinPrice" class="form-control" placeholder="VD: 30000" min="0">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold">Giá đến (đ)</label>
-                            <input type="number" id="newMaxPrice" class="form-control" placeholder="VD: 150000" min="0">
-                        </div>
-                        <div class="col-12">
-                            <label class="form-label fw-semibold">Website</label>
-                            <input type="url" id="newWebsite" class="form-control" placeholder="https://...">
-                        </div>
-                        <!-- Ảnh (bắt buộc): URL hoặc tải từ máy -->
-                        <div class="col-12">
-                            <label class="form-label fw-semibold">Ảnh đại diện <span class="text-danger">*</span></label>
-                            <input type="url" id="newImageUrl" class="form-control mb-2"
-                                   placeholder="https://... (dán link ảnh)">
-                            <div class="d-flex align-items-center gap-2">
-                                <span class="text-muted small text-nowrap">— hoặc tải từ máy —</span>
-                                <input type="file" id="newImageFile" class="form-control form-control-sm" accept="image/*">
+                    <!-- Stepper -->
+                    <div class="wiz-head">
+                        <div class="wiz-dot active" data-dot="1"><b>1</b><span>Thông tin</span></div>
+                        <div class="wiz-bar"></div>
+                        <div class="wiz-dot" data-dot="2"><b>2</b><span>Hình ảnh</span></div>
+                        <div class="wiz-bar"></div>
+                        <div class="wiz-dot" data-dot="3"><b>3</b><span>Vị trí</span></div>
+                    </div>
+
+                    <!-- STEP 1 — Thông tin cơ bản -->
+                    <div class="wiz-step active" data-step="1">
+                        <div class="row g-3">
+                            <div class="col-md-7">
+                                <label class="form-label fw-semibold">Tên địa điểm <span class="text-danger">*</span></label>
+                                <input type="text" id="newName" class="form-control" placeholder="VD: Quán Phở Bắc" required>
+                            </div>
+                            <div class="col-md-5">
+                                <label class="form-label fw-semibold">Danh mục</label>
+                                <select id="newCategory" class="form-select">
+                                    <optgroup label="Cá nhân">
+                                        <option value="home">Nhà riêng</option>
+                                        <option value="work">Công ty</option>
+                                        <option value="school">Trường học</option>
+                                        <option value="favorite">Quán ăn yêu thích</option>
+                                    </optgroup>
+                                    <optgroup label="Công khai">
+                                        <option value="restaurant">Nhà hàng</option>
+                                        <option value="cafe">Cà phê</option>
+                                        <option value="entertainment">Vui chơi</option>
+                                        <option value="hotel">Lưu trú</option>
+                                        <option value="culture">Văn hóa / Bảo tàng</option>
+                                        <option value="temple">Tâm linh</option>
+                                        <option value="nature">Thiên nhiên</option>
+                                        <option value="education">Giáo dục</option>
+                                        <option value="other">Khác</option>
+                                    </optgroup>
+                                </select>
+                            </div>
+                            <div class="col-md-8">
+                                <label class="form-label fw-semibold">Địa chỉ</label>
+                                <input type="text" id="newAddress" class="form-control" placeholder="Số nhà, đường, quận…">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">Điện thoại</label>
+                                <input type="text" id="newPhone" class="form-control" placeholder="024 xxxx xxxx">
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label fw-semibold">Giới thiệu / Mô tả</label>
+                                <textarea id="newAbout" class="form-control" rows="2"
+                                          placeholder="Không gian, món đặc trưng, lưu ý khi đến..."></textarea>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label fw-semibold">Tags</label>
+                                @{ var allTagsAdd = ViewBag.AllTags as List<MapHub.Models.Tag> ?? new List<MapHub.Models.Tag>(); }
+                                @if (allTagsAdd.Any())
+                                {
+                                    <div class="tag-pills">
+                                        @foreach (var tag in allTagsAdd)
+                                        {
+                                            <label class="tag-pill"><input type="checkbox" class="new-tag-cb" value="@tag.Id" hidden>@tag.Name</label>
+                                        }
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="form-text">Chưa có tag nào (Admin tạo ở Admin → Tags).</div>
+                                }
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">Giá từ (đ)</label>
+                                <input type="number" id="newMinPrice" class="form-control" placeholder="30000" min="0">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">Giá đến (đ)</label>
+                                <input type="number" id="newMaxPrice" class="form-control" placeholder="150000" min="0">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">Quyền xem</label>
+                                <select id="newVisibility" class="form-select">
+                                    <option value="private">Cá nhân (Chỉ tôi thấy)</option>
+                                    <option value="public">Công khai (Mọi người thấy)</option>
+                                </select>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label fw-semibold">Website</label>
+                                <input type="url" id="newWebsite" class="form-control" placeholder="https://...">
                             </div>
                         </div>
-                        <!-- Thêm nhiều ảnh khác (không bắt buộc) — như Google Maps -->
-                        <div class="col-12">
-                            <label class="form-label fw-semibold">
-                                <i class="bi bi-images"></i> Thêm nhiều ảnh khác
-                                <span class="text-muted fw-normal" style="font-size:.82rem">— không bắt buộc, chọn nhiều ảnh</span>
-                            </label>
-                            <input type="file" id="newMoreImages" class="form-control form-control-sm" accept="image/*" multiple>
-                        </div>
-                        <!-- Ảnh menu / thực đơn (không bắt buộc) -->
-                        <div class="col-12">
-                            <label class="form-label fw-semibold">
-                                <i class="bi bi-card-list"></i> Ảnh thực đơn / menu
-                                <span class="text-muted fw-normal" style="font-size:.82rem">— không bắt buộc, dành cho quán ăn/cafe</span>
-                            </label>
-                            <input type="file" id="newMenuImages" class="form-control form-control-sm" accept="image/*" multiple>
-                        </div>
-                        <!-- Quyền riêng tư -->
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold">Quyền xem</label>
-                            <select id="newVisibility" class="form-select">
-                                <option value="private">🔒 Cá nhân (Chỉ tôi thấy)</option>
-                                <option value="public">🌍 Công khai (Mọi người thấy ngay)</option>
-                            </select>
-                        </div>
-                        <!-- Tọa độ -->
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold">Tọa độ (click bản đồ hoặc nhập tay)</label>
-                            <div class="input-group">
-                                <input type="text" id="newLat" class="form-control" placeholder="Vĩ độ" oninput="syncMiniMarker()" required>
-                                <input type="text" id="newLng" class="form-control" placeholder="Kinh độ" oninput="syncMiniMarker()" required>
+                    </div>
+
+                    <!-- STEP 2 — Hình ảnh -->
+                    <div class="wiz-step" data-step="2">
+                        <label class="form-label fw-semibold">Ảnh đại diện <span class="text-danger">*</span></label>
+                        <div class="dropzone" onclick="document.getElementById('newImageFile').click()"
+                             data-dz="newImageFile" data-prev="dzPrev1">
+                            <input type="file" id="newImageFile" accept="image/*" hidden onchange="dzPreview('newImageFile','dzPrev1')">
+                            <div class="dz-empty">
+                                <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
+                                <div><b>Kéo &amp; thả ảnh</b> vào đây hoặc bấm để chọn</div>
                             </div>
-                            <small class="text-muted">Click bản đồ bên dưới, hoặc gõ trực tiếp vĩ độ / kinh độ</small>
+                            <div class="dz-prev" id="dzPrev1"></div>
                         </div>
-                        <!-- Mini map -->
-                        <div class="col-12">
-                            <div id="miniMap" style="height:240px; border-radius:10px; overflow:hidden;"></div>
+                        <div class="d-flex align-items-center gap-2 my-2">
+                            <span class="text-muted small text-nowrap">hoặc dán link</span>
+                            <input type="url" id="newImageUrl" class="form-control form-control-sm" placeholder="https://... (URL ảnh)">
+                        </div>
+
+                        <label class="form-label fw-semibold mt-2">Thêm nhiều ảnh khác <small class="text-muted">(không bắt buộc)</small></label>
+                        <div class="dropzone dz-sm" onclick="document.getElementById('newMoreImages').click()"
+                             data-dz="newMoreImages" data-prev="dzPrev2">
+                            <input type="file" id="newMoreImages" accept="image/*" multiple hidden onchange="dzPreview('newMoreImages','dzPrev2')">
+                            <div class="dz-empty"><span>Kéo thả nhiều ảnh thực tế của địa điểm</span></div>
+                            <div class="dz-prev" id="dzPrev2"></div>
+                        </div>
+
+                        <label class="form-label fw-semibold mt-2">Ảnh thực đơn / menu <small class="text-muted">(không bắt buộc)</small></label>
+                        <div class="dropzone dz-sm" onclick="document.getElementById('newMenuImages').click()"
+                             data-dz="newMenuImages" data-prev="dzPrev3">
+                            <input type="file" id="newMenuImages" accept="image/*" multiple hidden onchange="dzPreview('newMenuImages','dzPrev3')">
+                            <div class="dz-empty"><span>Kéo thả ảnh thực đơn (cho quán ăn/cafe)</span></div>
+                            <div class="dz-prev" id="dzPrev3"></div>
+                        </div>
+                    </div>
+
+                    <!-- STEP 3 — Vị trí -->
+                    <div class="wiz-step" data-step="3">
+                        <label class="form-label fw-semibold">Vị trí trên bản đồ <span class="text-danger">*</span></label>
+                        <p class="text-muted" style="font-size:.86rem;margin-bottom:.5rem">Bấm vào bản đồ để chọn vị trí, hoặc nhập toạ độ.</p>
+                        <div id="miniMap" style="height:420px; border-radius:14px; overflow:hidden; border:1px solid var(--line)"></div>
+                        <div class="input-group mt-2">
+                            <input type="text" id="newLat" class="form-control" placeholder="Vĩ độ" oninput="syncMiniMarker()" required>
+                            <input type="text" id="newLng" class="form-control" placeholder="Kinh độ" oninput="syncMiniMarker()" required>
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn-ghost" data-bs-dismiss="modal">Hủy</button>
-                    <button type="button" class="btn-accent" onclick="submitPlace()"><i class="bi bi-check-lg"></i> Lưu địa điểm</button>
+                <div class="modal-footer wiz-foot">
+                    <button type="button" class="btn-ghost" id="wizBack" onclick="wizGo(-1)" style="display:none">Quay lại</button>
+                    <div style="flex:1"></div>
+                    <button type="button" class="btn-accent" id="wizNext" onclick="wizGo(1)">Tiếp tục</button>
+                    <button type="button" class="btn-accent" id="wizFinish" onclick="submitPlace()" style="display:none"><i class="bi bi-check-lg"></i> Hoàn tất</button>
                 </div>
             </div>
         </div>
@@ -726,6 +738,63 @@ function drawRoute(slat, slng, dlat, dlng) {
 
 // ── Add Place Modal ───────────────────────────────────────────────────────
 // Có thể truyền sẵn lat/lng (vd click từ bản đồ chính) để điền toạ độ luôn
+// ── Wizard 3 bước cho modal thêm địa điểm ──────────────────────────────────
+let wizStep = 1;
+function wizSet(n) {
+    wizStep = Math.max(1, Math.min(3, n));
+    document.querySelectorAll('#addPlaceModal .wiz-step').forEach(s => s.classList.toggle('active', +s.dataset.step === wizStep));
+    document.querySelectorAll('#addPlaceModal .wiz-dot').forEach(d => {
+        const dn = +d.dataset.dot;
+        d.classList.toggle('active', dn === wizStep);
+        d.classList.toggle('done', dn < wizStep);
+    });
+    document.getElementById('wizBack').style.display   = wizStep > 1 ? '' : 'none';
+    document.getElementById('wizNext').style.display   = wizStep < 3 ? '' : 'none';
+    document.getElementById('wizFinish').style.display = wizStep === 3 ? '' : 'none';
+    const body = document.querySelector('#addPlaceModal .modal-body'); if (body) body.scrollTop = 0;
+    if (wizStep === 3 && miniMap) setTimeout(() => miniMap.invalidateSize(), 80);
+}
+function wizGo(dir) {
+    if (dir > 0 && wizStep === 1 && !document.getElementById('newName').value.trim()) {
+        alert('Vui lòng nhập tên địa điểm!'); document.getElementById('newName').focus(); return;
+    }
+    if (dir > 0 && wizStep === 2 &&
+        !document.getElementById('newImageUrl').value.trim() && !document.getElementById('newImageFile').files.length) {
+        alert('Vui lòng thêm ảnh đại diện (kéo thả/chọn ảnh hoặc dán URL)!'); return;
+    }
+    wizSet(wizStep + dir);
+}
+
+// ── Drag & drop upload + preview ───────────────────────────────────────────
+function dzPreview(inputId, prevId) {
+    const input = document.getElementById(inputId), prev = document.getElementById(prevId);
+    if (!input || !prev) return;
+    prev.innerHTML = '';
+    Array.from(input.files).forEach(f => {
+        const url = URL.createObjectURL(f);
+        const img = document.createElement('img');
+        img.src = url; img.className = 'dz-thumb'; img.onload = () => URL.revokeObjectURL(url);
+        prev.appendChild(img);
+    });
+    const dz = input.closest('.dropzone');
+    if (dz) dz.classList.toggle('has-files', input.files.length > 0);
+}
+function dzInit() {
+    document.querySelectorAll('#addPlaceModal .dropzone').forEach(dz => {
+        if (dz._bound) return; dz._bound = true;
+        const input = document.getElementById(dz.dataset.dz), prev = dz.dataset.prev;
+        ['dragenter','dragover'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.add('drag'); }));
+        ['dragleave','dragend'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.remove('drag'); }));
+        dz.addEventListener('drop', e => {
+            e.preventDefault(); dz.classList.remove('drag');
+            const files = e.dataTransfer.files; if (!files || !files.length) return;
+            if (!input.multiple) { const dt = new DataTransfer(); dt.items.add(files[0]); input.files = dt.files; }
+            else { input.files = files; }
+            dzPreview(input.id, prev);
+        });
+    });
+}
+
 function openAddPlace(presetLat, presetLng) {
     if (map) map.closePopup();   // đóng popup "Thêm địa điểm tại đây" nếu có
     const hasPreset = (typeof presetLat === 'number' && typeof presetLng === 'number');
@@ -733,6 +802,8 @@ function openAddPlace(presetLat, presetLng) {
         document.getElementById('newLat').value = presetLat.toFixed(6);
         document.getElementById('newLng').value = presetLng.toFixed(6);
     }
+    dzInit();
+    wizSet(1);
     const modal = new bootstrap.Modal(document.getElementById('addPlaceModal'));
     modal.show();
     document.getElementById('addPlaceModal').addEventListener('shown.bs.modal', () => {
