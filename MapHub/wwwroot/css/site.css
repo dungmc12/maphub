@@ -1653,6 +1653,20 @@ body.map-view { overflow: hidden; height: 100vh; }
 .ai-ls.done { opacity: 1; color: var(--green); }
 .ai-ls.done::before { content: "✓"; display: grid; place-items: center; font-size: .72rem; font-weight: 800; color: #fff; background: var(--green); border-color: var(--green); animation: none; }
 
+/* ── Plan timeline rail (dot + connector) ─────────────────────────────── */
+.plan-day-block .plan-item-card { position: relative; margin-left: 1.6rem; overflow: visible; }
+.plan-day-block .plan-item-card::before {
+  content: ""; position: absolute; left: -1.6rem; top: 1.25rem;
+  width: 13px; height: 13px; border-radius: 50%; background: var(--accent);
+  border: 3px solid var(--bg-main); box-shadow: 0 0 0 1.5px var(--accent); z-index: 2;
+}
+.plan-day-block .plan-item-card::after {
+  content: ""; position: absolute; left: calc(-1.6rem + 5.5px); top: 1.25rem; bottom: -0.85rem;
+  width: 2px; background: var(--line); z-index: 1;
+}
+.plan-day-block .plan-item-card:last-child::after { display: none; }
+@media (max-width: 540px){ .plan-day-block .plan-item-card { margin-left: 1.2rem; } .plan-day-block .plan-item-card::before { left: -1.2rem; } .plan-day-block .plan-item-card::after { left: calc(-1.2rem + 5.5px); } }
+
 /* AI chat suggestion chips */
 .chat-chips { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .6rem; }
 .chat-chip {
