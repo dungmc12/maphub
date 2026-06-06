@@ -171,22 +171,40 @@
                 <button onclick="document.getElementById('aiPlanModal').style.display='none'"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <div class="custom-modal-body">
+                <!-- Prompt suggestions -->
+                <div class="ai-prompt-row">
+                    <span class="ai-prompt-label">Gợi ý</span>
+                    <button type="button" class="ai-pchip" onclick="aiPreset('lãng mạn, cà phê đẹp, ăn tối', 2, 1)">Hẹn hò cuối tuần</button>
+                    <button type="button" class="ai-pchip" onclick="aiPreset('vui chơi, ăn uống, hợp trẻ em', 4, 1)">Đi với gia đình</button>
+                    <button type="button" class="ai-pchip" onclick="aiPreset('cà phê yên tĩnh, chụp ảnh, dạo phố', 1, 1)">Đi một mình</button>
+                    <button type="button" class="ai-pchip" onclick="aiPreset('hoạt động nhóm, ăn uống, giải trí', 10, 1)">Team building</button>
+                </div>
+
                 <div class="mb-3">
-                    <label class="form-label">Địa điểm muốn đến</label>
-                    <input type="text" id="aiDest" class="form-control" placeholder="VD: Hòa Lạc, Hồ Tây, Đồng Mô...">
+                    <label class="form-label fw-semibold">Bạn muốn khám phá đâu?</label>
+                    <input type="text" id="aiDest" class="form-control" placeholder="VD: Hòa Lạc, Hồ Tây, Đồng Mô, Phố cổ...">
                 </div>
                 <div class="mb-3">
-                    <label class="form-label">Số ngày</label>
-                    <input type="number" id="aiDays" class="form-control" value="1" min="1" max="7">
+                    <label class="form-label fw-semibold">Bạn thích trải nghiệm gì?</label>
+                    <input type="text" id="aiInterests" class="form-control" placeholder="Chọn nhanh bên dưới hoặc tự nhập…">
+                    <div class="ai-exp-chips">
+                        <button type="button" class="ai-exp" onclick="aiAddInterest('cà phê')">☕ Cà phê</button>
+                        <button type="button" class="ai-exp" onclick="aiAddInterest('check-in chụp ảnh')">📸 Check-in</button>
+                        <button type="button" class="ai-exp" onclick="aiAddInterest('ăn uống')">🍜 Ăn uống</button>
+                        <button type="button" class="ai-exp" onclick="aiAddInterest('giải trí')">🎵 Giải trí</button>
+                        <button type="button" class="ai-exp" onclick="aiAddInterest('thiên nhiên')">🌳 Thiên nhiên</button>
+                        <button type="button" class="ai-exp" onclick="aiAddInterest('văn hóa')">🏛️ Văn hóa</button>
+                    </div>
                 </div>
-                <div class="mb-3">
-                    <label class="form-label">Sở thích / Mục đích</label>
-                    <input type="text" id="aiInterests" class="form-control"
-                           placeholder="VD: ăn uống, vui chơi, chụp ảnh, cắm trại...">
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Số người <span class="text-muted small">(để AI ước tính chi phí)</span></label>
-                    <input type="number" id="aiPeople" class="form-control" value="2" min="1" max="20" placeholder="VD: 2">
+                <div class="row g-2 mb-3">
+                    <div class="col-6">
+                        <label class="form-label fw-semibold">Số ngày</label>
+                        <input type="number" id="aiDays" class="form-control" value="1" min="1" max="7">
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label fw-semibold">Số người</label>
+                        <input type="number" id="aiPeople" class="form-control" value="2" min="1" max="20">
+                    </div>
                 </div>
                 <div id="aiPlanResult" class="ai-plan-result" style="display:none"></div>
                 <div id="aiSaveRow" style="display:none;margin-top:.75rem">
@@ -252,6 +270,44 @@ function openAiPlanModal() {
     document.getElementById('aiPlanModal').style.display = 'flex';
 }
 
+// Chip trải nghiệm → cộng dồn vào ô sở thích
+function aiAddInterest(t) {
+    const inp = document.getElementById('aiInterests');
+    const cur = inp.value.split(',').map(s => s.trim()).filter(Boolean);
+    if (!cur.includes(t)) cur.push(t);
+    inp.value = cur.join(', ');
+}
+// Gợi ý nhanh → điền sở thích + số người + số ngày
+function aiPreset(interests, people, days) {
+    document.getElementById('aiInterests').value = interests;
+    document.getElementById('aiPeople').value = people;
+    document.getElementById('aiDays').value = days;
+    document.getElementById('aiDest').focus();
+}
+
+// Loader AI dạng từng bước (cho cảm giác AI đang làm việc)
+let _aiLoaderTimer = null;
+function aiLoaderHTML() {
+    return '<div class="ai-loader">' +
+        '<div class="ai-loader-head"><span class="ai-loader-spin"></span> Trợ lý AI đang làm việc…</div>' +
+        '<div class="ai-ls" data-i="0">Phân tích sở thích của bạn</div>' +
+        '<div class="ai-ls" data-i="1">Tìm địa điểm phù hợp</div>' +
+        '<div class="ai-ls" data-i="2">Ước tính chi phí</div>' +
+        '<div class="ai-ls" data-i="3">Tạo lịch trình tối ưu</div></div>';
+}
+function startAiLoader() {
+    const steps = document.querySelectorAll('#aiPlanResult .ai-ls');
+    if (!steps.length) return;
+    let i = 0;
+    const tick = () => {
+        steps.forEach((s, idx) => { s.classList.toggle('active', idx === i); s.classList.toggle('done', idx < i); });
+        i = Math.min(i + 1, steps.length - 1);
+    };
+    tick();
+    _aiLoaderTimer = setInterval(tick, 1400);
+}
+function stopAiLoader() { if (_aiLoaderTimer) { clearInterval(_aiLoaderTimer); _aiLoaderTimer = null; } }
+
 async function generateAiPlan() {
     const dest   = document.getElementById('aiDest').value.trim();
     const days   = parseInt(document.getElementById('aiDays').value) || 1;
@@ -265,7 +321,8 @@ async function generateAiPlan() {
     genBtn.disabled = true; genBtn.innerHTML = '<i class="fa-solid fa-hourglass-half"></i> Đang tạo…';
     document.getElementById('aiSaveRow').style.display = 'none';
     result.style.display = 'block';
-    result.innerHTML = '<div class="text-muted"><em><i class="fa-solid fa-robot"></i> AI đang lập kế hoạch… (có thể mất 10-20 giây)</em></div>';
+    result.innerHTML = aiLoaderHTML();
+    startAiLoader();
 
     try {
         const r = await fetch('/Plans/AiGenerate', {
@@ -274,6 +331,7 @@ async function generateAiPlan() {
             body: JSON.stringify({ destination: dest, days: days, interests: inter || 'ăn uống và vui chơi', people: people })
         });
         const d = await r.json();
+        stopAiLoader();
         if (d.error) {
             result.innerHTML = `<div class="text-danger">${d.error}</div>`;
         } else {
@@ -292,8 +350,10 @@ async function generateAiPlan() {
             if (!titleInput.value) titleInput.value = `Kế hoạch ${dest} ${days} ngày`;
         }
     } catch {
+        stopAiLoader();
         result.innerHTML = '<div class="text-danger">Lỗi kết nối AI. Vui lòng thử lại.</div>';
     } finally {
+        stopAiLoader();
         genBtn.disabled = false; genBtn.innerHTML = '<i class="fa-solid fa-robot"></i> Tạo lịch trình';
     }
 }

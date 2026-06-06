@@ -1633,6 +1633,26 @@ body.map-view { overflow: hidden; height: 100vh; }
 .tag-pill:hover { background: #E2E8F0; }
 .tag-pill:has(input:checked) { background: var(--accent); color: #fff; }
 
+/* ── AI Plan modal: prompt + experience chips + stepped loader ────────── */
+.ai-prompt-row { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin-bottom: 1.1rem; }
+.ai-prompt-label { font-size: .78rem; font-weight: 700; color: var(--ink-secondary); text-transform: uppercase; letter-spacing: .08em; }
+.ai-pchip { padding: .42rem .85rem; border-radius: var(--radius-pill); border: 1px solid var(--accent-soft); background: var(--blue-soft); color: var(--accent-dark); font: inherit; font-size: .83rem; font-weight: 600; cursor: pointer; transition: transform .15s var(--ease), background .15s; }
+.ai-pchip:hover { transform: translateY(-1px); background: var(--accent-soft); }
+.ai-exp-chips { display: flex; flex-wrap: wrap; gap: .45rem; margin-top: .6rem; }
+.ai-exp { padding: .4rem .8rem; border-radius: var(--radius-pill); border: 1px solid var(--line); background: var(--surface,#fff); color: var(--ink-primary); font: inherit; font-size: .85rem; font-weight: 500; cursor: pointer; transition: border-color .15s var(--ease), background .15s; }
+.ai-exp:hover { border-color: var(--accent); background: var(--bg-main); }
+
+.ai-loader { padding: .4rem .2rem; }
+.ai-loader-head { display: flex; align-items: center; gap: .55rem; font-weight: 700; color: var(--accent-dark); margin-bottom: .9rem; }
+.ai-loader-spin { width: 18px; height: 18px; border-radius: 50%; border: 2.5px solid var(--accent-soft); border-top-color: var(--accent); animation: spin .8s linear infinite; flex-shrink: 0; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.ai-ls { position: relative; padding: .4rem 0 .4rem 1.9rem; color: var(--ink-secondary); font-size: .92rem; opacity: .55; transition: opacity .3s var(--ease), color .3s var(--ease); }
+.ai-ls::before { content: ""; position: absolute; left: 0; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--line); }
+.ai-ls.active { opacity: 1; color: var(--ink-primary); font-weight: 600; }
+.ai-ls.active::before { border-color: var(--accent); border-top-color: transparent; animation: spin .7s linear infinite; }
+.ai-ls.done { opacity: 1; color: var(--green); }
+.ai-ls.done::before { content: "✓"; display: grid; place-items: center; font-size: .72rem; font-weight: 800; color: #fff; background: var(--green); border-color: var(--green); animation: none; }
+
 /* AI chat suggestion chips */
 .chat-chips { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .6rem; }
 .chat-chip {
