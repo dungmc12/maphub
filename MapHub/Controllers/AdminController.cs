@@ -697,7 +697,7 @@ public class AdminController : Controller
             if (url == null) continue;
             _context.PlaceImages.Add(new PlaceImage { PlaceId = placeId, Url = url, IsPrimary = false, IsMenu = true, UploadedByUserId = userId });
         }
-        if (videoFile != null)
+        if (videoFile != null && await _context.PlaceImages.CountAsync(i => i.PlaceId == placeId && i.IsVideo) < 3)
         {
             var vurl = await ImageHelper.VideoToDataUrlAsync(videoFile);
             if (vurl != null)

@@ -225,6 +225,18 @@ using (var scope = app.Services.CreateScope())
         app.Logger.LogError(ex, "Auto-migration UserLists lỗi");
     }
 
+    // Thêm cột VideoUrl cho PlaceReviews nếu chưa có
+    try
+    {
+        if (dbProvider == "postgres")
+            await context.Database.ExecuteSqlRawAsync(
+                "ALTER TABLE \"PlaceReviews\" ADD COLUMN IF NOT EXISTS \"VideoUrl\" text NULL;");
+        else
+            await context.Database.ExecuteSqlRawAsync(
+                "IF COL_LENGTH('PlaceReviews','VideoUrl') IS NULL ALTER TABLE PlaceReviews ADD VideoUrl nvarchar(max) NULL;");
+    }
+    catch (Exception ex) { app.Logger.LogError(ex, "Auto-migration PlaceReviews.VideoUrl lỗi"); }
+
     // Thêm cột Phone2 / OpenTime / CloseTime cho Places nếu chưa có
     try
     {

@@ -324,9 +324,9 @@ else if (isAuth)
                             <div class="dz-prev" id="dzPrev3"></div>
                         </div>
 
-                        <label class="form-label fw-semibold mt-2"><i class="bi bi-camera-video"></i> Video ngắn <small class="text-muted">(không bắt buộc · ≤30 giây · ≤15MB)</small></label>
+                        <label class="form-label fw-semibold mt-2"><i class="bi bi-camera-video"></i> Video ngắn <small class="text-muted">(không bắt buộc · tối đa 3 video · mỗi video ≤30 giây · ≤15MB)</small></label>
                         <div class="dropzone dz-sm" onclick="document.getElementById('newVideo').click()">
-                            <input type="file" id="newVideo" accept="video/mp4,video/webm,video/quicktime" hidden onchange="onVideoPick(this)">
+                            <input type="file" id="newVideo" accept="video/mp4,video/webm,video/quicktime" multiple hidden onchange="onVideoPick(this)">
                             <div class="dz-empty"><span>Kéo thả video clip giới thiệu (mp4/webm)</span></div>
                             <div class="dz-prev" id="dzPrevVid"></div>
                         </div>
@@ -856,24 +856,30 @@ function wizGo(dir) {
 // ── Drag & drop upload + preview ───────────────────────────────────────────
 // Chọn video → kiểm tra ≤15MB và ≤30 giây (giống Google, không cho dài quá) + xem trước
 function onVideoPick(input) {
-    const f = input.files && input.files[0];
     const prev = document.getElementById('dzPrevVid');
     const dz = input.closest('.dropzone');
     prev.innerHTML = ''; if (dz) dz.classList.remove('has-files');
-    if (!f) return;
-    if (f.size > 15 * 1024 * 1024) { alert('Video quá lớn (tối đa 15MB).'); input.value = ''; return; }
-    const url = URL.createObjectURL(f);
-    const probe = document.createElement('video');
-    probe.preload = 'metadata';
-    probe.onloadedmetadata = () => {
-        if (probe.duration > 31) { alert('Video quá dài (tối đa 30 giây). Hãy cắt ngắn lại.'); input.value = ''; URL.revokeObjectURL(url); return; }
-        const pv = document.createElement('video');
-        pv.src = url; pv.controls = true; pv.style.cssText = 'width:220px;border-radius:10px';
-        prev.appendChild(pv);
+    const files = Array.from(input.files || []);
+    if (!files.length) return;
+    if (files.length > 3) { alert('Tối đa 3 video cho mỗi địa điểm.'); input.value = ''; return; }
+    if (files.some(f => f.size > 15 * 1024 * 1024)) { alert('Có video quá lớn (tối đa 15MB/video).'); input.value = ''; return; }
+    let pending = files.length, invalid = false;
+    files.forEach(f => {
+        const url = URL.createObjectURL(f);
+        const probe = document.createElement('video');
+        probe.preload = 'metadata';
+        probe.onloadedmetadata = () => {
+            if (probe.duration > 31) { invalid = true; }
+            else { const pv = document.createElement('video'); pv.src = url; pv.controls = true; pv.style.cssText = 'width:160px;border-radius:10px'; prev.appendChild(pv); }
+            if (--pending === 0) finish();
+        };
+        probe.onerror = () => { invalid = true; if (--pending === 0) finish(); };
+        probe.src = url;
+    });
+    function finish() {
+        if (invalid) { alert('Có video quá dài (>30 giây) hoặc không đọc được — vui lòng chọn lại.'); input.value = ''; prev.innerHTML = ''; return; }
         if (dz) dz.classList.add('has-files');
-    };
-    probe.onerror = () => { alert('Không đọc được video này.'); input.value = ''; URL.revokeObjectURL(url); };
-    probe.src = url;
+    }
 }
 
 function dzPreview(inputId, prevId) {
@@ -1004,9 +1010,8 @@ async function submitPlace() {
             for (const f of document.getElementById('newMoreImages').files) await uploadOne(f, false);
             // 3) Ảnh menu/thực đơn (không bắt buộc)
             for (const f of document.getElementById('newMenuImages').files) await uploadOne(f, true);
-            // 4) Video ngắn (không bắt buộc)
-            const vid = document.getElementById('newVideo').files[0];
-            if (vid) {
+            // 4) Video ngắn (tối đa 3, không bắt buộc)
+            for (const vid of Array.from(document.getElementById('newVideo').files).slice(0, 3)) {
                 const fd = new FormData();
                 fd.append('placeId', json.id); fd.append('image', vid); fd.append('isVideo', 'true');
                 try { await fetch('/Map/UploadImage', { method: 'POST', headers: { 'RequestVerificationToken': token }, body: fd }); } catch {}

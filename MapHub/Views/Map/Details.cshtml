@@ -320,6 +320,13 @@
                                      onerror="this.onerror=null;this.style.display='none'"
                                      style="max-width:100%;max-height:220px;border-radius:10px;margin-top:8px;object-fit:cover">
                             }
+                            @if (!string.IsNullOrEmpty(rv.VideoUrl))
+                            {
+                                <video controls preload="metadata" playsinline
+                                       style="max-width:100%;max-height:240px;border-radius:10px;margin-top:8px;background:#000">
+                                    <source src="@rv.VideoUrl">
+                                </video>
+                            }
 
                             @if (currentUserId == rv.UserId || isAdmin)
                             {
@@ -366,6 +373,8 @@
                                     }
                                     <label class="form-label mb-1" style="font-size:.78rem"><i class="fa-solid fa-camera"></i> Đổi ảnh <small class="text-muted">(bỏ trống để giữ ảnh cũ)</small></label>
                                     <input type="file" name="photo" class="form-control form-control-sm mb-2" accept="image/*">
+                                    <label class="form-label mb-1" style="font-size:.78rem"><i class="fa-solid fa-video"></i> Đổi video <small class="text-muted">(≤30s · ≤15MB, bỏ trống = giữ nguyên)</small></label>
+                                    <input type="file" name="video" class="form-control form-control-sm mb-2 video-in" accept="video/mp4,video/webm,video/quicktime">
                                     <div class="d-flex gap-2">
                                         <button type="submit" class="btn-accent btn-sm-accent"><i class="fa-solid fa-floppy-disk"></i> Lưu thay đổi</button>
                                         <button type="button" class="btn-ghost btn-sm-ghost" onclick="toggleEditReview(@rv.Id)">Hủy</button>
@@ -424,9 +433,15 @@
                                 <input type="text" name="staffReview" class="form-control mb-2"
                                        placeholder="Nhận xét về nhân viên (tùy chọn)">
                             }
-                            <div class="mb-3">
-                                <label class="form-label"><i class="fa-solid fa-camera" style="color:#3b82f6"></i> Ảnh đính kèm <small class="text-muted">(tùy chọn, tối đa 5MB)</small></label>
-                                <input type="file" name="photo" class="form-control" accept="image/*">
+                            <div class="row g-2 mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label"><i class="fa-solid fa-camera" style="color:#3b82f6"></i> Ảnh đính kèm <small class="text-muted">(tùy chọn)</small></label>
+                                    <input type="file" name="photo" class="form-control form-control-sm" accept="image/*">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label"><i class="fa-solid fa-video" style="color:#0891b2"></i> Video <small class="text-muted">(tùy chọn · ≤30s · ≤15MB)</small></label>
+                                    <input type="file" name="video" class="form-control form-control-sm video-in" accept="video/mp4,video/webm,video/quicktime">
+                                </div>
                             </div>
                             <button type="submit" class="btn-accent">Gửi đánh giá</button>
                         </form>

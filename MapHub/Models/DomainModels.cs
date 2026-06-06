@@ -137,6 +137,7 @@ public class PlaceReview
     public string? StaffReview { get; set; }
     public string? Content { get; set; }
     public string? PhotoUrl { get; set; }
+    public string? VideoUrl { get; set; }     // Video ngắn của người đánh giá (1/đánh giá)
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     public Place? Place { get; set; }

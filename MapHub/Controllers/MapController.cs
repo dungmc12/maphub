@@ -251,6 +251,10 @@ public class MapController : Controller
         if (place.CreatedByUserId != currentUserId && !User.IsInRole("Admin"))
             return Forbid();
 
+        // Giới hạn tối đa 3 video / địa điểm (tối ưu dung lượng DB)
+        if (isVideo && await _context.PlaceImages.CountAsync(i => i.PlaceId == placeId && i.IsVideo) >= 3)
+            return BadRequest("Mỗi địa điểm chỉ tối đa 3 video.");
+
         // Lưu base64 data URL (bền với Render redeploy). Video dùng helper riêng (giới hạn 15MB).
         var dataUrl = isVideo ? await ImageHelper.VideoToDataUrlAsync(image) : await ImageHelper.ToDataUrlAsync(image);
         if (dataUrl == null)
@@ -305,12 +309,13 @@ public class MapController : Controller
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> AddReview(int placeId, byte qualityRating, byte serviceRating,
-        byte? foodRating, string? content, string? foodReview, string? staffReview, IFormFile? photo)
+        byte? foodRating, string? content, string? foodReview, string? staffReview, IFormFile? photo, IFormFile? video)
     {
         var currentUserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value!;
 
-        // Lưu ảnh review thành base64 data URL (tồn tại vĩnh viễn, không mất khi Render redeploy)
+        // Lưu ảnh + video review thành base64 data URL (tồn tại vĩnh viễn, không mất khi Render redeploy)
         string? photoUrl = await ImageHelper.ToDataUrlAsync(photo);
+        string? videoUrl = await ImageHelper.VideoToDataUrlAsync(video);
 
         _context.PlaceReviews.Add(new PlaceReview
         {
@@ -322,7 +327,8 @@ public class MapController : Controller
             Content = content,
             FoodReview = foodReview,
             StaffReview = staffReview,
-            PhotoUrl = photoUrl
+            PhotoUrl = photoUrl,
+            VideoUrl = videoUrl
         });
         await _context.SaveChangesAsync();
         return RedirectToAction(nameof(Details), new { id = placeId });
@@ -351,7 +357,7 @@ public class MapController : Controller
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> EditReview(int id, byte qualityRating, byte serviceRating,
-        byte? foodRating, string? content, string? foodReview, string? staffReview, IFormFile? photo)
+        byte? foodRating, string? content, string? foodReview, string? staffReview, IFormFile? photo, IFormFile? video)
     {
         var review = await _context.PlaceReviews.FindAsync(id);
         if (review == null) return NotFound();
@@ -367,9 +373,11 @@ public class MapController : Controller
         review.FoodReview    = foodReview;
         review.StaffReview   = staffReview;
 
-        // Chỉ thay ảnh khi người dùng tải ảnh mới (không chọn thì giữ ảnh cũ)
+        // Chỉ thay ảnh/video khi người dùng tải mới (không chọn thì giữ nguyên)
         var newPhoto = await ImageHelper.ToDataUrlAsync(photo);
         if (newPhoto != null) review.PhotoUrl = newPhoto;
+        var newVideo = await ImageHelper.VideoToDataUrlAsync(video);
+        if (newVideo != null) review.VideoUrl = newVideo;
 
         await _context.SaveChangesAsync();
         return RedirectToAction(nameof(Details), new { id = review.PlaceId });
@@ -532,7 +540,7 @@ public class MapController : Controller
             if (url == null) continue;
             _context.PlaceImages.Add(new PlaceImage { PlaceId = placeId, Url = url, IsPrimary = false, IsMenu = true, UploadedByUserId = userId });
         }
-        if (videoFile != null)
+        if (videoFile != null && await _context.PlaceImages.CountAsync(i => i.PlaceId == placeId && i.IsVideo) < 3)
         {
             var vurl = await ImageHelper.VideoToDataUrlAsync(videoFile);
             if (vurl != null)
