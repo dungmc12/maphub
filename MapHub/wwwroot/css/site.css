@@ -1726,6 +1726,22 @@ body.map-view { overflow: hidden; height: 100vh; }
 .tx-av { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; flex-shrink: 0;
          background: linear-gradient(145deg, var(--accent), var(--secondary)); color: #fff; font-weight: 700; font-size: .8rem; }
 
+/* ── My Places cards — refine ─────────────────────────────────────────── */
+.my-place-card .plan-card { overflow: hidden; border-radius: var(--radius-lg); border: 1px solid var(--line); box-shadow: var(--shadow-card); transition: transform .22s var(--ease), box-shadow .22s var(--ease); }
+.my-place-card .plan-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-lift); }
+.my-place-card .plan-card > img { transition: transform .45s var(--ease); }
+.my-place-card .plan-card:hover > img { transform: scale(1.06); }
+.mp-actions { display: flex; gap: .4rem; flex-wrap: wrap; align-items: center; }
+.mp-act {
+  display: inline-grid; place-items: center; width: 34px; height: 34px;
+  border-radius: 10px; border: 1px solid var(--line); background: var(--surface,#fff);
+  color: var(--ink-secondary); cursor: pointer; text-decoration: none; font-size: .9rem;
+  transition: background .15s var(--ease), border-color .15s var(--ease), color .15s var(--ease);
+}
+.mp-act:hover { background: var(--bg-main); border-color: #cbd5e1; color: var(--ink-primary); }
+.mp-act.mp-edit:hover { border-color: var(--accent); color: var(--accent); }
+.mp-act.mp-del:hover { border-color: var(--red); color: var(--red); background: #fef2f2; }
+
 /* Tag gợi ý dưới ô tìm kiếm (cuộn ngang) */
 .search-tag-row { display: flex; gap: .4rem; overflow-x: auto; margin-top: .55rem; padding-bottom: 2px; scrollbar-width: none; }
 .search-tag-row::-webkit-scrollbar { display: none; }

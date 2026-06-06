@@ -113,16 +113,16 @@
                                 else
                                 { <span class="badge bg-secondary">🔒 Cá nhân</span> }
                             </div>
-                            <div class="d-flex gap-1 mt-2 flex-wrap align-items-center">
-                                <a href="/Map?place=@p.Id" class="btn btn-sm btn-outline-secondary" title="Xem trên bản đồ">👁️</a>
-                                <a href="/Map/EditMyPlace/@p.Id" class="btn btn-sm btn-outline-primary" title="Sửa">✏️</a>
-                                <a href="@dir" target="_blank" rel="noopener" class="btn btn-sm btn-outline-success" title="Chỉ đường (Google Maps)">🧭</a>
+                            <div class="mp-actions mt-2">
+                                <a href="/Map?place=@p.Id" class="mp-act" title="Xem trên bản đồ"><i class="fa-solid fa-location-dot"></i></a>
+                                <a href="/Map/EditMyPlace/@p.Id" class="mp-act mp-edit" title="Sửa"><i class="fa-solid fa-pen"></i></a>
+                                <a href="@dir" target="_blank" rel="noopener" class="mp-act" title="Chỉ đường (Google Maps)"><i class="fa-solid fa-diamond-turn-right"></i></a>
                                 <form method="post" action="/Map/DeleteMyPlace"
                                       onsubmit="return confirm(this.dataset.msg)" data-msg="@delMsg"
-                                      class="d-inline ms-auto">
+                                      class="d-inline" style="margin-left:auto">
                                     @Html.AntiForgeryToken()
                                     <input type="hidden" name="id" value="@p.Id">
-                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Xóa">🗑️</button>
+                                    <button type="submit" class="mp-act mp-del" title="Xóa"><i class="fa-solid fa-trash"></i></button>
                                 </form>
                             </div>
                         </div>
@@ -157,10 +157,10 @@
                             {
                                 <div class="text-muted small">📍 @p.Address</div>
                             }
-                            <div class="d-flex gap-1 mt-2 align-items-center">
-                                <a href="/Map/Details/@p.Id" class="btn btn-sm btn-outline-secondary" title="Xem">👁️</a>
-                                <a href="@sdir" target="_blank" rel="noopener" class="btn btn-sm btn-outline-success" title="Chỉ đường">🧭</a>
-                                <button type="button" class="btn btn-sm btn-outline-danger ms-auto" onclick="unsavePlace(@p.Id)">❤️ Bỏ lưu</button>
+                            <div class="mp-actions mt-2">
+                                <a href="/Map/Details/@p.Id" class="mp-act" title="Xem chi tiết"><i class="fa-solid fa-eye"></i></a>
+                                <a href="@sdir" target="_blank" rel="noopener" class="mp-act" title="Chỉ đường"><i class="fa-solid fa-diamond-turn-right"></i></a>
+                                <button type="button" class="mp-act mp-del" style="margin-left:auto" onclick="unsavePlace(@p.Id)" title="Bỏ lưu"><i class="fa-solid fa-heart-circle-minus"></i></button>
                             </div>
                         </div>
                     </div>
