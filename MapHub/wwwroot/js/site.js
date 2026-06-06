@@ -1035,3 +1035,50 @@
 	document.addEventListener("DOMContentLoaded", function () { enhanceFileInputs(document); });
 	document.addEventListener("shown.bs.modal", function (e) { enhanceFileInputs(e.target); });
 })();
+
+/* ── Premium motion: scroll-reveal + subtle pointer tilt (CSS-driven, nhẹ) ── */
+(() => {
+	const reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+	function initReveal() {
+		const els = document.querySelectorAll(".reveal");
+		if (!els.length) return;
+		if (reduce || !("IntersectionObserver" in window)) {
+			els.forEach(el => el.classList.add("in"));
+			return;
+		}
+		const io = new IntersectionObserver((entries) => {
+			entries.forEach(e => {
+				if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); }
+			});
+		}, { threshold: 0.12, rootMargin: "0px 0px -8% 0px" });
+		els.forEach(el => io.observe(el));
+	}
+
+	// Tilt 3D rất nhẹ (≤3°), chỉ thiết bị có chuột; bỏ qua nếu giảm chuyển động
+	function initTilt() {
+		if (reduce || window.matchMedia("(hover: none)").matches) return;
+		document.querySelectorAll("[data-tilt]").forEach(card => {
+			let raf = null;
+			card.style.transformStyle = "preserve-3d";
+			card.style.transition = "transform .2s cubic-bezier(.22,1,.36,1)";
+			card.addEventListener("pointermove", (ev) => {
+				const r = card.getBoundingClientRect();
+				const px = (ev.clientX - r.left) / r.width - 0.5;
+				const py = (ev.clientY - r.top) / r.height - 0.5;
+				if (raf) cancelAnimationFrame(raf);
+				raf = requestAnimationFrame(() => {
+					card.style.transform = `perspective(900px) rotateY(${px * 4}deg) rotateX(${-py * 4}deg) translateY(-4px)`;
+				});
+			});
+			card.addEventListener("pointerleave", () => {
+				if (raf) cancelAnimationFrame(raf);
+				card.style.transform = "";
+			});
+		});
+	}
+
+	function init() { initReveal(); initTilt(); }
+	if (document.readyState !== "loading") init();
+	else document.addEventListener("DOMContentLoaded", init);
+})();

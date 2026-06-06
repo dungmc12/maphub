@@ -75,16 +75,25 @@
     {
         <div class="hero-default">
             <div class="hero-default-inner">
-                <p class="eyebrow">🗺️ KHÁM PHÁ HÀ NỘI</p>
+                <p class="eyebrow">KHÁM PHÁ HÀ NỘI</p>
                 <h1>Tìm địa điểm ăn uống,<br>vui chơi quanh bạn</h1>
                 <p class="subtitle">Từ trung tâm Hà Nội đến Láng &nbsp;·&nbsp; Hòa Lạc &nbsp;·&nbsp; ĐH FPT</p>
                 <div class="hero-cta-row">
-                    <a href="/Map" class="btn-accent">🗺️ Mở Bản Đồ</a>
-                    <a href="/Plans" class="btn-ghost">📋 Lên Kế Hoạch</a>
+                    <a href="/Map" class="btn-accent">Mở bản đồ</a>
+                    <a href="/Plans" class="btn-ghost">Lên kế hoạch</a>
                 </div>
             </div>
         </div>
     }
+</div>
+
+<!-- ── FLOATING SEARCH ────────────────────────────────────────────────────── -->
+<div class="container-xl" style="margin-top:-2.2rem;position:relative;z-index:5">
+    <form class="hero-search reveal" action="/Map" method="get" role="search">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        <input type="text" name="q" placeholder="Tìm nhà hàng, cà phê, địa điểm ở Hà Nội…" autocomplete="off">
+        <button type="submit">Tìm kiếm</button>
+    </form>
 </div>
 
 <!-- ── CATEGORY QUICK LINKS ───────────────────────────────────────────────── -->
@@ -157,13 +166,13 @@
 @if (feedList.Any())
 {
     <div class="container-xl pb-5">
-        <div class="section-header">
+        <div class="section-header reveal">
             <div>
                 <h3 class="section-title">📰 Tin tức &amp; Cẩm nang</h3>
                 <p class="section-sub">Kinh nghiệm, điểm đến và hoạt động mới nhất</p>
             </div>
         </div>
-        <div class="news-grid">
+        <div class="news-grid reveal">
             @foreach (var post in feedList)
             {
                 <div class="news-card">
@@ -199,14 +208,14 @@
 @if (Model != null && Model.Any())
 {
     <div class="container-xl pb-5">
-        <div class="section-header">
+        <div class="section-header reveal">
             <div>
                 <h3 class="section-title">📍 Địa điểm nổi bật</h3>
                 <p class="section-sub">Những nơi được yêu thích nhất trên CityScout</p>
             </div>
             <a href="/Map" class="btn-ghost btn-sm-ghost">Xem tất cả →</a>
         </div>
-        <div class="places-grid">
+        <div class="places-grid reveal">
             @foreach (var place in Model)
             {
                 var imgObj  = place.Images.FirstOrDefault();
@@ -252,10 +261,54 @@
     </div>
 }
 
+<!-- ── CITY GUIDE ────────────────────────────────────────────────────────── -->
+<div class="container-xl pb-5">
+    <div class="section-header reveal">
+        <div>
+            <h3 class="section-title">Cẩm nang khám phá Hà Nội</h3>
+            <p class="section-sub">Gợi ý lịch trình & bộ sưu tập địa điểm theo chủ đề</p>
+        </div>
+    </div>
+    <div class="guide-grid">
+        <a href="/Map?cat=nature" class="guide-card reveal" data-tilt>
+            <img src="https://images.unsplash.com/photo-1528127269322-539801943592?w=600&q=80" alt="Hồ Tây" loading="lazy" onerror="this.src='https://picsum.photos/seed/hotay/600/400'">
+            <div class="guide-card-overlay">
+                <span class="guide-card-kicker">Điểm đến</span>
+                <div class="guide-card-title">Khám phá Hồ Tây</div>
+                <div class="guide-card-meta">Hoàng hôn · cà phê view hồ · đạp xe</div>
+            </div>
+        </a>
+        <a href="/Map?cat=cafe" class="guide-card reveal d1" data-tilt>
+            <img src="https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=600&q=80" alt="Cafe Hà Nội" loading="lazy" onerror="this.src='https://picsum.photos/seed/cafehn/600/400'">
+            <div class="guide-card-overlay">
+                <span class="guide-card-kicker">Bộ sưu tập</span>
+                <div class="guide-card-title">10 quán cà phê đẹp ở Hà Nội</div>
+                <div class="guide-card-meta">Không gian sống ảo · yên tĩnh học bài</div>
+            </div>
+        </a>
+        <a href="/Map" class="guide-card reveal d2" data-tilt>
+            <img src="https://images.unsplash.com/photo-1559592413-7cec4d0cae2b?w=600&q=80" alt="Cuối tuần" loading="lazy" onerror="this.src='https://picsum.photos/seed/weekend/600/400'">
+            <div class="guide-card-overlay">
+                <span class="guide-card-kicker">Gợi ý</span>
+                <div class="guide-card-title">Đi đâu cuối tuần?</div>
+                <div class="guide-card-meta">Lịch trình 1 ngày quanh Hà Nội</div>
+            </div>
+        </a>
+        <a href="/Map?cat=restaurant" class="guide-card reveal d3" data-tilt>
+            <img src="https://images.unsplash.com/photo-1555126634-323283e090fa?w=600&q=80" alt="Ẩm thực đêm" loading="lazy" onerror="this.src='https://picsum.photos/seed/nightfood/600/400'">
+            <div class="guide-card-overlay">
+                <span class="guide-card-kicker">Ẩm thực</span>
+                <div class="guide-card-title">Ăn đêm Hà Nội</div>
+                <div class="guide-card-meta">Phố cổ · quán khuya · món đặc trưng</div>
+            </div>
+        </a>
+    </div>
+</div>
+
 <!-- ── DOWNLOAD / CTA BANNER ─────────────────────────────────────────────── -->
 <div class="cta-banner">
     <div class="container-xl">
-        <div class="cta-inner">
+        <div class="cta-inner reveal">
             <div>
                 <h3>Lên kế hoạch cùng AI CityScout</h3>
                 <p>Để trợ lý AI gợi ý lịch trình hoàn hảo cho chuyến đi tiếp theo của bạn.</p>
