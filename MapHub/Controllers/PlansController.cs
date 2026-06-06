@@ -24,7 +24,7 @@ public class PlansController : Controller
         var currentUserId = UserId();
         var plans = await _context.Plans
             .Where(p => p.UserId == currentUserId)
-            .Include(p => p.Items).ThenInclude(i => i.Place)
+            .Include(p => p.Items).ThenInclude(i => i.Place).ThenInclude(p => p!.Images.Where(img => img.IsPrimary))
             .OrderByDescending(p => p.CreatedAt)
             .ToListAsync();
 

@@ -1,4 +1,23 @@
 @model IEnumerable<MapHub.Models.Plan>
+@functions {
+    // Tổng quãng đường giữa các điểm liên tiếp (Haversine, km) — tính từ lat/lng sẵn có
+    static double PlanDistanceKm(MapHub.Models.Plan plan)
+    {
+        var pts = plan.Items.Where(i => i.Place != null)
+            .Select(i => (lat: (double)i.Place!.Latitude, lng: (double)i.Place!.Longitude)).ToList();
+        double total = 0;
+        for (int i = 1; i < pts.Count; i++)
+        {
+            double dLat = (pts[i].lat - pts[i-1].lat) * Math.PI / 180;
+            double dLng = (pts[i].lng - pts[i-1].lng) * Math.PI / 180;
+            double a = Math.Sin(dLat/2) * Math.Sin(dLat/2) +
+                       Math.Cos(pts[i-1].lat * Math.PI/180) * Math.Cos(pts[i].lat * Math.PI/180) *
+                       Math.Sin(dLng/2) * Math.Sin(dLng/2);
+            total += 6371 * 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1-a));
+        }
+        return total;
+    }
+}
 @{
     ViewData["Title"] = "Kế hoạch của tôi";
     bool isPro     = User.IsInRole("Admin") || User.IsInRole("Pro") || (bool)(ViewBag.IsPro ?? false);
@@ -47,24 +66,44 @@
         <div class="plans-grid">
             @foreach (var plan in Model)
             {
-                <div class="plan-card">
-                    <div class="plan-card-header">
-                        <h5 class="plan-card-title">@plan.Title</h5>
+                var firstImg = plan.Items.Select(i => i.Place).FirstOrDefault(p => p != null && p.Images.Any());
+                var coverId  = firstImg?.Images.FirstOrDefault()?.Id;
+                var km       = PlanDistanceKm(plan);
+                var cost     = plan.Items.Sum(i => i.Place?.MinPrice ?? 0);
+                int days     = (plan.StartDate.HasValue && plan.EndDate.HasValue)
+                               ? (plan.EndDate.Value - plan.StartDate.Value).Days + 1
+                               : Math.Max(1, plan.Items.Select(i => i.DayNumber).DefaultIfEmpty(1).Distinct().Count());
+                <div class="plan-card2 reveal">
+                    <a href="/Plans/Details/@plan.Id" class="plan-cover">
+                        @if (coverId.HasValue)
+                        {
+                            <img src="/Map/Image/@coverId" alt="@plan.Title" loading="lazy"
+                                 onerror="this.onerror=null;this.src='https://picsum.photos/seed/plan@(plan.Id)/600/360'">
+                        }
+                        else
+                        {
+                            <img src="https://picsum.photos/seed/plan@(plan.Id)/600/360" alt="@plan.Title" loading="lazy">
+                        }
+                        <span class="plan-cover-grad"></span>
                         @if (plan.IsPublic)
                         {
-                            <span class="badge bg-success ms-2"><i class="fa-solid fa-share-nodes"></i> Đang chia sẻ</span>
+                            <span class="plan-cover-badge">Đang chia sẻ</span>
                         }
-                    </div>
-                    <div class="plan-card-body">
-                        @if (plan.StartDate.HasValue)
-                        {
-                            <p class="plan-date">
-                                <i class="fa-solid fa-calendar"></i> @plan.StartDate.Value.ToString("dd/MM/yyyy")
-                                @if (plan.EndDate.HasValue) { <span> → @plan.EndDate.Value.ToString("dd/MM/yyyy")</span> }
-                            </p>
-                        }
-                        <p class="plan-places"><i class="fa-solid fa-location-dot"></i> @plan.Items.Count địa điểm</p>
-
+                        <div class="plan-cover-text">
+                            <h3 class="plan-cover-title">@plan.Title</h3>
+                            @if (plan.StartDate.HasValue)
+                            {
+                                <div class="plan-cover-date">@plan.StartDate.Value.ToString("dd/MM")@(plan.EndDate.HasValue ? " – " + plan.EndDate.Value.ToString("dd/MM/yyyy") : "")</div>
+                            }
+                        </div>
+                    </a>
+                    <div class="plan-card2-body">
+                        <div class="plan-stats">
+                            <div class="pstat"><b>@plan.Items.Count</b><span>địa điểm</span></div>
+                            <div class="pstat"><b>@(km >= 1 ? km.ToString("0.#") : km.ToString("0.#"))<small>km</small></b><span>quãng đường</span></div>
+                            <div class="pstat"><b>@days<small>ngày</small></b><span>thời lượng</span></div>
+                            <div class="pstat"><b>@(cost > 0 ? (cost >= 1000 ? (cost/1000).ToString("0") + "k" : cost.ToString("0")) : "0")</b><span>ước tính (đ)</span></div>
+                        </div>
                         @if (plan.Items.Any())
                         {
                             <div class="plan-items-preview">
@@ -78,31 +117,31 @@
                                 }
                             </div>
                         }
-                    </div>
-                    <div class="plan-card-footer">
-                        <a href="/Plans/Details/@plan.Id" class="btn-accent btn-sm-accent">Xem chi tiết</a>
-                        <form method="post" action="/Plans/ToggleShare" class="d-inline">
-                            @Html.AntiForgeryToken()
-                            <input type="hidden" name="id" value="@plan.Id">
-                            <button type="submit" class="btn-ghost btn-sm-ghost" title="@(plan.IsPublic ? "Tắt chia sẻ" : "Tạo link chia sẻ")">
-                                @Html.Raw(plan.IsPublic ? "<i class=\"fa-solid fa-link-slash\"></i> Tắt chia sẻ" : "<i class=\"fa-solid fa-share-nodes\"></i> Chia sẻ")
-                            </button>
-                        </form>
-                        <form method="post" action="/Plans/Delete" class="d-inline"
-                              onsubmit="return confirm('Xóa kế hoạch này?')">
-                            @Html.AntiForgeryToken()
-                            <input type="hidden" name="id" value="@plan.Id">
-                            <button type="submit" class="btn-danger-ghost btn-sm-ghost"><i class="fa-solid fa-trash"></i></button>
-                        </form>
-                    </div>
-                    @if (plan.IsPublic && !string.IsNullOrEmpty(plan.ShareToken))
-                    {
-                        <div class="plan-share-url">
-                            <input type="text" readonly value="@($"{Context.Request.Scheme}://{Context.Request.Host}/Plans/Shared/{plan.ShareToken}")"
-                                   onclick="this.select();document.execCommand('copy');showCopyMsg(this)">
-                            <small class="text-muted">Click để sao chép link</small>
+                        <div class="plan-card2-actions">
+                            <a href="/Plans/Details/@plan.Id" class="btn-accent btn-sm-accent">Xem chi tiết</a>
+                            <form method="post" action="/Plans/ToggleShare" class="d-inline">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="id" value="@plan.Id">
+                                <button type="submit" class="btn-ghost btn-sm-ghost" title="@(plan.IsPublic ? "Tắt chia sẻ" : "Tạo link chia sẻ")">
+                                    @Html.Raw(plan.IsPublic ? "<i class=\"fa-solid fa-link-slash\"></i>" : "<i class=\"fa-solid fa-share-nodes\"></i>")
+                                </button>
+                            </form>
+                            <form method="post" action="/Plans/Delete" class="d-inline plan-del-form"
+                                  onsubmit="return confirmPlanDelete(this)">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="id" value="@plan.Id">
+                                <button type="submit" class="btn-danger-ghost btn-sm-ghost" style="margin-left:auto"><i class="fa-solid fa-trash"></i></button>
+                            </form>
                         </div>
-                    }
+                        @if (plan.IsPublic && !string.IsNullOrEmpty(plan.ShareToken))
+                        {
+                            <div class="plan-share-url">
+                                <input type="text" readonly value="@($"{Context.Request.Scheme}://{Context.Request.Host}/Plans/Shared/{plan.ShareToken}")"
+                                       onclick="this.select();document.execCommand('copy');showCopyMsg(this)">
+                                <small class="text-muted">Click để sao chép link</small>
+                            </div>
+                        }
+                    </div>
                 </div>
             }
         </div>
@@ -276,6 +315,15 @@ function validatePlanDates() {
 
 function openAiPlanModal() {
     document.getElementById('aiPlanModal').style.display = 'flex';
+}
+
+// Xóa kế hoạch: fade card rồi mới submit (animation mượt)
+function confirmPlanDelete(form) {
+    if (!confirm('Xóa kế hoạch này?')) return false;
+    const card = form.closest('.plan-card2');
+    if (card) { card.style.transition = 'opacity .3s var(--ease), transform .3s var(--ease)'; card.style.opacity = '0'; card.style.transform = 'scale(.96)'; }
+    setTimeout(() => form.submit(), 300);
+    return false;
 }
 
 // Gợi ý nhanh tên kế hoạch (modal tạo thủ công)
