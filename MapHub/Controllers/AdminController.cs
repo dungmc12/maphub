@@ -39,7 +39,9 @@ public class AdminController : Controller
         ViewBag.TotalPlaces     = totalPlaces;
         ViewBag.TotalEvents     = totalEvents;
         ViewBag.TotalUsers      = totalUsers;
-        ViewBag.PendingPayments = pendingPayments;
+        // Dùng value tuple (kiểu public) thay anonymous → Razor view truy cập được, không 500
+        ViewBag.PendingPayments = pendingPayments
+            .Select(p => (p.Id, p.Email, p.UserId, p.Amount, p.PlanType, p.Code, p.CreatedAt)).ToList();
         ViewBag.Revenue = await _context.Payments.Where(p => p.Status == "paid").SumAsync(p => (decimal?)p.Amount) ?? 0m;
 
         var now = DateTime.UtcNow;
@@ -63,15 +65,17 @@ public class AdminController : Controller
         ViewBag.CatLabels = System.Text.Json.JsonSerializer.Serialize(catGroups.Select(x => catVi.TryGetValue(x.Cat.ToLower(), out var l) ? l : x.Cat).ToList());
         ViewBag.CatData   = System.Text.Json.JsonSerializer.Serialize(catGroups.Select(x => x.Count).ToList());
 
-        // Top địa điểm theo lượt đánh giá
-        ViewBag.TopPlaces = await _context.Places
+        // Top địa điểm theo lượt đánh giá (value tuple cho view)
+        var topQ = await _context.Places
             .Select(p => new { p.Id, p.Name, Reviews = p.Reviews.Count, Rating = p.Reviews.Any() ? Math.Round(p.Reviews.Average(r => r.QualityRating), 1) : 0.0 })
             .OrderByDescending(x => x.Reviews).ThenByDescending(x => x.Rating).Take(5).ToListAsync();
+        ViewBag.TopPlaces = topQ.Select(x => (x.Id, x.Name, x.Reviews, x.Rating)).ToList();
 
         // Chờ duyệt (địa điểm công khai)
-        ViewBag.PendingPlaces = await _context.Places.Where(p => p.Visibility == "public" && !p.IsApproved)
+        var pendQ = await _context.Places.Where(p => p.Visibility == "public" && !p.IsApproved)
             .OrderByDescending(p => p.CreatedAt)
             .Select(p => new { p.Id, p.Name, p.Category, p.CreatedAt }).Take(6).ToListAsync();
+        ViewBag.PendingPlaces = pendQ.Select(x => (x.Id, x.Name, x.Category, x.CreatedAt)).ToList();
 
         // Hoạt động gần đây (địa điểm mới + đánh giá mới + thanh toán)
         var acts = new List<(string Kind, string Text, DateTime At)>();

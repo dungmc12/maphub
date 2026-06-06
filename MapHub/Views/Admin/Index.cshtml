@@ -5,9 +5,9 @@
     int totalEvents  = (int)(ViewBag.TotalEvents  ?? 0);
     int totalUsers   = (int)(ViewBag.TotalUsers   ?? 0);
     decimal revenue  = (decimal)(ViewBag.Revenue ?? 0m);
-    var pendingPay = (ViewBag.PendingPayments as IEnumerable<dynamic> ?? Enumerable.Empty<dynamic>()).ToList();
-    var topPlaces  = (ViewBag.TopPlaces as IEnumerable<dynamic> ?? Enumerable.Empty<dynamic>()).ToList();
-    var pendingPlaces = (ViewBag.PendingPlaces as IEnumerable<dynamic> ?? Enumerable.Empty<dynamic>()).ToList();
+    var pendingPay = ViewBag.PendingPayments as List<(int Id, string Email, string UserId, decimal Amount, string PlanType, string Code, DateTime CreatedAt)> ?? new();
+    var topPlaces  = ViewBag.TopPlaces as List<(int Id, string Name, int Reviews, double Rating)> ?? new();
+    var pendingPlaces = ViewBag.PendingPlaces as List<(int Id, string Name, string Category, DateTime CreatedAt)> ?? new();
     var activity   = ViewBag.Activity as List<(string Kind, string Text, DateTime At)> ?? new();
     string Vnd(decimal n) => n.ToString("#,##0") + "đ";
 }
@@ -62,7 +62,7 @@
                             <tr id="payrow-@p.Id">
                                 <td>@(p.Email ?? p.UserId)</td>
                                 <td><span class="abadge @(p.PlanType == "year" ? "abadge-gold" : "abadge-blue")">@(p.PlanType == "year" ? "1 năm" : "1 tháng")</span></td>
-                                <td><strong style="color:var(--green)">@(((decimal)p.Amount).ToString("#,##0"))đ</strong></td>
+                                <td><strong style="color:var(--green)">@p.Amount.ToString("#,##0")đ</strong></td>
                                 <td><span class="mono-code">@p.Code</span></td>
                                 <td><span class="admin-sub">@p.CreatedAt.ToString("dd/MM HH:mm")</span></td>
                                 <td>
@@ -91,7 +91,7 @@
                         <li class="rank-item">
                             <span class="rank-no">@rank</span>
                             <a href="/Map/Details/@t.Id" class="rank-name">@t.Name</a>
-                            <span class="rank-meta">★ @(((double)t.Rating).ToString("0.0")) · @t.Reviews đánh giá</span>
+                            <span class="rank-meta">★ @t.Rating.ToString("0.0") · @t.Reviews đánh giá</span>
                         </li>
                     }
                 </ol>
