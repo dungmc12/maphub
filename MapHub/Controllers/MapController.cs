@@ -75,6 +75,7 @@ public class MapController : Controller
         {
             p.Id, p.Name, p.Description, p.Latitude, p.Longitude,
             p.Address, p.Category, p.Phone, p.MinPrice, p.MaxPrice, p.UpdatedAt,
+            p.OpenTime, p.CloseTime,
             Rating = p.Reviews.Any() ? Math.Round(p.Reviews.Average(r => r.QualityRating), 1) : 0.0,
             ReviewCount = p.Reviews.Count,
             PrimaryImageId = p.Images.Where(i => i.IsPrimary).Select(i => (int?)i.Id).FirstOrDefault()
@@ -90,6 +91,7 @@ public class MapController : Controller
         {
             p.Id, p.Name, p.Description, p.Latitude, p.Longitude,
             p.Address, p.Category, p.Phone, p.MinPrice, p.MaxPrice,
+            p.OpenTime, p.CloseTime,
             p.Rating, p.ReviewCount,
             PrimaryImage = p.PrimaryImageId.HasValue
                 ? $"/Map/Image/{p.PrimaryImageId}?v={p.UpdatedAt.Ticks}"

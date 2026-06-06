@@ -597,19 +597,26 @@ function categoryHours(cat) {
     }
 }
 
-function isOpenNow(cat) {
-    const h = categoryHours(cat);
+// Giờ thật của địa điểm (openTime/closeTime "HH:MM") nếu có, không thì ước lượng theo loại
+function parseHM(s) { const m = /^(\d{1,2}):(\d{2})/.exec(s || ''); return m ? (+m[1] + (+m[2]) / 60) : null; }
+function placeHours(p) {
+    const o = parseHM(p.openTime), c = parseHM(p.closeTime);
+    if (o != null && c != null) return { open: o, close: c, real: true };
+    return categoryHours(p.category);
+}
+function isOpenNow(p) {
+    const h = placeHours(p);
     if (h.open === 0 && h.close >= 24) return true;            // mở cả ngày
     const d = new Date();
     const now = d.getHours() + d.getMinutes() / 60;
+    if (h.close <= h.open) return now >= h.open || now < h.close;   // qua nửa đêm (vd 18:00–02:00)
     return now >= h.open && now < h.close;
 }
-
-function hoursLabel(cat) {
-    const h = categoryHours(cat);
+function hoursLabel(p) {
+    const h = placeHours(p);
     if (h.open === 0 && h.close >= 24) return 'Mở cả ngày';
-    const f = n => String(n).padStart(2, '0') + ':00';
-    return `${f(h.open)}–${f(h.close)}`;
+    const f = n => { const hh = Math.floor(n) % 24, mm = Math.round((n - Math.floor(n)) * 60); return String(hh).padStart(2, '0') + ':' + String(mm).padStart(2, '0'); };
+    return `${f(h.open)}–${f(h.close)}` + (h.real ? '' : ' (ước tính)');
 }
 
 function loadPlaces(cat, q) {
@@ -653,7 +660,7 @@ function renderPlaces(list) {
             return price == null || price <= currentBudget;
         });
     }
-    if (openNowOnly) view = view.filter(p => isOpenNow(p.category));
+    if (openNowOnly) view = view.filter(p => isOpenNow(p));
     if (currentDistrict) view = view.filter(p => (p.address || '').toLowerCase().includes(currentDistrict.toLowerCase()));
 
     if (!view.length) {
@@ -698,9 +705,9 @@ function renderPlaces(list) {
                 <div class="place-list-name">${p.name}</div>
                 <div class="place-list-cat">${categoryLabel(p.category)} · <i class="bi bi-cash-coin"></i> ${priceLabel(p.minPrice, p.maxPrice)}</div>
                 <div class="place-list-cat" style="margin-top:2px">
-                    <i class="bi bi-clock"></i> ${hoursLabel(p.category)} ·
-                    <span style="font-weight:700;color:${isOpenNow(p.category) ? '#16a34a' : '#dc2626'}">
-                        ${isOpenNow(p.category) ? 'Đang mở' : 'Đã đóng'}
+                    <i class="bi bi-clock"></i> ${hoursLabel(p)} ·
+                    <span style="font-weight:700;color:${isOpenNow(p) ? '#16a34a' : '#dc2626'}">
+                        ${isOpenNow(p) ? 'Đang mở' : 'Đã đóng'}
                     </span>
                 </div>
                 ${p.address ? `<div class="place-list-addr"><i class="bi bi-geo-alt-fill"></i> ${p.address}</div>` : ''}
