@@ -59,10 +59,11 @@ public class MapController : Controller
 
         if (!string.IsNullOrWhiteSpace(q))
         {
-            // So khớp không phân biệt hoa/thường (PostgreSQL Contains mặc định phân biệt hoa/thường)
+            // So khớp không phân biệt hoa/thường: tên, địa chỉ, HOẶC tên tag
             var ql = q.ToLower();
             query = query.Where(p => p.Name.ToLower().Contains(ql)
-                                  || (p.Address != null && p.Address.ToLower().Contains(ql)));
+                                  || (p.Address != null && p.Address.ToLower().Contains(ql))
+                                  || p.PlaceTags.Any(pt => pt.Tag != null && pt.Tag.Name.ToLower().Contains(ql)));
         }
 
         // Lọc theo ngân sách: giá khởi điểm trong tầm tiền (địa điểm miễn phí/chưa rõ giá vẫn hiện)

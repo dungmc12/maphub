@@ -52,8 +52,18 @@
                 <div style="position:relative">
                     <i class="bi bi-search" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:#94a3b8;font-size:.9rem;pointer-events:none"></i>
                     <input type="text" id="searchInput" class="sidebar-search-input" style="padding-left:34px"
-                           placeholder="Tìm tên, địa chỉ...">
+                           placeholder="Tìm tên, địa chỉ, tag…">
                 </div>
+                @{ var mapTags = ViewBag.AllTags as List<MapHub.Models.Tag> ?? new List<MapHub.Models.Tag>(); }
+                @if (mapTags.Any())
+                {
+                    <div class="search-tag-row">
+                        @foreach (var t in mapTags)
+                        {
+                            <button type="button" class="search-tag-chip" onclick="searchByTag('@t.Name.Replace("'", "\\'")')">@t.Name</button>
+                        }
+                    </div>
+                }
             </div>
 
             <!-- Budget filter (thanh kéo, thay cho dropdown) -->
@@ -772,6 +782,14 @@ document.getElementById('searchInput').addEventListener('input', function() {
     clearTimeout(this._t);
     this._t = setTimeout(() => loadPlaces(currentCat, this.value.trim()), 350);
 });
+
+// Bấm chip tag → tìm theo tag đó
+function searchByTag(tag) {
+    focusPlaceId = null;
+    const si = document.getElementById('searchInput');
+    if (si) si.value = tag;
+    loadPlaces(currentCat, tag);
+}
 
 // ── Routing ───────────────────────────────────────────────────────────────
 function routeTo(lat, lng) {

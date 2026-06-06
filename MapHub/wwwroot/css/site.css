@@ -1697,6 +1697,17 @@ body.map-view { overflow: hidden; height: 100vh; }
 .plan-day-block .plan-item-card:last-child::after { display: none; }
 @media (max-width: 540px){ .plan-day-block .plan-item-card { margin-left: 1.2rem; } .plan-day-block .plan-item-card::before { left: -1.2rem; } .plan-day-block .plan-item-card::after { left: calc(-1.2rem + 5.5px); } }
 
+/* Tag gợi ý dưới ô tìm kiếm (cuộn ngang) */
+.search-tag-row { display: flex; gap: .4rem; overflow-x: auto; margin-top: .55rem; padding-bottom: 2px; scrollbar-width: none; }
+.search-tag-row::-webkit-scrollbar { display: none; }
+.search-tag-chip {
+  flex-shrink: 0; padding: .3rem .7rem; border-radius: var(--radius-pill);
+  border: 1px solid var(--line); background: var(--bg-main); color: var(--ink-secondary);
+  font: inherit; font-size: .78rem; font-weight: 500; cursor: pointer; white-space: nowrap;
+  transition: border-color .15s var(--ease), background .15s var(--ease), color .15s var(--ease);
+}
+.search-tag-chip:hover { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-dark); }
+
 /* AI chat suggestion chips */
 .chat-chips { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .6rem; }
 .chat-chip {

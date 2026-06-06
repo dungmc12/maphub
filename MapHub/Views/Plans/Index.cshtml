@@ -133,19 +133,27 @@
         <form method="post" action="/Plans/Create" id="createPlanForm" onsubmit="return validatePlanDates()">
             @Html.AntiForgeryToken()
             <div class="custom-modal-body">
+                <!-- Gợi ý nhanh tên kế hoạch (đồng bộ với modal AI) -->
+                <div class="ai-prompt-row">
+                    <span class="ai-prompt-label">Gợi ý</span>
+                    <button type="button" class="ai-pchip" onclick="planNamePreset('Hà Nội cuối tuần')">Hà Nội cuối tuần</button>
+                    <button type="button" class="ai-pchip" onclick="planNamePreset('Dã ngoại Hòa Lạc')">Dã ngoại Hòa Lạc</button>
+                    <button type="button" class="ai-pchip" onclick="planNamePreset('Foodtour phố cổ')">Foodtour phố cổ</button>
+                    <button type="button" class="ai-pchip" onclick="planNamePreset('Cà phê chill')">Cà phê chill</button>
+                </div>
                 <div class="mb-3">
                     <label class="form-label fw-semibold">Tên kế hoạch <span class="text-danger">*</span></label>
-                    <input type="text" name="title" class="form-control" required
+                    <input type="text" name="title" id="planTitleInput" class="form-control" required
                            placeholder="VD: Hà Nội cuối tuần, Dã ngoại Hòa Lạc...">
                 </div>
                 <div class="row g-2">
                     <div class="col-6">
-                        <label class="form-label">Ngày khởi hành</label>
+                        <label class="form-label fw-semibold">Ngày khởi hành</label>
                         <input type="date" name="startDate" id="planStartDate" class="form-control"
                                onchange="updateEndDateMin()">
                     </div>
                     <div class="col-6">
-                        <label class="form-label">Ngày về</label>
+                        <label class="form-label fw-semibold">Ngày về</label>
                         <input type="date" name="endDate" id="planEndDate" class="form-control">
                     </div>
                 </div>
@@ -268,6 +276,12 @@ function validatePlanDates() {
 
 function openAiPlanModal() {
     document.getElementById('aiPlanModal').style.display = 'flex';
+}
+
+// Gợi ý nhanh tên kế hoạch (modal tạo thủ công)
+function planNamePreset(name) {
+    const inp = document.getElementById('planTitleInput');
+    if (inp) { inp.value = name; inp.focus(); }
 }
 
 // Chip trải nghiệm → cộng dồn vào ô sở thích
