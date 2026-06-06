@@ -4,23 +4,41 @@
 
 @if (SignInManager.IsSignedIn(User))
 {
-    <a asp-controller="Account" asp-action="Profile" class="nav-user-pill" style="text-decoration:none;color:inherit" title="Hồ sơ của tôi">
-        <i class="bi bi-person-circle"></i>
-        <span class="nav-user-name">@User.Identity?.Name</span>
-    </a>
-    <form class="inline-form" asp-controller="Account" asp-action="Logout"
-          asp-route-returnUrl="@Url.Action("Login", "Account")" method="post">
-        <button type="submit" class="nav-logout-btn">
-            <i class="bi bi-box-arrow-right"></i><span>Đăng xuất</span>
+    var name = User.Identity?.Name ?? "";
+    var initial = string.IsNullOrWhiteSpace(name) ? "?" : name.Trim()[..1].ToUpper();
+    var isAdmin = User.IsInRole("Admin");
+
+    <div class="dropdown nav-avatar-wrap">
+        <button type="button" class="nav-avatar" data-bs-toggle="dropdown" aria-expanded="false" title="Tài khoản">
+            <span class="nav-avatar-circle">@initial</span>
+            <svg class="nav-avatar-chev" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
         </button>
-    </form>
+        <ul class="dropdown-menu dropdown-menu-end nav-dropdown">
+            <li class="nav-dd-head">
+                <div class="nav-dd-name">@name</div>
+                <div class="nav-dd-mail">@(isAdmin ? "Quản trị viên" : "Thành viên")</div>
+            </li>
+            <li><a class="dropdown-item" asp-controller="Account" asp-action="Profile">Hồ sơ của tôi</a></li>
+            <li><a class="dropdown-item" asp-controller="Map" asp-action="MyPlaces">Địa điểm của tôi</a></li>
+            @if (isAdmin)
+            {
+                <li><a class="dropdown-item" asp-controller="Admin" asp-action="Index">Quản trị</a></li>
+            }
+            else
+            {
+                <li><a class="dropdown-item nav-dd-pro" asp-controller="Payments" asp-action="Premium">Nâng cấp Pro</a></li>
+            }
+            <li><hr class="dropdown-divider"></li>
+            <li>
+                <form asp-controller="Account" asp-action="Logout" asp-route-returnUrl="@Url.Action("Login", "Account")" method="post">
+                    <button type="submit" class="dropdown-item nav-dd-danger">Đăng xuất</button>
+                </form>
+            </li>
+        </ul>
+    </div>
 }
 else
 {
-    <a asp-controller="Account" asp-action="Login" class="nav-item">
-        <i class="bi bi-box-arrow-in-right"></i><span>Đăng nhập</span>
-    </a>
-    <a asp-controller="Account" asp-action="Register" class="nav-item nav-item-register">
-        <i class="bi bi-person-plus-fill"></i><span>Đăng ký</span>
-    </a>
+    <a asp-controller="Account" asp-action="Login" class="nav-link2">Đăng nhập</a>
+    <a asp-controller="Account" asp-action="Register" class="btn-accent btn-sm-accent">Đăng ký</a>
 }

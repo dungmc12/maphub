@@ -26,37 +26,16 @@
                 <span class="brand-text">CityScout</span>
             </a>
 
-            <!-- Nav -->
+            <!-- Nav — tối giản: Explore · Map · Plans · avatar -->
             <nav class="top-nav">
                 @{
                     var ctrl = ViewContext.RouteData.Values["controller"]?.ToString() ?? "";
                 }
-                <a asp-controller="Home" asp-action="Index" class="nav-item @(ctrl == "Home" ? "nav-item-active" : "")">
-                    <i class="bi bi-house-fill" style="color:#22c55e"></i><span>Trang chủ</span>
-                </a>
-                <a asp-controller="Map" asp-action="Index" class="nav-item @(ctrl == "Map" ? "nav-item-active" : "")">
-                    <i class="bi bi-map-fill" style="color:#3b82f6"></i><span>Bản đồ</span>
-                </a>
+                <a asp-controller="Home" asp-action="Index" class="nav-link2 @(ctrl == "Home" ? "is-active" : "")">Khám phá</a>
+                <a asp-controller="Map" asp-action="Index" class="nav-link2 @(ctrl == "Map" ? "is-active" : "")">Bản đồ</a>
                 @if (User.Identity?.IsAuthenticated == true)
                 {
-                    <a asp-controller="Map" asp-action="MyPlaces" class="nav-item @(ViewContext.RouteData.Values["action"]?.ToString() == "MyPlaces" ? "nav-item-active" : "")">
-                        <i class="bi bi-geo-alt-fill" style="color:#ef4444"></i><span>Địa điểm của tôi</span>
-                    </a>
-                    <a asp-controller="Plans" asp-action="Index" class="nav-item @(ctrl == "Plans" ? "nav-item-active" : "")">
-                        <i class="bi bi-calendar-week-fill" style="color:#8b5cf6"></i><span>Kế hoạch</span>
-                    </a>
-                }
-                @if (!User.IsInRole("Admin"))
-                {
-                    <a asp-controller="Payments" asp-action="Premium" class="nav-item nav-item-pro">
-                        <i class="bi bi-lightning-charge-fill"></i><span>Pro</span>
-                    </a>
-                }
-                @if (User.IsInRole("Admin"))
-                {
-                    <a asp-controller="Admin" asp-action="Index" class="nav-item nav-item-admin">
-                        <i class="bi bi-shield-fill"></i><span>Admin</span>
-                    </a>
+                    <a asp-controller="Plans" asp-action="Index" class="nav-link2 @(ctrl == "Plans" ? "is-active" : "")">Kế hoạch</a>
                 }
                 <partial name="_LoginPartial" />
             </nav>
