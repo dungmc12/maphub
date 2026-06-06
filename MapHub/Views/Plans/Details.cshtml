@@ -79,6 +79,25 @@
         </div>
     }
 
+    @{
+        var mapPts = Model.Items.Where(i => i.Place != null).ToList();
+    }
+    @if (mapPts.Any())
+    {
+        <!-- Map preview -->
+        <div class="plan-map-wrap mb-4 reveal">
+            <div id="planMap"></div>
+        </div>
+        <script>
+            window.planPoints = [
+                @foreach (var it in mapPts)
+                {
+                    @:{ lat: @it.Place!.Latitude.ToString(System.Globalization.CultureInfo.InvariantCulture), lng: @it.Place!.Longitude.ToString(System.Globalization.CultureInfo.InvariantCulture), name: "@(it.Place!.Name?.Replace("\\", "\\\\").Replace("\"", "\\\""))" },
+                }
+            ];
+        </script>
+    }
+
     @if (isOwner)
     {
         <!-- Notes / Description panel -->
@@ -181,7 +200,7 @@
                                                     <input type="hidden" name="planId" value="@Model.Id">
                                                     <input type="hidden" name="itemId"  value="@item.Id">
                                                     <button type="submit" class="aact-btn aact-del"
-                                                            onclick="return confirm('Xóa địa điểm này khỏi kế hoạch?')">
+                                                            onclick="return fadeRemoveItem(this)">
                                                         <i class="fa-solid fa-trash"></i>
                                                     </button>
                                                 </form>
@@ -509,6 +528,16 @@ async function loadPlanPlaces(cat, q) {
 // ── Chọn địa điểm trên bản đồ ───────────────────────────────────────────────
 let planPlaces = [], planPickMap = null, planPickMarkers = [], planView = 'list';
 
+// Xóa địa điểm khỏi kế hoạch: fade card rồi mới submit
+function fadeRemoveItem(btn) {
+    if (!confirm('Xóa địa điểm này khỏi kế hoạch?')) return false;
+    const card = btn.closest('.plan-item-card');
+    const form = btn.closest('form');
+    if (card) card.classList.add('removing');
+    setTimeout(() => form.submit(), 300);
+    return false;
+}
+
 function togglePlanView(mode) {
     planView = mode;
     document.getElementById('planViewList').className = 'btn btn-sm ' + (mode === 'list' ? 'btn-accent' : 'btn-outline-secondary');
@@ -589,6 +618,21 @@ document.addEventListener('DOMContentLoaded', () => {
             loadPlanPlaces(this.dataset.cat, q);
         });
     });
+
+    // Map preview: marker đánh số + đường nối lộ trình
+    if (window.planPoints && planPoints.length && document.getElementById('planMap') && window.L) {
+        const pm = L.map('planMap', { scrollWheelZoom: false });
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(pm);
+        const latlngs = [];
+        planPoints.forEach((p, i) => {
+            const icon = L.divIcon({ className: 'plan-num-marker', html: '<span>' + (i + 1) + '</span>', iconSize: [28, 28], iconAnchor: [14, 14] });
+            L.marker([p.lat, p.lng], { icon }).addTo(pm).bindPopup('<b>' + (i + 1) + '. ' + p.name + '</b>');
+            latlngs.push([p.lat, p.lng]);
+        });
+        if (latlngs.length > 1) L.polyline(latlngs, { color: '#0891B2', weight: 3, opacity: .65, dashArray: '6 7' }).addTo(pm);
+        pm.fitBounds(latlngs, { padding: [30, 30], maxZoom: 15 });
+        setTimeout(() => pm.invalidateSize(), 200);
+    }
 });
 </script>
 }
