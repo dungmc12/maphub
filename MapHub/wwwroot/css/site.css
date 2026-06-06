@@ -1738,6 +1738,28 @@ body.map-view { overflow: hidden; height: 100vh; }
 .dash-card-title { font-size: 1.02rem; font-weight: 700; letter-spacing: -.01em; margin: 0; }
 .dash-card-sub { font-size: .8rem; color: var(--ink-secondary); margin: .15rem 0 0; }
 
+/* Dashboard 2-col + lists */
+.dash-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem; }
+@media (max-width: 820px) { .dash-2col { grid-template-columns: 1fr; } }
+.rank-list { list-style: none; margin: .3rem 0 0; padding: 0; counter-reset: r; }
+.rank-item { display: flex; align-items: center; gap: .7rem; padding: .6rem 0; border-bottom: 1px solid var(--line); }
+.rank-item:last-child { border-bottom: none; }
+.rank-no { width: 26px; height: 26px; border-radius: 8px; background: var(--bg-main); color: var(--ink-secondary); font-weight: 800; font-size: .82rem; display: grid; place-items: center; flex-shrink: 0; }
+.rank-item:nth-child(1) .rank-no { background: var(--accent); color: #fff; }
+.rank-name { flex: 1; font-weight: 600; font-size: .92rem; color: var(--ink-primary); text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rank-name:hover { color: var(--accent); }
+.rank-meta { font-size: .78rem; color: var(--ink-secondary); white-space: nowrap; }
+.act-list { list-style: none; margin: .3rem 0 0; padding: 0; }
+.act-item { display: flex; align-items: center; gap: .65rem; padding: .55rem 0; font-size: .9rem; }
+.act-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--accent); flex-shrink: 0; }
+.act-review .act-dot { background: var(--warning); }
+.act-pay .act-dot { background: var(--green); }
+.act-text { flex: 1; color: var(--ink-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.act-time { font-size: .76rem; color: var(--ink-secondary); white-space: nowrap; }
+.pend-list { display: flex; flex-direction: column; gap: .3rem; margin-top: .3rem; }
+.pend-item { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .6rem .2rem; border-bottom: 1px solid var(--line); }
+.pend-item:last-child { border-bottom: none; }
+
 /* Transactions table niceties */
 .mono-code { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: .82rem; color: var(--accent-dark); font-weight: 600; }
 .tx-user { display: inline-flex; align-items: center; gap: .55rem; }

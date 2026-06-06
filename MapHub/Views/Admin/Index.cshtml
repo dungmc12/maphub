@@ -1,195 +1,182 @@
-@model IEnumerable<MapHub.Models.Place>
 @{
     ViewData["Title"] = "Admin Dashboard";
     int pendingCount = (int)(ViewBag.PendingCount ?? 0);
     int totalPlaces  = (int)(ViewBag.TotalPlaces  ?? 0);
     int totalEvents  = (int)(ViewBag.TotalEvents  ?? 0);
     int totalUsers   = (int)(ViewBag.TotalUsers   ?? 0);
+    decimal revenue  = (decimal)(ViewBag.Revenue ?? 0m);
+    var pendingPay = (ViewBag.PendingPayments as IEnumerable<dynamic> ?? Enumerable.Empty<dynamic>()).ToList();
+    var topPlaces  = (ViewBag.TopPlaces as IEnumerable<dynamic> ?? Enumerable.Empty<dynamic>()).ToList();
+    var pendingPlaces = (ViewBag.PendingPlaces as IEnumerable<dynamic> ?? Enumerable.Empty<dynamic>()).ToList();
+    var activity   = ViewBag.Activity as List<(string Kind, string Text, DateTime At)> ?? new();
+    string Vnd(decimal n) => n.ToString("#,##0") + "đ";
 }
 
 <partial name="_AdminNav" />
 
-<div class="admin-page">
-
-    <!-- Stats -->
-    <div class="admin-stats-row">
-        <div class="astat astat-orange">
-            <div class="astat-icon"><i class="fa-solid fa-hourglass-half"></i></div>
-            <div class="astat-body">
-                <div class="astat-num">@pendingCount</div>
-                <div class="astat-label">Chờ duyệt</div>
-            </div>
-        </div>
-        <div class="astat astat-blue">
-            <div class="astat-icon"><i class="fa-solid fa-location-dot"></i></div>
-            <div class="astat-body">
-                <div class="astat-num">@totalPlaces</div>
-                <div class="astat-label">Địa điểm</div>
-            </div>
-        </div>
-        <div class="astat astat-green">
-            <div class="astat-icon"><i class="fa-solid fa-calendar-day"></i></div>
-            <div class="astat-body">
-                <div class="astat-num">@totalEvents</div>
-                <div class="astat-label">Sự kiện</div>
-            </div>
-        </div>
-        <div class="astat astat-purple">
-            <div class="astat-icon"><i class="fa-solid fa-users"></i></div>
-            <div class="astat-body">
-                <div class="astat-num">@totalUsers</div>
-                <div class="astat-label">Người dùng</div>
-            </div>
-        </div>
-    </div>
-
-    @if (!string.IsNullOrEmpty(TempData["Success"]?.ToString()))
-    {
-        <div class="admin-alert admin-alert-success">✅ @TempData["Success"]</div>
-    }
-
-    @{
-        var pendingPay = ViewBag.PendingPayments as IEnumerable<dynamic> ?? Enumerable.Empty<dynamic>();
-        var pendingPayList = pendingPay.ToList();
-    }
-    @if (pendingPayList.Any())
-    {
-        <div class="admin-section-header mt-4">
-            <h2 class="admin-section-title"><i class="fa-solid fa-credit-card"></i> Thanh toán chờ duyệt <span class="admin-badge-warn">@pendingPayList.Count</span></h2>
-        </div>
-        <div class="table-responsive mb-4">
-            <table class="admin-table">
-                <thead><tr><th>Email</th><th>Gói</th><th>Số tiền</th><th>Mã CK</th><th>Mã GD ngân hàng</th><th>Thời gian</th><th>Thao tác</th></tr></thead>
-                <tbody>
-                @foreach (var p in pendingPayList)
-                {
-                    <tr id="payrow-@p.Id">
-                        <td>@(p.Email ?? p.UserId)</td>
-                        <td>@(p.PlanType == "year" ? "1 năm" : "1 tháng")</td>
-                        <td>@(((decimal)p.Amount).ToString("#,##0"))đ</td>
-                        <td><code>@p.Code</code></td>
-                        <td><small class="text-muted">@(string.IsNullOrEmpty((string?)p.TransactionId) ? "—" : p.TransactionId)</small></td>
-                        <td><small>@p.CreatedAt.ToString("dd/MM HH:mm")</small></td>
-                        <td>
-                            <button class="btn btn-sm btn-success me-1" onclick="approvePayment(@p.Id)">✅ Duyệt</button>
-                            <button class="btn btn-sm btn-outline-danger" onclick="rejectPayment(@p.Id)">✗ Từ chối</button>
-                        </td>
-                    </tr>
-                }
-                </tbody>
-            </table>
-        </div>
-    }
-
-    <div class="admin-section-header">
+<div class="admin-page dash">
+    <div class="admin-section-header mb-1">
         <div>
-            <h2 class="admin-section-title">Địa điểm gần đây</h2>
-            @if (pendingCount > 0)
-            {
-                <span class="admin-badge-warn">@pendingCount chờ duyệt</span>
-            }
+            <h2 class="admin-section-title">Tổng quan</h2>
+            <p class="admin-section-sub">Bức tranh toàn cảnh CityScout</p>
         </div>
         <a href="/Admin/AddPlace" class="btn-accent">＋ Thêm địa điểm</a>
     </div>
 
-    <div class="admin-table-wrap">
-        <table class="admin-table">
-            <thead>
-                <tr>
-                    <th>Địa điểm</th>
-                    <th>Danh mục</th>
-                    <th>Trạng thái</th>
-                    <th>Quyền xem</th>
-                    <th>Hành động</th>
-                </tr>
-            </thead>
-            <tbody>
-                @{
-                    var catViMap = new Dictionary<string,(string L,string C)>(StringComparer.OrdinalIgnoreCase){
-                        ["restaurant"]=("Nhà hàng","acat-restaurant"),["cafe"]=("Cà phê","acat-cafe"),
-                        ["entertainment"]=("Vui chơi","acat-entertainment"),["culture"]=("Văn hóa","acat-culture"),
-                        ["temple"]=("Tâm linh","acat-temple"),["nature"]=("Thiên nhiên","acat-nature"),
-                        ["education"]=("Giáo dục","acat-education"),["hotel"]=("Lưu trú","acat-hotel")
-                    };
-                }
-                @foreach (var p in Model)
-                {
-                    var (cLabel,cCls) = catViMap.TryGetValue(p.Category??"",out var cv)?cv:(p.Category??"Khác","");
-                    <tr class="@(!p.IsApproved ? "admin-row-warn" : "")">
-                        <td>
-                            <a href="/Map/Details/@p.Id" class="admin-place-link">@p.Name</a>
-                            @if (!string.IsNullOrEmpty(p.Address))
-                            { <div class="admin-sub"><i class="fa-solid fa-location-dot" style="color:#ef4444"></i> @p.Address</div> }
-                        </td>
-                        <td><span class="admin-cat-badge @cCls">@cLabel</span></td>
-                        <td>
-                            @if (p.IsApproved) { <span class="abadge abadge-green"><i class="fa-solid fa-circle-check"></i> Đã duyệt</span> }
-                            else               { <span class="abadge abadge-orange"><i class="fa-solid fa-hourglass-half"></i> Chờ duyệt</span> }
-                        </td>
-                        <td>
-                            @if (p.Visibility == "public") { <span class="abadge abadge-blue"><i class="fa-solid fa-globe"></i> Công khai</span> }
-                            else                           { <span class="abadge abadge-gray"><i class="fa-solid fa-lock"></i> Cá nhân</span> }
-                        </td>
-                        <td>
-                            <div class="admin-actions">
-                                <a href="/Map/Details/@p.Id"    class="aact-btn aact-view" title="Xem"><i class="fa-solid fa-eye"></i></a>
-                                <a href="/Admin/EditPlace/@p.Id" class="aact-btn aact-edit" title="Sửa"><i class="fa-solid fa-pen"></i></a>
-                                <form method="post" action="/Admin/ToggleFeaturedPlace" class="d-inline">
-                                    @Html.AntiForgeryToken()
-                                    <input type="hidden" name="id" value="@p.Id">
-                                    <button type="submit" class="aact-btn aact-star @(p.IsFeatured ? "aact-star-on" : "")" title="@(p.IsFeatured?"Bỏ nổi bật":"Nổi bật")">
-                                        <i class="bi @(p.IsFeatured?"bi-star-fill":"bi-star")"></i>
-                                    </button>
-                                </form>
-                                @if (!p.IsApproved)
-                                {
-                                    <form method="post" action="/Admin/ApprovePlace" class="d-inline">
-                                        @Html.AntiForgeryToken()
-                                        <input type="hidden" name="id" value="@p.Id">
-                                        <button type="submit" class="aact-btn aact-approve"><i class="fa-solid fa-check"></i> Duyệt</button>
-                                    </form>
-                                    <form method="post" action="/Admin/RejectPlace" class="d-inline"
-                                          onsubmit="return confirm('Từ chối và xóa địa điểm này?')">
-                                        @Html.AntiForgeryToken()
-                                        <input type="hidden" name="id" value="@p.Id">
-                                        <button type="submit" class="aact-btn aact-reject"><i class="fa-solid fa-xmark"></i> Từ chối</button>
-                                    </form>
-                                }
-                                <form method="post" action="/Admin/DeletePlace" class="d-inline"
-                                      onsubmit="return confirm('Xóa vĩnh viễn địa điểm &quot;@p.Name&quot;?')">
-                                    @Html.AntiForgeryToken()
-                                    <input type="hidden" name="id" value="@p.Id">
-                                    <button type="submit" class="aact-btn aact-del" title="Xóa"><i class="fa-solid fa-trash"></i></button>
-                                </form>
-                            </div>
-                        </td>
-                    </tr>
-                }
-            </tbody>
-        </table>
+    @if (!string.IsNullOrEmpty(TempData["Success"]?.ToString()))
+    {
+        <div class="admin-alert admin-alert-success">@TempData["Success"]</div>
+    }
+
+    <!-- KPI -->
+    <div class="kpi-grid mt-3">
+        <div class="kpi-card"><div class="kpi-label">Địa điểm</div><div class="kpi-num" data-count="@totalPlaces">@totalPlaces</div><div class="kpi-foot">@(pendingCount > 0 ? pendingCount + " chờ duyệt" : "Đã duyệt hết")</div></div>
+        <div class="kpi-card"><div class="kpi-label">Sự kiện</div><div class="kpi-num" data-count="@totalEvents">@totalEvents</div><div class="kpi-foot">Đang & sắp diễn ra</div></div>
+        <div class="kpi-card"><div class="kpi-label">Người dùng</div><div class="kpi-num" data-count="@totalUsers">@totalUsers</div><div class="kpi-foot">Tài khoản đã đăng ký</div></div>
+        <div class="kpi-card kpi-accent"><div class="kpi-label">Doanh thu</div><div class="kpi-num" data-count="@revenue" data-money="1">@Vnd(revenue)</div><div class="kpi-foot">Pro đã thanh toán</div></div>
     </div>
+
+    <!-- Charts -->
+    <div class="dash-charts mt-4">
+        <div class="dash-card dash-trend">
+            <div class="dash-card-head"><div><h3 class="dash-card-title">Tăng trưởng địa điểm</h3><p class="dash-card-sub">6 tháng gần nhất</p></div></div>
+            <div id="admGrowth" style="min-height:280px"></div>
+        </div>
+        <div class="dash-card">
+            <div class="dash-card-head"><h3 class="dash-card-title">Phân bố danh mục</h3></div>
+            <div id="admCat" style="min-height:280px"></div>
+        </div>
+    </div>
+
+    <!-- Pending payments -->
+    @if (pendingPay.Any())
+    {
+        <div class="dash-card mt-4" style="padding:0;overflow:hidden">
+            <div class="dash-card-head" style="padding:1.1rem 1.3rem 0"><h3 class="dash-card-title">Thanh toán chờ duyệt <span class="admin-badge-warn">@pendingPay.Count</span></h3></div>
+            <div class="admin-table-wrap" style="border:none;box-shadow:none;border-radius:0">
+                <table class="admin-table">
+                    <thead><tr><th>Người dùng</th><th>Gói</th><th>Số tiền</th><th>Mã CK</th><th>Thời gian</th><th>Thao tác</th></tr></thead>
+                    <tbody>
+                        @foreach (var p in pendingPay)
+                        {
+                            <tr id="payrow-@p.Id">
+                                <td>@(p.Email ?? p.UserId)</td>
+                                <td><span class="abadge @(p.PlanType == "year" ? "abadge-gold" : "abadge-blue")">@(p.PlanType == "year" ? "1 năm" : "1 tháng")</span></td>
+                                <td><strong style="color:var(--green)">@(((decimal)p.Amount).ToString("#,##0"))đ</strong></td>
+                                <td><span class="mono-code">@p.Code</span></td>
+                                <td><span class="admin-sub">@p.CreatedAt.ToString("dd/MM HH:mm")</span></td>
+                                <td>
+                                    <button class="aact-btn aact-approve" onclick="approvePayment(@p.Id)"><i class="fa-solid fa-check"></i> Duyệt</button>
+                                    <button class="aact-btn aact-reject" onclick="rejectPayment(@p.Id)"><i class="fa-solid fa-xmark"></i> Từ chối</button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+
+    <!-- Top places + Activity -->
+    <div class="dash-2col mt-4">
+        <div class="dash-card">
+            <div class="dash-card-head"><h3 class="dash-card-title">Địa điểm nổi bật</h3><span class="dash-card-sub">Theo lượt đánh giá</span></div>
+            @if (topPlaces.Any())
+            {
+                <ol class="rank-list">
+                    @{ int rank = 0; }
+                    @foreach (var t in topPlaces)
+                    {
+                        rank++;
+                        <li class="rank-item">
+                            <span class="rank-no">@rank</span>
+                            <a href="/Map/Details/@t.Id" class="rank-name">@t.Name</a>
+                            <span class="rank-meta">★ @(((double)t.Rating).ToString("0.0")) · @t.Reviews đánh giá</span>
+                        </li>
+                    }
+                </ol>
+            }
+            else { <p class="text-muted" style="padding:.5rem">Chưa có dữ liệu đánh giá.</p> }
+        </div>
+
+        <div class="dash-card">
+            <div class="dash-card-head"><h3 class="dash-card-title">Hoạt động gần đây</h3></div>
+            @if (activity.Any())
+            {
+                <ul class="act-list">
+                    @foreach (var a in activity)
+                    {
+                        <li class="act-item act-@a.Kind">
+                            <span class="act-dot"></span>
+                            <span class="act-text">@a.Text</span>
+                            <span class="act-time">@a.At.ToLocalTime().ToString("dd/MM HH:mm")</span>
+                        </li>
+                    }
+                </ul>
+            }
+            else { <p class="text-muted" style="padding:.5rem">Chưa có hoạt động.</p> }
+        </div>
+    </div>
+
+    <!-- Pending approvals -->
+    @if (pendingPlaces.Any())
+    {
+        <div class="dash-card mt-4">
+            <div class="dash-card-head"><h3 class="dash-card-title">Chờ duyệt <span class="admin-badge-warn">@pendingPlaces.Count</span></h3><a href="/Admin/Places?filter=pending" class="dash-card-sub" style="text-decoration:none">Xem tất cả →</a></div>
+            <div class="pend-list">
+                @foreach (var p in pendingPlaces)
+                {
+                    <div class="pend-item">
+                        <div>
+                            <a href="/Map/Details/@p.Id" class="rank-name">@p.Name</a>
+                            <div class="admin-sub">@p.Category · @p.CreatedAt.ToLocalTime().ToString("dd/MM HH:mm")</div>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <form method="post" action="/Admin/ApprovePlace">@Html.AntiForgeryToken()<input type="hidden" name="id" value="@p.Id"><button class="aact-btn aact-approve"><i class="fa-solid fa-check"></i> Duyệt</button></form>
+                            <form method="post" action="/Admin/RejectPlace" onsubmit="return confirm('Từ chối và xóa?')">@Html.AntiForgeryToken()<input type="hidden" name="id" value="@p.Id"><button class="aact-btn aact-reject"><i class="fa-solid fa-xmark"></i></button></form>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    }
 </div>
 
 @section Scripts {
+<script src="https://cdn.jsdelivr.net/npm/apexcharts@3.49.0/dist/apexcharts.min.js"></script>
 <script>
-const _tok = document.querySelector('meta[name="RequestVerificationToken"]')?.content
-    || document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
-
+const _tok = document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
 async function approvePayment(id) {
     if (!confirm('Duyệt thanh toán này và kích hoạt Pro cho user?')) return;
     const fd = new FormData(); fd.append('id', id); fd.append('__RequestVerificationToken', _tok);
-    const r = await fetch('/Payments/Approve', { method:'POST', body: fd });
-    const d = await r.json();
-    if (d.ok) { document.getElementById('payrow-' + id)?.remove(); alert('✅ Đã duyệt - user đã lên Pro!'); }
-    else alert('Lỗi: ' + (d.msg||''));
+    const r = await fetch('/Payments/Approve', { method:'POST', body: fd }); const d = await r.json();
+    if (d.ok) { document.getElementById('payrow-' + id)?.remove(); alert('Đã duyệt — user đã lên Pro!'); } else alert('Lỗi: ' + (d.msg||''));
 }
 async function rejectPayment(id) {
     if (!confirm('Từ chối thanh toán này?')) return;
     const fd = new FormData(); fd.append('id', id); fd.append('__RequestVerificationToken', _tok);
-    const r = await fetch('/Payments/Reject', { method:'POST', body: fd });
-    const d = await r.json();
-    if (d.ok) { document.getElementById('payrow-' + id)?.remove(); }
-    else alert('Lỗi: ' + (d.msg||''));
+    const r = await fetch('/Payments/Reject', { method:'POST', body: fd }); const d = await r.json();
+    if (d.ok) document.getElementById('payrow-' + id)?.remove(); else alert('Lỗi: ' + (d.msg||''));
 }
+(function () {
+    const ink = '#64748B', accent = '#0891B2';
+    if (!window.ApexCharts) return;
+    new ApexCharts(document.querySelector('#admGrowth'), {
+        chart: { type: 'area', height: 280, toolbar: { show: false }, fontFamily: 'Inter, sans-serif' },
+        series: [{ name: 'Địa điểm mới', data: @Html.Raw(ViewBag.GrowthData ?? "[]") }],
+        xaxis: { categories: @Html.Raw(ViewBag.GrowthLabels ?? "[]"), labels: { style: { colors: ink } }, axisBorder: { show: false }, axisTicks: { show: false } },
+        yaxis: { labels: { style: { colors: ink } } },
+        colors: [accent], stroke: { curve: 'smooth', width: 3 },
+        fill: { type: 'gradient', gradient: { opacityFrom: .35, opacityTo: .02 } },
+        grid: { borderColor: '#EEF2F6', strokeDashArray: 4 }, dataLabels: { enabled: false }
+    }).render();
+    new ApexCharts(document.querySelector('#admCat'), {
+        chart: { type: 'donut', height: 280, fontFamily: 'Inter, sans-serif' },
+        series: @Html.Raw(ViewBag.CatData ?? "[1]"), labels: @Html.Raw(ViewBag.CatLabels ?? "['—']"),
+        colors: ['#0891B2','#F59E0B','#38BDF8','#10B981','#8b5cf6','#ef4444','#14b8a6','#f472b6'],
+        legend: { position: 'bottom', labels: { colors: ink } }, stroke: { width: 0 },
+        plotOptions: { pie: { donut: { size: '66%' } } }, dataLabels: { enabled: true, formatter: v => v.toFixed(0) + '%' }
+    }).render();
+})();
 </script>
 }

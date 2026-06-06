@@ -40,14 +40,50 @@ public class AdminController : Controller
         ViewBag.TotalEvents     = totalEvents;
         ViewBag.TotalUsers      = totalUsers;
         ViewBag.PendingPayments = pendingPayments;
+        ViewBag.Revenue = await _context.Payments.Where(p => p.Status == "paid").SumAsync(p => (decimal?)p.Amount) ?? 0m;
 
-        var places = await _context.Places
-            .Include(p => p.Images.Where(i => i.IsPrimary))
+        var now = DateTime.UtcNow;
+        var monthStart = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+        var months = Enumerable.Range(0, 6).Select(i => monthStart.AddMonths(-i)).Reverse().ToList();
+
+        // Tăng trưởng: địa điểm tạo mỗi tháng (6 tháng)
+        var placeDates = await _context.Places.Select(p => p.CreatedAt).ToListAsync();
+        ViewBag.GrowthLabels = System.Text.Json.JsonSerializer.Serialize(months.Select(m => $"T{m.Month}").ToList());
+        ViewBag.GrowthData   = System.Text.Json.JsonSerializer.Serialize(months.Select(m => placeDates.Count(d => d >= m && d < m.AddMonths(1))).ToList());
+
+        // Phân bố theo danh mục
+        var catVi = new Dictionary<string, string> {
+            ["restaurant"]="Nhà hàng", ["cafe"]="Cà phê", ["entertainment"]="Vui chơi", ["hotel"]="Lưu trú",
+            ["culture"]="Văn hóa", ["temple"]="Tâm linh", ["nature"]="Thiên nhiên", ["education"]="Giáo dục",
+            ["home"]="Nhà riêng", ["work"]="Công ty", ["school"]="Trường học", ["favorite"]="Yêu thích"
+        };
+        var catGroups = await _context.Places.Where(p => p.Category != null)
+            .GroupBy(p => p.Category!).Select(g => new { Cat = g.Key, Count = g.Count() })
+            .OrderByDescending(x => x.Count).Take(8).ToListAsync();
+        ViewBag.CatLabels = System.Text.Json.JsonSerializer.Serialize(catGroups.Select(x => catVi.TryGetValue(x.Cat.ToLower(), out var l) ? l : x.Cat).ToList());
+        ViewBag.CatData   = System.Text.Json.JsonSerializer.Serialize(catGroups.Select(x => x.Count).ToList());
+
+        // Top địa điểm theo lượt đánh giá
+        ViewBag.TopPlaces = await _context.Places
+            .Select(p => new { p.Id, p.Name, Reviews = p.Reviews.Count, Rating = p.Reviews.Any() ? Math.Round(p.Reviews.Average(r => r.QualityRating), 1) : 0.0 })
+            .OrderByDescending(x => x.Reviews).ThenByDescending(x => x.Rating).Take(5).ToListAsync();
+
+        // Chờ duyệt (địa điểm công khai)
+        ViewBag.PendingPlaces = await _context.Places.Where(p => p.Visibility == "public" && !p.IsApproved)
             .OrderByDescending(p => p.CreatedAt)
-            .Take(50)
-            .ToListAsync();
+            .Select(p => new { p.Id, p.Name, p.Category, p.CreatedAt }).Take(6).ToListAsync();
 
-        return View(places);
+        // Hoạt động gần đây (địa điểm mới + đánh giá mới + thanh toán)
+        var acts = new List<(string Kind, string Text, DateTime At)>();
+        foreach (var p in await _context.Places.OrderByDescending(x => x.CreatedAt).Take(6).Select(x => new { x.Name, x.CreatedAt }).ToListAsync())
+            acts.Add(("place", $"Địa điểm mới: {p.Name}", p.CreatedAt));
+        foreach (var r in await _context.PlaceReviews.OrderByDescending(x => x.CreatedAt).Take(6).Select(x => new { Name = x.Place!.Name, x.CreatedAt }).ToListAsync())
+            acts.Add(("review", $"Đánh giá mới cho {r.Name}", r.CreatedAt));
+        foreach (var pay in await _context.Payments.Where(x => x.Status == "paid").OrderByDescending(x => x.PaidAt).Take(4).Select(x => new { x.Amount, x.PaidAt }).ToListAsync())
+            acts.Add(("pay", $"Thanh toán Pro {pay.Amount:#,##0}đ", pay.PaidAt ?? now));
+        ViewBag.Activity = acts.OrderByDescending(a => a.At).Take(8).ToList();
+
+        return View();
     }
 
     [HttpGet]
