@@ -51,8 +51,7 @@ public class MapController : Controller
         var query = _context.Places
             .Where(p => (p.Visibility == "public" && p.IsApproved)
                      || (p.Visibility == "private" && p.CreatedByUserId == currentUserId))
-            .Include(p => p.Images.Where(i => i.IsPrimary))
-            .Include(p => p.Reviews)
+            .AsNoTracking()
             .AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(category))
@@ -70,15 +69,15 @@ public class MapController : Controller
         if (maxPrice.HasValue)
             query = query.Where(p => p.MinPrice == null || p.MinPrice <= maxPrice.Value);
 
+        // Chỉ lấy ID ảnh đại diện + version (UpdatedAt) — KHÔNG kéo chuỗi base64 nặng vào JSON.
+        // Ảnh tải riêng qua /Map/Image/{id} (có cache trình duyệt) → danh sách nhẹ, đông người vẫn mượt.
         var rows = await query.Select(p => new
         {
             p.Id, p.Name, p.Description, p.Latitude, p.Longitude,
-            p.Address, p.Category, p.Phone, p.MinPrice, p.MaxPrice,
+            p.Address, p.Category, p.Phone, p.MinPrice, p.MaxPrice, p.UpdatedAt,
             Rating = p.Reviews.Any() ? Math.Round(p.Reviews.Average(r => r.QualityRating), 1) : 0.0,
             ReviewCount = p.Reviews.Count,
-            PrimaryImage = p.Images.Any()
-                ? p.Images.First().Url
-                : "https://picsum.photos/seed/default-place/400/300"
+            PrimaryImageId = p.Images.Where(i => i.IsPrimary).Select(i => (int?)i.Id).FirstOrDefault()
         }).ToListAsync();
 
         // Đánh dấu địa điểm đã lưu của user hiện tại
@@ -91,11 +90,39 @@ public class MapController : Controller
         {
             p.Id, p.Name, p.Description, p.Latitude, p.Longitude,
             p.Address, p.Category, p.Phone, p.MinPrice, p.MaxPrice,
-            p.Rating, p.ReviewCount, p.PrimaryImage,
+            p.Rating, p.ReviewCount,
+            PrimaryImage = p.PrimaryImageId.HasValue
+                ? $"/Map/Image/{p.PrimaryImageId}?v={p.UpdatedAt.Ticks}"
+                : "https://picsum.photos/seed/default-place/400/300",
             IsSaved = savedIds.Contains(p.Id)
         });
 
         return Json(places);
+    }
+
+    // Phục vụ ảnh địa điểm theo ID, có cache trình duyệt 30 ngày → JSON/HTML không phải nhồi base64,
+    // trang nhẹ hơn nhiều và tải nhanh khi đông người. Ảnh URL ngoài/uploads cũ thì chuyển hướng.
+    [HttpGet]
+    public async Task<IActionResult> Image(int id)
+    {
+        var url = await _context.PlaceImages.AsNoTracking()
+            .Where(i => i.Id == id).Select(i => i.Url).FirstOrDefaultAsync();
+        if (string.IsNullOrEmpty(url)) return NotFound();
+
+        if (url.StartsWith("data:", StringComparison.OrdinalIgnoreCase))
+        {
+            var comma = url.IndexOf(',');
+            if (comma < 0) return NotFound();
+            var mime = url[5..comma].Split(';')[0];          // data:image/jpeg;base64,...
+            try
+            {
+                var bytes = Convert.FromBase64String(url[(comma + 1)..]);
+                Response.Headers["Cache-Control"] = "public, max-age=2592000, immutable";
+                return File(bytes, string.IsNullOrWhiteSpace(mime) ? "image/jpeg" : mime);
+            }
+            catch { return NotFound(); }
+        }
+        return Redirect(url);   // URL ngoài hoặc /uploads cũ
     }
 
     [HttpGet]

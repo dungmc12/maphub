@@ -209,7 +209,8 @@
         <div class="places-grid">
             @foreach (var place in Model)
             {
-                var img     = place.Images.FirstOrDefault()?.Url ?? "https://picsum.photos/seed/place-default/400/300";
+                var imgObj  = place.Images.FirstOrDefault();
+                var img     = imgObj != null ? $"/Map/Image/{imgObj.Id}?v={place.UpdatedAt.Ticks}" : "https://picsum.photos/seed/place-default/400/300";
                 var rating  = place.Reviews.Any() ? Math.Round(place.Reviews.Average(r => r.QualityRating), 1) : 0.0;
                 var reviews = place.Reviews.Count;
                 <div class="place-card">

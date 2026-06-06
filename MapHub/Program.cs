@@ -37,6 +37,14 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 
 builder.Services.AddControllersWithViews();
 builder.Services.AddRazorPages();
+
+// Nén Gzip/Brotli cho JSON/HTML/CSS/JS → giảm dung lượng truyền, tải nhanh hơn khi đông người
+builder.Services.AddResponseCompression(o =>
+{
+    o.EnableForHttps = true;
+    o.MimeTypes = Microsoft.AspNetCore.ResponseCompression.ResponseCompressionDefaults.MimeTypes
+        .Concat(new[] { "application/json", "image/svg+xml" });
+});
 builder.Services.Configure<GoogleMapsOptions>(builder.Configuration.GetSection("GoogleMaps"));
 builder.Services.Configure<AiAssistantOptions>(builder.Configuration.GetSection("AI"));
 
@@ -134,6 +142,7 @@ var app = builder.Build();
 
 // Phải đặt TRƯỚC mọi middleware dùng tới scheme (https redirect, auth, OAuth callback)
 app.UseForwardedHeaders();
+app.UseResponseCompression();
 
 if (!app.Environment.IsDevelopment())
 {
@@ -144,7 +153,12 @@ if (!app.Environment.IsDevelopment())
 if (!disableHttpsRedirection)
     app.UseHttpsRedirection();
 
-app.UseStaticFiles();
+app.UseStaticFiles(new StaticFileOptions
+{
+    // CSS/JS dùng asp-append-version (hash đổi khi sửa) nên cache dài 7 ngày an toàn → tải lại nhanh
+    OnPrepareResponse = ctx =>
+        ctx.Context.Response.Headers["Cache-Control"] = "public, max-age=604800"
+});
 app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();

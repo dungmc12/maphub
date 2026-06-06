@@ -73,7 +73,8 @@
         <div class="row g-3" id="placeGrid">
             @foreach (var p in Model)
             {
-                var img = p.Images.FirstOrDefault()?.Url ?? "https://placehold.co/400x250?text=No+Image";
+                var imgObj = p.Images.FirstOrDefault();
+                var img = imgObj != null ? $"/Map/Image/{imgObj.Id}?v={p.UpdatedAt.Ticks}" : "https://placehold.co/400x250?text=No+Image";
                 var inv = System.Globalization.CultureInfo.InvariantCulture;
                 var dir = $"https://www.google.com/maps/dir/?api=1&destination={p.Latitude.ToString(inv)},{p.Longitude.ToString(inv)}";
                 var delMsg = $"Xóa địa điểm \"{p.Name}\"? Hành động này không thể hoàn tác.";
@@ -143,7 +144,8 @@
         <div class="row g-3">
             @foreach (var p in savedPlaces)
             {
-                var simg = p.Images.FirstOrDefault()?.Url ?? "https://placehold.co/400x250?text=No+Image";
+                var simgObj = p.Images.FirstOrDefault();
+                var simg = simgObj != null ? $"/Map/Image/{simgObj.Id}?v={p.UpdatedAt.Ticks}" : "https://placehold.co/400x250?text=No+Image";
                 var sinv = System.Globalization.CultureInfo.InvariantCulture;
                 var sdir = $"https://www.google.com/maps/dir/?api=1&destination={p.Latitude.ToString(sinv)},{p.Longitude.ToString(sinv)}";
                 <div class="col-md-4 col-sm-6" id="saved-@p.Id">

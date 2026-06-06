@@ -95,8 +95,8 @@
                             @foreach (var img in galleryImages)
                             {
                                 <div class="carousel-item @(ci == 0 ? "active" : "")">
-                                    <img src="@img.Url" class="d-block w-100 gallery-main-img"
-                                         alt="@img.Caption" onclick="openLightbox(this.src)"
+                                    <img src="/Map/Image/@img.Id?v=@Model.UpdatedAt.Ticks" class="d-block w-100 gallery-main-img"
+                                         alt="@img.Caption" loading="lazy" onclick="openLightbox(this.src)"
                                          onerror="this.onerror=null;this.src='https://placehold.co/800x400?text=Ảnh+không+còn'">
                                     @if (!string.IsNullOrEmpty(img.Caption))
                                     {
@@ -126,7 +126,7 @@
                             @{ int ti = 0; }
                             @foreach (var img in galleryImages)
                             {
-                                <img src="@img.Url" alt="thumb"
+                                <img src="/Map/Image/@img.Id?v=@Model.UpdatedAt.Ticks" alt="thumb" loading="lazy"
                                      class="gallery-thumb @(ti == 0 ? "active" : "")"
                                      data-index="@ti"
                                      onclick="goToSlide(@ti)"
@@ -159,7 +159,7 @@
                     <div style="display:flex;flex-wrap:wrap;gap:.6rem">
                         @foreach (var mi in menuImages)
                         {
-                            <img src="@mi.Url" alt="Ảnh menu" onclick="openLightbox(this.src)"
+                            <img src="/Map/Image/@mi.Id?v=@Model.UpdatedAt.Ticks" alt="Ảnh menu" loading="lazy" onclick="openLightbox(this.src)"
                                  onerror="this.onerror=null;this.src='https://placehold.co/200x200?text=x'"
                                  style="width:140px;height:140px;object-fit:cover;border-radius:10px;cursor:zoom-in;border:1px solid var(--line)">
                         }
