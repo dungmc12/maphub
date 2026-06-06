@@ -1313,8 +1313,14 @@ body.map-view { overflow: hidden; height: 100vh; }
 @media (max-width: 768px) {
   /* Bản đồ: sidebar XẾP TRÊN, map XẾP DƯỚI (trước đây nằm cùng hàng → map văng ra ngoài) */
   .map-body          { flex-direction: column; }
-  .map-sidebar-panel { width: 100%; height: 42vh; flex: 0 0 auto; border-right: none; border-bottom: 1px solid var(--line); }
+  .map-sidebar-panel { width: 100%; height: 38vh; flex: 0 0 auto; border-right: none; border-bottom: 1px solid var(--line); }
   .map-body > #map   { width: 100%; flex: 1 1 auto; min-height: 0; }
+  /* Thu nhỏ bảng thời tiết để không che marker trên map nhỏ */
+  .weather-map-panel { min-width: 0; max-width: 168px; padding: 7px 9px; }
+  .weather-panel-icon { font-size: 1.4rem; }
+  .weather-panel-temp { font-size: 1.05rem; }
+  .weather-panel-desc, .weather-panel-wind { font-size: .68rem; }
+  .weather-legend { font-size: .62rem; gap: 5px; padding-top: 6px; }
   .hero-slide        { height: 280px; }
   .hero-slide-overlay { padding: 1.5rem; }
   .hero-event-title  { font-size: 1.2rem; }
