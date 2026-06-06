@@ -112,9 +112,17 @@
 
             <!-- Place list -->
             <div id="placeList" class="place-list-scroll">
-                <div class="text-center text-muted p-4">
-                    <div class="spinner-border spinner-border-sm me-1"></div> Đang tải…
-                </div>
+                @for (int s = 0; s < 6; s++)
+                {
+                    <div class="skeleton-card">
+                        <div class="skel skel-img"></div>
+                        <div style="flex:1">
+                            <div class="skel skel-line" style="width:70%"></div>
+                            <div class="skel skel-line" style="width:45%"></div>
+                            <div class="skel skel-line" style="width:85%;margin-top:14px"></div>
+                        </div>
+                    </div>
+                }
             </div>
         </div>
 
@@ -607,7 +615,7 @@ function renderPlaces(list) {
     }
 
     container.innerHTML = '';
-    view.forEach(p => {
+    view.forEach((p, _idx) => {
         const suit = currentWeather
             ? getWeatherSuitability(currentWeather.weatherCode, p.category)
             : 'good';
@@ -652,6 +660,7 @@ function renderPlaces(list) {
                 ${currentWeather ? `<div class="place-weather-badge ${sl.cls}">${sl.text}</div>` : ''}
             </div>`;
         card.onclick = () => { map.setView([p.latitude, p.longitude], 16); m.openPopup(); };
+        card.style.animationDelay = Math.min(_idx, 12) * 30 + 'ms';   // stagger entrance
         container.appendChild(card);
     });
 }
