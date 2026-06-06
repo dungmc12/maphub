@@ -1082,3 +1082,16 @@
 	if (document.readyState !== "loading") init();
 	else document.addEventListener("DOMContentLoaded", init);
 })();
+
+/* ── Validate SĐT (9–11 chữ số) cho mọi form có input .phone-in ──────────── */
+(() => {
+	document.addEventListener("submit", (e) => {
+		const form = e.target;
+		if (!form.querySelectorAll) return;
+		const bad = Array.from(form.querySelectorAll(".phone-in")).find((inp) => {
+			const d = (inp.value || "").replace(/\D/g, "");
+			return inp.value.trim() && (d.length < 9 || d.length > 11);
+		});
+		if (bad) { e.preventDefault(); alert("Số điện thoại phải có 9–11 chữ số."); bad.focus(); }
+	}, true);
+})();

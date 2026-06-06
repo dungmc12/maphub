@@ -432,6 +432,20 @@
                             <a href="tel:@Model.Phone">@Model.Phone</a>
                         </li>
                     }
+                    @if (!string.IsNullOrEmpty(Model.Phone2))
+                    {
+                        <li>
+                            <i class="fa-solid fa-phone-volume" style="color:#0d9488;font-size:1rem"></i>
+                            <a href="tel:@Model.Phone2">@Model.Phone2</a> <small class="text-muted">(hotline)</small>
+                        </li>
+                    }
+                    @if (!string.IsNullOrEmpty(Model.OpenTime) || !string.IsNullOrEmpty(Model.CloseTime))
+                    {
+                        <li>
+                            <i class="fa-solid fa-clock" style="color:#f59e0b;font-size:1rem"></i>
+                            <span>@(Model.OpenTime ?? "?") – @(Model.CloseTime ?? "?")</span>
+                        </li>
+                    }
                     @if (!string.IsNullOrEmpty(Model.WebsiteUrl))
                     {
                         <li>

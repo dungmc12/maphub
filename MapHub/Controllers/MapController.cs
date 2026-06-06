@@ -193,6 +193,9 @@ public class MapController : Controller
             About = dto.About,
             Address = dto.Address,
             Phone = dto.Phone,
+            Phone2 = dto.Phone2,
+            OpenTime = dto.OpenTime,
+            CloseTime = dto.CloseTime,
             WebsiteUrl = dto.WebsiteUrl,
             MinPrice = dto.MinPrice,
             MaxPrice = dto.MaxPrice,
@@ -464,7 +467,8 @@ public class MapController : Controller
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> EditMyPlace(int id, string name, string? category, string? about,
-        string? address, string? phone, decimal? minPrice, decimal? maxPrice, string visibility,
+        string? address, string? phone, string? phone2, string? openTime, string? closeTime,
+        decimal? minPrice, decimal? maxPrice, string visibility,
         decimal latitude, decimal longitude, string? newImageUrl, IFormFile? imageFile,
         IFormFile[]? moreImages = null, IFormFile[]? menuImages = null)
     {
@@ -478,6 +482,9 @@ public class MapController : Controller
         place.About      = about;
         place.Address    = address;
         place.Phone      = phone;
+        place.Phone2     = phone2;
+        place.OpenTime   = openTime;
+        place.CloseTime  = closeTime;
         place.MinPrice   = minPrice;
         place.MaxPrice   = maxPrice;
         place.Visibility = visibility;
@@ -530,6 +537,9 @@ public class PlaceDto
     public string? About { get; set; }
     public string? Address { get; set; }
     public string? Phone { get; set; }
+    public string? Phone2 { get; set; }
+    public string? OpenTime { get; set; }
+    public string? CloseTime { get; set; }
     public string? WebsiteUrl { get; set; }
     public decimal? MinPrice { get; set; }
     public decimal? MaxPrice { get; set; }

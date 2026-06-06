@@ -225,6 +225,25 @@ using (var scope = app.Services.CreateScope())
         app.Logger.LogError(ex, "Auto-migration UserLists lỗi");
     }
 
+    // Thêm cột Phone2 / OpenTime / CloseTime cho Places nếu chưa có
+    try
+    {
+        if (dbProvider == "postgres")
+            await context.Database.ExecuteSqlRawAsync(
+                "ALTER TABLE \"Places\" ADD COLUMN IF NOT EXISTS \"Phone2\" text NULL; " +
+                "ALTER TABLE \"Places\" ADD COLUMN IF NOT EXISTS \"OpenTime\" text NULL; " +
+                "ALTER TABLE \"Places\" ADD COLUMN IF NOT EXISTS \"CloseTime\" text NULL;");
+        else
+            await context.Database.ExecuteSqlRawAsync(
+                "IF COL_LENGTH('Places','Phone2') IS NULL ALTER TABLE Places ADD Phone2 nvarchar(max) NULL; " +
+                "IF COL_LENGTH('Places','OpenTime') IS NULL ALTER TABLE Places ADD OpenTime nvarchar(max) NULL; " +
+                "IF COL_LENGTH('Places','CloseTime') IS NULL ALTER TABLE Places ADD CloseTime nvarchar(max) NULL;");
+    }
+    catch (Exception ex)
+    {
+        app.Logger.LogError(ex, "Auto-migration Places Phone2/OpenTime/CloseTime lỗi");
+    }
+
     // Thêm cột IsMenu cho PlaceImages nếu chưa có (ảnh thực đơn/menu)
     try
     {

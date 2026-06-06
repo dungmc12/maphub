@@ -40,17 +40,29 @@
                     <label class="form-label fw-semibold">Mô tả / Ghi chú</label>
                     <textarea name="about" class="form-control" rows="3">@Model.About</textarea>
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-6">
                     <label class="form-label fw-semibold">Điện thoại</label>
-                    <input type="text" name="phone" class="form-control" value="@Model.Phone">
+                    <input type="tel" name="phone" class="form-control phone-in" value="@Model.Phone" inputmode="numeric">
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">Hotline phụ <small class="text-muted">(tùy chọn)</small></label>
+                    <input type="tel" name="phone2" class="form-control phone-in" value="@Model.Phone2" inputmode="numeric">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-semibold">Giờ mở cửa</label>
+                    <input type="time" name="openTime" class="form-control" value="@Model.OpenTime">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-semibold">Giờ đóng cửa</label>
+                    <input type="time" name="closeTime" class="form-control" value="@Model.CloseTime">
+                </div>
+                <div class="col-md-3">
                     <label class="form-label fw-semibold">Giá từ (đ)</label>
-                    <input type="number" name="minPrice" class="form-control" value="@Model.MinPrice">
+                    <input type="number" name="minPrice" class="form-control" value="@(Model.MinPrice.HasValue ? ((long)Model.MinPrice).ToString() : "")" min="0" step="1000">
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <label class="form-label fw-semibold">Giá đến (đ)</label>
-                    <input type="number" name="maxPrice" class="form-control" value="@Model.MaxPrice">
+                    <input type="number" name="maxPrice" class="form-control" value="@(Model.MaxPrice.HasValue ? ((long)Model.MaxPrice).ToString() : "")" min="0" step="1000">
                 </div>
                 <div class="col-md-6">
                     <label class="form-label fw-semibold">Quyền xem</label>

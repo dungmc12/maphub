@@ -61,6 +61,9 @@ public class Place
     public decimal? MinPrice { get; set; }
     public decimal? MaxPrice { get; set; }
     public string? Phone { get; set; }
+    public string? Phone2 { get; set; }       // Hotline phụ (tùy chọn)
+    public string? OpenTime { get; set; }      // Giờ mở cửa, vd "08:00"
+    public string? CloseTime { get; set; }     // Giờ đóng cửa, vd "22:00"
     public string? WebsiteUrl { get; set; }
     public string? Category { get; set; }
     public string? CreatedByUserId { get; set; }

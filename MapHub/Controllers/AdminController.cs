@@ -360,7 +360,8 @@ public class AdminController : Controller
     public async Task<IActionResult> EditPlace(int id, string name, string? category, string? about,
         string? address, string? phone, string? websiteUrl, decimal? minPrice, decimal? maxPrice,
         string visibility, string? newImageUrl, IFormFile? imageFile, int[]? tagIds, bool isFeatured = false,
-        IFormFile[]? moreImages = null, IFormFile[]? menuImages = null)
+        IFormFile[]? moreImages = null, IFormFile[]? menuImages = null,
+        string? phone2 = null, string? openTime = null, string? closeTime = null)
     {
         var place = await _context.Places.Include(p => p.Images).FirstOrDefaultAsync(p => p.Id == id);
         if (place == null) return NotFound();
@@ -378,6 +379,9 @@ public class AdminController : Controller
         place.About      = about;
         place.Address    = address;
         place.Phone      = phone;
+        place.Phone2     = phone2;
+        place.OpenTime   = openTime;
+        place.CloseTime  = closeTime;
         place.WebsiteUrl = websiteUrl;
         place.MinPrice   = minPrice;
         place.MaxPrice   = maxPrice;
