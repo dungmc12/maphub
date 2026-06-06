@@ -1097,6 +1097,23 @@
 	else document.addEventListener("DOMContentLoaded", init);
 })();
 
+/* ── Validate video (≤30s · ≤15MB) cho mọi input .video-in ──────────────── */
+(() => {
+	document.addEventListener("change", (e) => {
+		const inp = e.target;
+		if (!inp.classList || !inp.classList.contains("video-in")) return;
+		const f = inp.files && inp.files[0];
+		if (!f) return;
+		if (f.size > 15 * 1024 * 1024) { alert("Video quá lớn (tối đa 15MB)."); inp.value = ""; return; }
+		const url = URL.createObjectURL(f);
+		const v = document.createElement("video");
+		v.preload = "metadata";
+		v.onloadedmetadata = () => { if (v.duration > 31) { alert("Video quá dài (tối đa 30 giây). Hãy cắt ngắn lại."); inp.value = ""; } URL.revokeObjectURL(url); };
+		v.onerror = () => { alert("Không đọc được video này."); inp.value = ""; URL.revokeObjectURL(url); };
+		v.src = url;
+	});
+})();
+
 /* ── Validate SĐT (9–11 chữ số) cho mọi form có input .phone-in ──────────── */
 (() => {
 	document.addEventListener("submit", (e) => {

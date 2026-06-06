@@ -476,7 +476,7 @@ public class MapController : Controller
         string? address, string? phone, string? phone2, string? openTime, string? closeTime,
         decimal? minPrice, decimal? maxPrice, string visibility,
         decimal latitude, decimal longitude, string? newImageUrl, IFormFile? imageFile,
-        IFormFile[]? moreImages = null, IFormFile[]? menuImages = null)
+        IFormFile[]? moreImages = null, IFormFile[]? menuImages = null, IFormFile? videoFile = null)
     {
         var currentUserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
         var place = await _context.Places.Include(p => p.Images).FirstOrDefaultAsync(p => p.Id == id);
@@ -509,14 +509,14 @@ public class MapController : Controller
         await _context.SaveChangesAsync();
 
         // Bổ sung nhiều ảnh khác + ảnh menu (không bắt buộc)
-        await AddPlaceImagesAsync(place.Id, moreImages, menuImages, currentUserId);
+        await AddPlaceImagesAsync(place.Id, moreImages, menuImages, currentUserId, videoFile);
 
         TempData["Success"] = $"Đã cập nhật \"{place.Name}\".";
         return RedirectToAction(nameof(MyPlaces));
     }
 
     // Thêm nhiều ảnh (thường + menu) cho địa điểm, lưu base64 (bền với Render redeploy)
-    private async Task AddPlaceImagesAsync(int placeId, IFormFile[]? moreImages, IFormFile[]? menuImages, string? userId)
+    private async Task AddPlaceImagesAsync(int placeId, IFormFile[]? moreImages, IFormFile[]? menuImages, string? userId, IFormFile? videoFile = null)
     {
         foreach (var f in moreImages ?? Array.Empty<IFormFile>())
         {
@@ -531,6 +531,12 @@ public class MapController : Controller
             var url = await ImageHelper.ToDataUrlAsync(f);
             if (url == null) continue;
             _context.PlaceImages.Add(new PlaceImage { PlaceId = placeId, Url = url, IsPrimary = false, IsMenu = true, UploadedByUserId = userId });
+        }
+        if (videoFile != null)
+        {
+            var vurl = await ImageHelper.VideoToDataUrlAsync(videoFile);
+            if (vurl != null)
+                _context.PlaceImages.Add(new PlaceImage { PlaceId = placeId, Url = vurl, IsPrimary = false, IsMenu = false, IsVideo = true, UploadedByUserId = userId });
         }
         await _context.SaveChangesAsync();
     }
