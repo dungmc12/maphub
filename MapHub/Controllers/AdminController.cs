@@ -655,6 +655,18 @@ public class AdminController : Controller
         ViewBag.Count      = paid.Count;
         ViewBag.MonthTotal = paid.Where(p => p.PaidAt >= monthStart).Sum(p => p.Amount);
         ViewBag.MonthCount = paid.Count(p => p.PaidAt >= monthStart);
+
+        // Doanh thu 6 tháng gần nhất (cho biểu đồ xu hướng)
+        var months = Enumerable.Range(0, 6).Select(i => monthStart.AddMonths(-i)).Reverse().ToList();
+        ViewBag.TrendLabels = System.Text.Json.JsonSerializer.Serialize(months.Select(m => $"T{m.Month}/{m:yy}").ToList());
+        ViewBag.TrendData   = System.Text.Json.JsonSerializer.Serialize(
+            months.Select(m => paid.Where(p => p.PaidAt >= m && p.PaidAt < m.AddMonths(1)).Sum(p => p.Amount)).ToList());
+
+        // Cơ cấu theo gói (cho biểu đồ tròn)
+        var byPlan = paid.GroupBy(p => p.PlanType).OrderByDescending(g => g.Sum(x => x.Amount)).ToList();
+        ViewBag.ChannelLabels = System.Text.Json.JsonSerializer.Serialize(
+            byPlan.Select(g => g.Key == "year" ? "Gói năm" : g.Key == "month" ? "Gói tháng" : (g.Key ?? "Khác")).ToList());
+        ViewBag.ChannelData   = System.Text.Json.JsonSerializer.Serialize(byPlan.Select(g => g.Sum(x => x.Amount)).ToList());
         return View(paid);
     }
 

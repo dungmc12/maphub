@@ -10,60 +10,152 @@
 
 <partial name="_AdminNav" />
 
-<div class="admin-page">
+<div class="admin-page dash">
     <div class="admin-section-header mb-3">
-        <h2 class="admin-section-title"><i class="fa-solid fa-money-bill-wave"></i> Doanh thu</h2>
-        <p class="admin-section-sub">Tổng hợp các đơn đã thanh toán thành công</p>
+        <h2 class="admin-section-title">Doanh thu</h2>
+        <p class="admin-section-sub">Tổng hợp các đơn Pro đã thanh toán thành công</p>
     </div>
 
-    <!-- Thẻ tổng quan -->
-    <div class="row g-3 mb-4">
-        <div class="col-md-3 col-6">
-            <div class="astat-card"><div class="astat-num">@Vnd(total)</div><div class="astat-label">Tổng doanh thu</div></div>
+    <!-- KPI cards -->
+    <div class="kpi-grid">
+        <div class="kpi-card">
+            <div class="kpi-label">Tổng doanh thu</div>
+            <div class="kpi-num" data-count="@total" data-money="1">@Vnd(total)</div>
+            <div class="kpi-foot">Tất cả thời gian</div>
         </div>
-        <div class="col-md-3 col-6">
-            <div class="astat-card"><div class="astat-num">@count</div><div class="astat-label">Đơn đã trả</div></div>
+        <div class="kpi-card">
+            <div class="kpi-label">Đơn đã thanh toán</div>
+            <div class="kpi-num" data-count="@count">@count</div>
+            <div class="kpi-foot">Tổng số đơn</div>
         </div>
-        <div class="col-md-3 col-6">
-            <div class="astat-card"><div class="astat-num">@Vnd(monthTotal)</div><div class="astat-label">Tháng này</div></div>
+        <div class="kpi-card kpi-accent">
+            <div class="kpi-label">Doanh thu tháng này</div>
+            <div class="kpi-num" data-count="@monthTotal" data-money="1">@Vnd(monthTotal)</div>
+            <div class="kpi-foot">@DateTime.Now.ToString("MM/yyyy")</div>
         </div>
-        <div class="col-md-3 col-6">
-            <div class="astat-card"><div class="astat-num">@monthCount</div><div class="astat-label">Đơn tháng này</div></div>
+        <div class="kpi-card">
+            <div class="kpi-label">Đơn tháng này</div>
+            <div class="kpi-num" data-count="@monthCount">@monthCount</div>
+            <div class="kpi-foot">@DateTime.Now.ToString("MM/yyyy")</div>
         </div>
     </div>
 
-    <div class="admin-table-wrap">
-        <table class="admin-table">
-            <thead>
-                <tr>
-                    <th>Mã đơn</th>
-                    <th>Người dùng</th>
-                    <th>Gói</th>
-                    <th>Số tiền</th>
-                    <th>Kênh</th>
-                    <th>Ngày trả</th>
-                </tr>
-            </thead>
-            <tbody>
-                @if (!Model.Any())
-                {
-                    <tr><td colspan="6" class="text-center text-muted p-4">Chưa có giao dịch nào.</td></tr>
-                }
-                else
-                {
-                    @foreach (var r in Model)
+    <!-- Charts -->
+    <div class="dash-charts">
+        <div class="dash-card dash-trend">
+            <div class="dash-card-head">
+                <div>
+                    <h3 class="dash-card-title">Xu hướng doanh thu</h3>
+                    <p class="dash-card-sub">6 tháng gần nhất</p>
+                </div>
+            </div>
+            <div id="revTrend" style="min-height:300px"></div>
+        </div>
+        <div class="dash-card">
+            <div class="dash-card-head">
+                <h3 class="dash-card-title">Cơ cấu gói</h3>
+            </div>
+            <div id="revChannel" style="min-height:300px"></div>
+        </div>
+    </div>
+
+    <!-- Recent transactions -->
+    <div class="dash-card mt-4" style="padding:0;overflow:hidden">
+        <div class="dash-card-head" style="padding:1.1rem 1.3rem 0">
+            <h3 class="dash-card-title">Giao dịch gần đây</h3>
+        </div>
+        <div class="admin-table-wrap" style="border:none;box-shadow:none;border-radius:0">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>Mã đơn</th>
+                        <th>Người dùng</th>
+                        <th>Gói</th>
+                        <th class="text-end">Số tiền</th>
+                        <th>Kênh</th>
+                        <th>Ngày trả</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.Any())
                     {
-                        <tr>
-                            <td><span class="admin-sub">@r.Code</span></td>
-                            <td>@(r.Email ?? "—")</td>
-                            <td>@(r.PlanType == "year" ? "1 năm" : "1 tháng")</td>
-                            <td><strong class="text-success">@Vnd(r.Amount)</strong></td>
-                            <td><span class="admin-sub">@r.Provider</span></td>
-                            <td>@(r.PaidAt?.ToLocalTime().ToString("dd/MM/yyyy HH:mm") ?? "—")</td>
-                        </tr>
+                        <tr><td colspan="6" class="text-center text-muted p-4">Chưa có giao dịch nào.</td></tr>
                     }
-                }
-            </tbody>
-        </table>
+                    else
+                    {
+                        @foreach (var r in Model.Take(50))
+                        {
+                            <tr>
+                                <td><span class="mono-code">@r.Code</span></td>
+                                <td>
+                                    <div class="tx-user">
+                                        <span class="tx-av">@((r.Email ?? "?").Trim()[..1].ToString().ToUpper())</span>
+                                        <span>@(r.Email ?? "—")</span>
+                                    </div>
+                                </td>
+                                <td><span class="abadge @(r.PlanType == "year" ? "abadge-gold" : "abadge-blue")">@(r.PlanType == "year" ? "1 năm" : "1 tháng")</span></td>
+                                <td class="text-end"><strong style="color:var(--green)">@Vnd(r.Amount)</strong></td>
+                                <td><span class="admin-sub">@(r.Provider ?? "—")</span></td>
+                                <td><span class="admin-sub">@(r.PaidAt?.ToLocalTime().ToString("dd/MM/yyyy HH:mm") ?? "—")</span></td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
+
+@section Scripts {
+<script src="https://cdn.jsdelivr.net/npm/apexcharts@3.49.0/dist/apexcharts.min.js"></script>
+<script>
+(function () {
+    // Animated counters
+    document.querySelectorAll('.kpi-num[data-count]').forEach(el => {
+        const target = parseFloat(el.dataset.count) || 0;
+        const money = el.dataset.money === '1';
+        const dur = 900, t0 = performance.now();
+        const fmt = v => money ? Math.round(v).toLocaleString('vi-VN') + 'đ' : Math.round(v).toLocaleString('vi-VN');
+        function tick(now) {
+            const p = Math.min((now - t0) / dur, 1);
+            el.textContent = fmt(target * (1 - Math.pow(1 - p, 3)));
+            if (p < 1) requestAnimationFrame(tick);
+        }
+        requestAnimationFrame(tick);
+    });
+
+    const ink = '#64748B', accent = '#0891B2';
+    const trendData = @Html.Raw(ViewBag.TrendData ?? "[]");
+    const trendLabels = @Html.Raw(ViewBag.TrendLabels ?? "[]");
+    const chData = @Html.Raw(ViewBag.ChannelData ?? "[]");
+    const chLabels = @Html.Raw(ViewBag.ChannelLabels ?? "[]");
+
+    if (window.ApexCharts) {
+        new ApexCharts(document.querySelector('#revTrend'), {
+            chart: { type: 'area', height: 300, toolbar: { show: false }, fontFamily: 'Inter, sans-serif', animations: { speed: 600 } },
+            series: [{ name: 'Doanh thu', data: trendData }],
+            xaxis: { categories: trendLabels, labels: { style: { colors: ink } }, axisBorder: { show: false }, axisTicks: { show: false } },
+            yaxis: { labels: { style: { colors: ink }, formatter: v => (v >= 1e6 ? (v/1e6).toFixed(1)+'tr' : (v/1e3).toFixed(0)+'k') } },
+            colors: [accent],
+            stroke: { curve: 'smooth', width: 3 },
+            fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.35, opacityTo: 0.02 } },
+            grid: { borderColor: '#EEF2F6', strokeDashArray: 4 },
+            dataLabels: { enabled: false },
+            tooltip: { y: { formatter: v => v.toLocaleString('vi-VN') + 'đ' } }
+        }).render();
+
+        new ApexCharts(document.querySelector('#revChannel'), {
+            chart: { type: 'donut', height: 300, fontFamily: 'Inter, sans-serif' },
+            series: chData.length ? chData : [1],
+            labels: chLabels.length ? chLabels : ['Chưa có'],
+            colors: ['#0891B2', '#F59E0B', '#38BDF8', '#10B981'],
+            legend: { position: 'bottom', labels: { colors: ink } },
+            stroke: { width: 0 },
+            plotOptions: { pie: { donut: { size: '68%', labels: { show: true, total: { show: true, label: 'Tổng đơn', color: ink } } } } },
+            dataLabels: { enabled: true, formatter: (v) => v.toFixed(0) + '%' },
+            tooltip: { y: { formatter: v => v.toLocaleString('vi-VN') + 'đ' } }
+        }).render();
+    }
+})();
+</script>
+}
