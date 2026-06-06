@@ -2,10 +2,11 @@
 @{
     ViewData["Title"] = "Admin – Địa điểm";
     string? filter = ViewBag.Filter as string;
-    int total    = Model.Count();
-    int pending  = Model.Count(p => !p.IsApproved && p.Visibility == "public");
-    int pub      = Model.Count(p =>  p.Visibility == "public");
-    int priv     = Model.Count(p =>  p.Visibility == "private");
+    // Đếm theo toàn bộ bảng (ViewBag) — không phụ thuộc tab đang lọc
+    int total    = ViewBag.CountAll     ?? Model.Count();
+    int pending  = ViewBag.CountPending ?? 0;
+    int pub      = ViewBag.CountPublic  ?? 0;
+    int priv     = ViewBag.CountPrivate ?? 0;
 }
 
 <partial name="_AdminNav" />

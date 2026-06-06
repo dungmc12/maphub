@@ -24,7 +24,7 @@ public class AdminController : Controller
 
     public async Task<IActionResult> Index()
     {
-        var pendingCount    = await _context.Places.CountAsync(p => !p.IsApproved);
+        var pendingCount    = await _context.Places.CountAsync(p => p.Visibility == "public" && !p.IsApproved);
         var totalPlaces     = await _context.Places.CountAsync();
         var totalEvents     = await _context.Events.CountAsync();
         var totalUsers      = await _context.Users.CountAsync();
@@ -59,7 +59,7 @@ public class AdminController : Controller
 
         query = filter switch
         {
-            "pending" => query.Where(p => !p.IsApproved),
+            "pending" => query.Where(p => p.Visibility == "public" && !p.IsApproved),
             "public"  => query.Where(p => p.Visibility == "public"),
             "private" => query.Where(p => p.Visibility == "private"),
             _         => query
@@ -67,6 +67,11 @@ public class AdminController : Controller
 
         var places = await query.OrderByDescending(p => p.CreatedAt).ToListAsync();
         ViewBag.Filter = filter;
+        // Đếm theo TOÀN BỘ bảng (không theo filter) để các tab luôn hiện đúng tổng
+        ViewBag.CountAll     = await _context.Places.CountAsync();
+        ViewBag.CountPending = await _context.Places.CountAsync(p => p.Visibility == "public" && !p.IsApproved);
+        ViewBag.CountPublic  = await _context.Places.CountAsync(p => p.Visibility == "public");
+        ViewBag.CountPrivate = await _context.Places.CountAsync(p => p.Visibility == "private");
         return View(places);
     }
 
@@ -399,7 +404,7 @@ public class AdminController : Controller
         await AddPlaceImagesAsync(place.Id, moreImages, menuImages, place.CreatedByUserId);
 
         TempData["Success"] = $"Đã cập nhật: {place.Name}";
-        return RedirectToAction(nameof(Index));
+        return RedirectToAction(nameof(Places));   // về trang Quản lý địa điểm, không đá ra dashboard
     }
 
     [HttpPost]
