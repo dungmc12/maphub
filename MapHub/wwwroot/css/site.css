@@ -122,6 +122,8 @@ body.map-view { overflow: hidden; height: 100vh; }
   background: linear-gradient(145deg,var(--accent),var(--secondary));
   color: #fff; font-weight: 700; font-size: .8rem;
 }
+.nav-avatar-img { object-fit: cover; padding: 0; background: none; }
+.nav-dd-avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; display: block; margin-bottom: .35rem; }
 .nav-avatar-chev { color: var(--ink-secondary); }
 .nav-dropdown {
   border: 1px solid var(--line); border-radius: 14px;

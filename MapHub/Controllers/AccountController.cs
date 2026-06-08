@@ -4,6 +4,7 @@ using MapHub.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace MapHub.Controllers;
 
@@ -251,6 +252,31 @@ public class AccountController : Controller
         ViewBag.Email = user?.Email;
         ViewBag.HasPassword = user != null && await _userManager.HasPasswordAsync(user);
         return View(profile);
+    }
+
+    // Phục vụ ảnh đại diện theo userId (có cache) → navbar/khắp nơi dùng <img src> nhẹ,
+    // không nhồi base64 vào mọi trang. Avatar lưu data:base64 thì giải mã; URL ngoài thì redirect.
+    [HttpGet]
+    [AllowAnonymous]
+    public async Task<IActionResult> Avatar(string id)
+    {
+        var url = await _context.UserProfiles
+            .Where(p => p.UserId == id).Select(p => p.AvatarUrl).FirstOrDefaultAsync();
+        if (string.IsNullOrEmpty(url)) return NotFound();
+        if (url.StartsWith("data:", StringComparison.OrdinalIgnoreCase))
+        {
+            var comma = url.IndexOf(',');
+            if (comma < 0) return NotFound();
+            var mime = url[5..comma].Split(';')[0];
+            try
+            {
+                var bytes = Convert.FromBase64String(url[(comma + 1)..]);
+                Response.Headers["Cache-Control"] = "public, max-age=2592000";
+                return File(bytes, string.IsNullOrWhiteSpace(mime) ? "image/jpeg" : mime);
+            }
+            catch { return NotFound(); }
+        }
+        return Redirect(url);
     }
 
     [Authorize]

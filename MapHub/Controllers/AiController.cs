@@ -40,7 +40,8 @@ public class AiController : Controller
         var places = await _db.Places
             .Where(p => p.IsApproved && p.Visibility == "public")
             .OrderByDescending(p => p.IsFeatured)
-            .Take(30)
+            .ThenByDescending(p => p.Id)   // địa điểm mới thêm/sửa luôn được đưa vào ngữ cảnh AI
+            .Take(60)
             .Select(p => new { p.Id, p.Name, p.Category, p.Address })
             .ToListAsync(cancellationToken);
 

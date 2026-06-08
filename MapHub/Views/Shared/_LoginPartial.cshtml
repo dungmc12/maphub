@@ -1,6 +1,9 @@
 @using MapHub.Data
 @using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
 @inject SignInManager<ApplicationUser> SignInManager
+@inject UserManager<ApplicationUser> UserManager
+@inject ApplicationDbContext Db
 
 @if (SignInManager.IsSignedIn(User))
 {
@@ -8,13 +11,33 @@
     var initial = string.IsNullOrWhiteSpace(name) ? "?" : name.Trim()[..1].ToUpper();
     var isAdmin = User.IsInRole("Admin");
 
+    // Ảnh đại diện đã tải lên (nếu có) → hiện ngay trên navbar, kể cả trên bản đồ
+    var uid = UserManager.GetUserId(User);
+    // Chỉ lấy CỜ có-avatar + version (KHÔNG kéo chuỗi base64 nặng vào mọi trang)
+    var prof = uid == null ? null : await Db.UserProfiles
+        .Where(p => p.UserId == uid)
+        .Select(p => new { HasAvatar = p.AvatarUrl != null && p.AvatarUrl != "", p.UpdatedAt }).FirstOrDefaultAsync();
+    var hasAvatar = prof?.HasAvatar == true;
+    var avatarSrc = hasAvatar ? $"/Account/Avatar/{uid}?v={prof!.UpdatedAt.Ticks}" : null;
+
     <div class="dropdown nav-avatar-wrap">
         <button type="button" class="nav-avatar" data-bs-toggle="dropdown" aria-expanded="false" title="Tài khoản">
-            <span class="nav-avatar-circle">@initial</span>
+            @if (hasAvatar)
+            {
+                <img class="nav-avatar-circle nav-avatar-img" src="@avatarSrc" alt="@name">
+            }
+            else
+            {
+                <span class="nav-avatar-circle">@initial</span>
+            }
             <svg class="nav-avatar-chev" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
         </button>
         <ul class="dropdown-menu dropdown-menu-end nav-dropdown">
             <li class="nav-dd-head">
+                @if (hasAvatar)
+                {
+                    <img class="nav-dd-avatar" src="@avatarSrc" alt="@name">
+                }
                 <div class="nav-dd-name">@name</div>
                 <div class="nav-dd-mail">@(isAdmin ? "Quản trị viên" : "Thành viên")</div>
             </li>

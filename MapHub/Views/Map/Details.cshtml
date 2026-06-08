@@ -38,6 +38,12 @@
                                 class="btn btn-sm @(isSavedDetail ? "btn-danger" : "btn-outline-danger") mb-2">
                             @Html.Raw(isSavedDetail ? "<i class=\"fa-solid fa-heart\"></i> Đã lưu" : "<i class=\"fa-regular fa-heart\"></i> Lưu địa điểm")
                         </button>
+                        @if (currentUserId == Model.CreatedByUserId || isAdmin)
+                        {
+                            <a href="/Map/EditMyPlace/@Model.Id" class="btn btn-sm btn-outline-primary mb-2 ms-1">
+                                <i class="fa-solid fa-pen"></i> Sửa địa điểm
+                            </a>
+                        }
                     }
                     <div class="place-detail-meta-row">
                         @{
@@ -394,7 +400,8 @@
                 {
                     <div id="reviewForm" class="review-form-box mt-4">
                         <h5><i class="fa-solid fa-pen-to-square" style="color:#0891b2"></i> Viết đánh giá của bạn</h5>
-                        <form method="post" action="/Map/AddReview" enctype="multipart/form-data">
+                        <form method="post" action="/Map/AddReview" enctype="multipart/form-data"
+                              onsubmit="this.querySelector('button[type=submit]').disabled=true;this.querySelector('button[type=submit]').textContent='Đang gửi…';">
                             @Html.AntiForgeryToken()
                             <input type="hidden" name="placeId" value="@Model.Id">
                             <div class="row g-2 mb-2">

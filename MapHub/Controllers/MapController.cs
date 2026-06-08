@@ -181,7 +181,8 @@ public class MapController : Controller
         var reviewerIds = place.Reviews.Select(r => r.UserId).Distinct().ToList();
         var profiles = await _context.UserProfiles
             .Where(p => reviewerIds.Contains(p.UserId))
-            .Select(p => new { p.UserId, p.DisplayName, p.AvatarUrl })
+            // KHÔNG kéo base64 avatar vào trang — chỉ cờ có-avatar, ảnh tải qua /Account/Avatar/{id}
+            .Select(p => new { p.UserId, p.DisplayName, HasAvatar = p.AvatarUrl != null && p.AvatarUrl != "" })
             .ToListAsync();
         var emails = await _context.Users
             .Where(u => reviewerIds.Contains(u.Id))
@@ -196,7 +197,7 @@ public class MapController : Controller
             var name = !string.IsNullOrWhiteSpace(prof?.DisplayName)
                 ? prof!.DisplayName!
                 : (!string.IsNullOrWhiteSpace(email) ? email!.Split('@')[0] : "Người dùng");
-            authors[rid] = (name, prof?.AvatarUrl);
+            authors[rid] = (name, prof?.HasAvatar == true ? $"/Account/Avatar/{rid}" : null);
         }
         ViewBag.ReviewAuthors = authors;
         return View(place);
@@ -239,9 +240,8 @@ public class MapController : Controller
             Latitude = dto.Latitude,
             Longitude = dto.Longitude,
             CreatedByUserId = currentUserId,
-            // Admin tự duyệt; người dùng thường đăng CÔNG KHAI thì chờ Admin duyệt.
-            // (Riêng tư không cần duyệt — vẫn hiện cho chính chủ qua điều kiện private+owner.)
-            IsApproved = isAdmin
+            // Không cần Admin duyệt: địa điểm (cá nhân hay công khai) hiển thị ngay sau khi tạo.
+            IsApproved = true
         };
 
         _context.Places.Add(place);
@@ -344,6 +344,12 @@ public class MapController : Controller
         byte? foodRating, string? content, string? foodReview, string? staffReview, IFormFile? photo, IFormFile? video)
     {
         var currentUserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value!;
+
+        // Chống gửi trùng (double-click / resubmit): nếu cùng user vừa đánh giá địa điểm này
+        // trong 30 giây gần đây thì bỏ qua, không tạo bản ghi thứ 2.
+        var since = DateTime.UtcNow.AddSeconds(-30);
+        if (await _context.PlaceReviews.AnyAsync(r => r.PlaceId == placeId && r.UserId == currentUserId && r.CreatedAt >= since))
+            return RedirectToAction(nameof(Details), new { id = placeId });
 
         // Lưu ảnh + video review thành base64 data URL (tồn tại vĩnh viễn, không mất khi Render redeploy)
         string? photoUrl = await ImageHelper.ToDataUrlAsync(photo);

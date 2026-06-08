@@ -281,7 +281,8 @@ public class PlansController : Controller
         var places = await _context.Places
             .Where(p => p.IsApproved && p.Visibility == "public")
             .OrderByDescending(p => p.IsFeatured)
-            .Take(40)
+            .ThenByDescending(p => p.Id)   // gồm cả địa điểm mới thêm/sửa gần đây
+            .Take(60)
             .Select(p => new { p.Id, p.Name, p.Category, p.Address })
             .ToListAsync(ct);
 
