@@ -597,7 +597,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const lat = @Model.Latitude, lng = @Model.Longitude;
     const m = L.map('detailMiniMap', { zoomControl:false, dragging:false, scrollWheelZoom:false })
                .setView([lat, lng], 15);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(m);
+    window.cityTiles(m);
     L.marker([lat, lng]).addTo(m)
      .bindPopup('<b>@Html.Raw(Model.Name.Replace("'", "\\'"))</b>').openPopup();
 

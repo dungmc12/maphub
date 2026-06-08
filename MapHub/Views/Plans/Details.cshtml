@@ -547,7 +547,7 @@ function togglePlanView(mode) {
     if (mode === 'map') {
         if (!planPickMap) {
             planPickMap = L.map('planPickMap').setView([21.0285, 105.8542], 12);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(planPickMap);
+            window.cityTiles(planPickMap);
         }
         setTimeout(() => { planPickMap.invalidateSize(); renderPlanMap(); }, 120);
     }
@@ -622,7 +622,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Map preview: marker đánh số + đường nối lộ trình
     if (window.planPoints && planPoints.length && document.getElementById('planMap') && window.L) {
         const pm = L.map('planMap', { scrollWheelZoom: false });
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(pm);
+        window.cityTiles(pm);
         const latlngs = [];
         planPoints.forEach((p, i) => {
             const icon = L.divIcon({ className: 'plan-num-marker', html: '<span>' + (i + 1) + '</span>', iconSize: [28, 28], iconAnchor: [14, 14] });

@@ -137,7 +137,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const lat = parseFloat(document.getElementById('editLat').value) || 21.0285;
     const lng = parseFloat(document.getElementById('editLng').value) || 105.8542;
     editMap = L.map('editMiniMap').setView([lat, lng], 15);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(editMap);
+    window.cityTiles(editMap);
     editMarker = L.marker([lat, lng]).addTo(editMap);
     editMap.on('click', e => {
         document.getElementById('editLat').value = e.latlng.lat.toFixed(6);

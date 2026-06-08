@@ -1,4 +1,23 @@
-﻿(() => {
+﻿// ── Lớp nền bản đồ dùng chung ─────────────────────────────────────────────
+// Có MAPBOX_TOKEN → dùng Mapbox (đẹp hơn); chưa có → tự fallback OpenStreetMap (miễn phí).
+// Đổi style ở MAPBOX_STYLE: streets-v12 | outdoors-v12 | light-v11 | dark-v11 | satellite-streets-v12
+window.MAPBOX_STYLE = window.MAPBOX_STYLE || 'streets-v12';
+window.cityTiles = function (map, opts) {
+	opts = opts || {};
+	const token = window.MAPBOX_TOKEN;
+	if (token) {
+		return L.tileLayer(
+			`https://api.mapbox.com/styles/v1/mapbox/${window.MAPBOX_STYLE}/tiles/512/{z}/{x}/{y}@2x?access_token=${token}`,
+			Object.assign({ tileSize: 512, zoomOffset: -1, maxZoom: 19,
+				attribution: '© <a href="https://www.mapbox.com/">Mapbox</a> © <a href="https://openstreetmap.org">OpenStreetMap</a>' }, opts)
+		).addTo(map);
+	}
+	return L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+		Object.assign({ maxZoom: 19, attribution: '© <a href="https://openstreetmap.org">OpenStreetMap</a> contributors' }, opts)
+	).addTo(map);
+};
+
+(() => {
 	const config = window.mapHubConfig;
 	if (!config || !config.mapElementId) {
 		return;

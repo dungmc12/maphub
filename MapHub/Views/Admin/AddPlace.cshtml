@@ -147,7 +147,7 @@
 let adminMap, adminMarker;
 document.addEventListener('DOMContentLoaded', () => {
     adminMap = L.map('adminMiniMap').setView([21.0285, 105.8542], 12);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(adminMap);
+    window.cityTiles(adminMap);
     adminMap.on('click', e => {
         document.getElementById('adminLat').value = e.latlng.lat.toFixed(6);
         document.getElementById('adminLng').value = e.latlng.lng.toFixed(6);

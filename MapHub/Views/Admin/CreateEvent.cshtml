@@ -119,7 +119,7 @@ function toggleEventMap() {
     box.style.display = show ? 'block' : 'none';
     if (show && !eventMap) {
         eventMap = L.map('eventPickMap').setView([21.0285, 105.8542], 12);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(eventMap);
+        window.cityTiles(eventMap);
         const bounds = [];
         eventPlaces.forEach(p => {
             L.marker([p.lat, p.lng]).addTo(eventMap).bindPopup(

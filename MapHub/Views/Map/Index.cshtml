@@ -383,10 +383,7 @@ function toggleSave(placeId, btn, full) {
 
 document.addEventListener('DOMContentLoaded', () => {
     map = L.map('map').setView([21.0285, 105.8542], 12);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© <a href="https://openstreetmap.org">OpenStreetMap</a> contributors',
-        maxZoom: 19
-    }).addTo(map);
+    window.cityTiles(map);
 
     // Mobile: đảm bảo map nhận đúng kích thước (sau khi layout xếp cột) + khi xoay/đổi cỡ
     setTimeout(() => map.invalidateSize(), 200);
@@ -925,7 +922,7 @@ function openAddPlace(presetLat, presetLng) {
     document.getElementById('addPlaceModal').addEventListener('shown.bs.modal', () => {
         if (!miniMap) {
             miniMap = L.map('miniMap').setView([21.0285, 105.8542], 13);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(miniMap);
+            window.cityTiles(miniMap);
             miniMap.on('click', e => {
                 document.getElementById('newLat').value = e.latlng.lat.toFixed(6);
                 document.getElementById('newLng').value = e.latlng.lng.toFixed(6);
