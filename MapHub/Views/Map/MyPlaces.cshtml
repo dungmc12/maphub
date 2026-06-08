@@ -76,7 +76,7 @@
                 var imgObj = p.Images.FirstOrDefault();
                 var img = imgObj != null ? $"/Map/Image/{imgObj.Id}?v={p.UpdatedAt.Ticks}" : "https://placehold.co/400x250?text=No+Image";
                 var inv = System.Globalization.CultureInfo.InvariantCulture;
-                var dir = $"https://www.google.com/maps/dir/?api=1&destination={p.Latitude.ToString(inv)},{p.Longitude.ToString(inv)}";
+                var dir = $"/Map?route={p.Latitude.ToString(inv)},{p.Longitude.ToString(inv)}";
                 var delMsg = $"Xóa địa điểm \"{p.Name}\"? Hành động này không thể hoàn tác.";
                 <div class="col-md-4 col-sm-6 my-place-card" data-name="@p.Name.ToLower()" data-cat="@(p.Category?.ToLower())" data-created="@p.CreatedAt.Ticks">
                     <div class="plan-card" style="overflow:hidden">
@@ -116,7 +116,7 @@
                             <div class="mp-actions mt-2">
                                 <a href="/Map?place=@p.Id" class="mp-act" title="Xem trên bản đồ"><i class="fa-solid fa-location-dot"></i></a>
                                 <a href="/Map/EditMyPlace/@p.Id" class="mp-act mp-edit" title="Sửa"><i class="fa-solid fa-pen"></i></a>
-                                <a href="@dir" target="_blank" rel="noopener" class="mp-act" title="Chỉ đường (Google Maps)"><i class="fa-solid fa-diamond-turn-right"></i></a>
+                                <a href="@dir" class="mp-act" title="Chỉ đường"><i class="fa-solid fa-diamond-turn-right"></i></a>
                                 <form method="post" action="/Map/DeleteMyPlace"
                                       onsubmit="return confirm(this.dataset.msg)" data-msg="@delMsg"
                                       class="d-inline" style="margin-left:auto">
@@ -147,7 +147,7 @@
                 var simgObj = p.Images.FirstOrDefault();
                 var simg = simgObj != null ? $"/Map/Image/{simgObj.Id}?v={p.UpdatedAt.Ticks}" : "https://placehold.co/400x250?text=No+Image";
                 var sinv = System.Globalization.CultureInfo.InvariantCulture;
-                var sdir = $"https://www.google.com/maps/dir/?api=1&destination={p.Latitude.ToString(sinv)},{p.Longitude.ToString(sinv)}";
+                var sdir = $"/Map?route={p.Latitude.ToString(sinv)},{p.Longitude.ToString(sinv)}";
                 <div class="col-md-4 col-sm-6" id="saved-@p.Id">
                     <div class="plan-card" style="overflow:hidden">
                         <img src="@simg" alt="@p.Name" onerror="this.onerror=null;this.src='https://placehold.co/400x300?text=No+Img'" style="width:100%;height:160px;object-fit:cover;border-radius:10px 10px 0 0">
@@ -159,7 +159,7 @@
                             }
                             <div class="mp-actions mt-2">
                                 <a href="/Map/Details/@p.Id" class="mp-act" title="Xem chi tiết"><i class="fa-solid fa-eye"></i></a>
-                                <a href="@sdir" target="_blank" rel="noopener" class="mp-act" title="Chỉ đường"><i class="fa-solid fa-diamond-turn-right"></i></a>
+                                <a href="@sdir" class="mp-act" title="Chỉ đường"><i class="fa-solid fa-diamond-turn-right"></i></a>
                                 <button type="button" class="mp-act mp-del" style="margin-left:auto" onclick="unsavePlace(@p.Id)" title="Bỏ lưu"><i class="fa-solid fa-heart-circle-minus"></i></button>
                             </div>
                         </div>

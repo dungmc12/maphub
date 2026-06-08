@@ -434,6 +434,14 @@ document.addEventListener('DOMContentLoaded', () => {
     if (urlPlace) { focusPlaceId = parseInt(urlPlace) || null; currentCat = ''; }
 
     loadPlaces(currentCat, urlQ.trim());
+
+    // Read ?route=lat,lng → tự vẽ đường đi tới địa điểm ngay trong app (từ nút "Chỉ đường")
+    const urlRoute = new URLSearchParams(window.location.search).get('route');
+    if (urlRoute) {
+        const parts = urlRoute.split(',').map(Number);
+        if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1]))
+            setTimeout(() => routeTo(parts[0], parts[1]), 700);
+    }
     restoreChatHistory();   // hiện lại 5 đoạn chat gần nhất
 });
 
@@ -800,12 +808,18 @@ function routeTo(lat, lng) {
 
 function drawRoute(slat, slng, dlat, dlng) {
     if (routingControl) map.removeControl(routingControl);
-    routingControl = L.Routing.control({
+    const opts = {
         waypoints: [L.latLng(slat, slng), L.latLng(dlat, dlng)],
         routeWhileDragging: false, showAlternatives: false, fitSelectedRoutes: true,
         lineOptions: { styles: [{ color:'#0891b2', opacity:0.85, weight:6 }] },
         createMarker: () => null
-    }).on('routingerror', () => {
+    };
+    // Có token Mapbox → dùng Mapbox Directions (ổn định, chỉ đường ngay trong app).
+    // Không có → router mặc định (OSRM demo); cả hai lỗi mới mở Google Maps.
+    if (window.MAPBOX_TOKEN && L.Routing.mapbox) {
+        opts.router = L.Routing.mapbox(window.MAPBOX_TOKEN, { profile: 'mapbox/driving' });
+    }
+    routingControl = L.Routing.control(opts).on('routingerror', () => {
         map.removeControl(routingControl);
         window.open(`https://www.google.com/maps/dir/?api=1&destination=${dlat},${dlng}&origin=${slat},${slng}`, '_blank');
     }).addTo(map);

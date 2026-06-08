@@ -505,10 +505,13 @@
                 </ul>
 
                 <div class="info-actions mt-3">
-                    <button class="btn-accent w-100 mb-2"
-                            onclick="window.open('https://www.google.com/maps/dir/?api=1&destination=@Model.Latitude,@Model.Longitude','_blank')">
+                    @{
+                        var invc = System.Globalization.CultureInfo.InvariantCulture;
+                        var routeParam = $"{Model.Latitude.ToString(invc)},{Model.Longitude.ToString(invc)}";
+                    }
+                    <a class="btn-accent w-100 mb-2 text-center text-decoration-none" href="/Map?route=@routeParam">
                         <i class="fa-solid fa-location-arrow"></i> Chỉ đường
-                    </button>
+                    </a>
                     @if (User.Identity?.IsAuthenticated == true)
                     {
                         <a href="/Plans" class="btn-ghost w-100">
