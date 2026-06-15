@@ -26,7 +26,7 @@ services:
       - key: GoogleMaps__DefaultZoom
         value: "13"
       - key: Pricing__Month__Amount
-        value: "5000"
+        value: "59000"
       - key: Pricing__Month__Days
         value: "30"
       - key: Pricing__Month__Label

@@ -7,8 +7,8 @@
 }
 
 <style>
-.pr-grid { display:flex; gap:1.5rem; justify-content:center; flex-wrap:wrap; padding:2.5rem 1rem; max-width:980px; margin:0 auto; }
-.pr-card { flex:1 1 260px; max-width:300px; background:#fff; border:2px solid #e5e7eb; border-radius:20px;
+.pr-grid { display:flex; gap:1.5rem; justify-content:center; align-items:stretch; flex-wrap:wrap; padding:2.5rem 1rem; max-width:720px; margin:0 auto; }
+.pr-card { flex:1 1 300px; max-width:340px; background:#fff; border:2px solid #e5e7eb; border-radius:20px;
            padding:1.8rem 1.5rem; display:flex; flex-direction:column; box-shadow:0 4px 20px rgba(0,0,0,.06); }
 .pr-card.featured { border-color:#8b5cf6; background:linear-gradient(160deg,#faf5ff,#fff); box-shadow:0 8px 32px rgba(139,92,246,.15); position:relative; }
 .pr-card.best { border-color:#f59e0b; background:linear-gradient(160deg,#fffbeb,#fff); box-shadow:0 8px 32px rgba(245,158,11,.12); position:relative; }
@@ -97,7 +97,7 @@
 
     <!-- Pro tháng -->
     <div class="pr-card featured">
-        <div class="pr-badge">Phổ biến</div>
+        <div class="pr-badge">Khuyến nghị</div>
         <div class="pr-tier">Pro @if (isPro && currentPlan == "month") { <span class="pr-using-tag">Đang dùng</span> }</div>
         <div class="pr-price">@(((decimal)ViewBag.MonthAmount).ToString("#,##0"))đ <span>/ tháng</span></div>
         <div class="pr-desc">Gia hạn mỗi 30 ngày</div>
@@ -121,37 +121,6 @@
                 <input type="hidden" name="plan" value="month">
                 <button type="submit" class="pr-btn pr-btn-month w-100">
                     <i class="fa-solid fa-qrcode me-1"></i> @(isPro ? "Gia hạn thêm 1 tháng" : "Đăng ký 1 tháng")
-                </button>
-            </form>
-        }
-    </div>
-
-    <!-- Pro năm -->
-    <div class="pr-card best">
-        <div class="pr-badge gold">Tiết kiệm nhất</div>
-        <div class="pr-tier">Pro @if (isPro && currentPlan == "year") { <span class="pr-using-tag">Đang dùng</span> }</div>
-        <div class="pr-price">@(((decimal)ViewBag.YearAmount).ToString("#,##0"))đ <span>/ năm</span></div>
-        <div class="pr-desc">Dùng trọn 365 ngày <span class="pr-save">-17%</span></div>
-        <ul class="pr-feats">
-            <li>Tất cả tính năng miễn phí</li>
-            <li>Không giới hạn địa điểm</li>
-            <li>Không giới hạn kế hoạch</li>
-            <li>Chat AI tư vấn hành trình</li>
-            <li>Tạo kế hoạch tự động bằng AI</li>
-            <li>Chia sẻ kế hoạch qua link</li>
-            <li>Lọc địa điểm nâng cao</li>
-        </ul>
-        @if (!isLoggedIn)
-        {
-            <a href="/Account/Login" class="pr-btn pr-btn-year">Đăng nhập để mua</a>
-        }
-        else
-        {
-            <form method="post" action="/Payments/Create">
-                @Html.AntiForgeryToken()
-                <input type="hidden" name="plan" value="year">
-                <button type="submit" class="pr-btn pr-btn-year w-100">
-                    <i class="fa-solid fa-qrcode me-1"></i> @(isPro ? "Gia hạn thêm 1 năm" : "Đăng ký 1 năm")
                 </button>
             </form>
         }
@@ -255,10 +224,10 @@
         </div>
         <div class="faq-item2">
             <button type="button" class="faq-q2" onclick="this.parentElement.classList.toggle('open')">
-                Tôi có thể gia hạn hoặc đổi gói không?
+                Tôi có thể gia hạn bất cứ lúc nào không?
                 <svg class="faq-x" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
             </button>
-            <div class="faq-a2"><div>Có. Bạn gia hạn thêm tháng/năm bất cứ lúc nào — thời gian được cộng dồn vào hạn hiện tại.</div></div>
+            <div class="faq-a2"><div>Có. Bạn gia hạn thêm 1 tháng bất cứ lúc nào — thời gian được cộng dồn vào hạn hiện tại.</div></div>
         </div>
     </div>
 </div>
