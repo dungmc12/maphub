@@ -551,13 +551,14 @@ body.map-view { overflow: hidden; height: 100vh; }
 
 /* ── AI Chat Widget ───────────────────────────────────────────────────── */
 .chat-widget {
-  position: fixed; bottom: 20px; right: 20px; width: 310px; z-index: 500;
+  position: fixed; bottom: 18px; right: 18px; width: 290px; z-index: 500;
   border-radius: 14px; box-shadow: 0 8px 30px rgba(0,0,0,.18);
   background: #fff; display: flex; flex-direction: column; overflow: hidden;
   transition: height .25s ease;
 }
 .chat-widget.collapsed { height: 42px; }
-.chat-widget.expanded  { height: 520px; }
+/* Nhỏ gọn + giới hạn theo chiều cao màn hình để KHÔNG che panel thời tiết (góc trên phải) */
+.chat-widget.expanded  { height: min(420px, calc(100vh - 200px)); }
 .chat-widget-header {
   background: var(--blue); color: #fff; padding: .6rem 1rem;
   cursor: pointer; font-weight: 700; font-size: .9rem;
