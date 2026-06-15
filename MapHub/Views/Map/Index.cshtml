@@ -200,6 +200,10 @@ else if (isAuth)
 
                     <!-- STEP 1 — Thông tin cơ bản -->
                     <div class="wiz-step active" data-step="1">
+                        <div class="alert alert-light border d-flex align-items-center gap-2 py-2 mb-3" style="font-size:.85rem">
+                            <span style="font-size:1.1rem">⚡</span>
+                            <span>Vội? Chỉ cần <b>tên</b> + <b>chọn vị trí trên bản đồ</b> rồi bấm <b>“Lưu nhanh”</b>. Ảnh, giờ, giá, menu… bổ sung sau ở <b>“Sửa địa điểm”</b> (chỉ bạn sửa được).</span>
+                        </div>
                         <div class="row g-3">
                             <div class="col-md-7">
                                 <label class="form-label fw-semibold">Tên địa điểm <span class="text-danger">*</span></label>
@@ -293,7 +297,7 @@ else if (isAuth)
 
                     <!-- STEP 2 — Hình ảnh -->
                     <div class="wiz-step" data-step="2">
-                        <label class="form-label fw-semibold">Ảnh đại diện <span class="text-danger">*</span></label>
+                        <label class="form-label fw-semibold">Ảnh đại diện <small class="text-muted">(không bắt buộc — có thể thêm sau ở “Sửa địa điểm”)</small></label>
                         <div class="dropzone" onclick="document.getElementById('newImageFile').click()"
                              data-dz="newImageFile" data-prev="dzPrev1">
                             <input type="file" id="newImageFile" accept="image/*" hidden onchange="dzPreview('newImageFile','dzPrev1')">
@@ -345,6 +349,7 @@ else if (isAuth)
                 </div>
                 <div class="modal-footer wiz-foot">
                     <button type="button" class="btn-ghost" id="wizBack" onclick="wizGo(-1)" style="display:none">Quay lại</button>
+                    <button type="button" class="btn-ghost" id="wizQuick" onclick="quickSave()" title="Tạo nhanh chỉ với tên + vị trí, bổ sung ảnh/chi tiết sau">⚡ Lưu nhanh</button>
                     <div style="flex:1"></div>
                     <button type="button" class="btn-accent" id="wizNext" onclick="wizGo(1)">Tiếp tục</button>
                     <button type="button" class="btn-accent" id="wizFinish" onclick="submitPlace()" style="display:none"><i class="bi bi-check-lg"></i> Hoàn tất</button>
@@ -857,11 +862,20 @@ function wizGo(dir) {
         if (ph && !isValidPhone(ph)) { alert('Số điện thoại phải có 9–11 chữ số.'); document.getElementById('newPhone').focus(); return; }
         if (ph2 && !isValidPhone(ph2)) { alert('Hotline phụ phải có 9–11 chữ số.'); document.getElementById('newPhone2').focus(); return; }
     }
-    if (dir > 0 && wizStep === 2 &&
-        !document.getElementById('newImageUrl').value.trim() && !document.getElementById('newImageFile').files.length) {
-        alert('Vui lòng thêm ảnh đại diện (kéo thả/chọn ảnh hoặc dán URL)!'); return;
-    }
     wizSet(wizStep + dir);
+}
+
+// Lưu nhanh: chỉ cần TÊN + VỊ TRÍ → tạo địa điểm tạm, bổ sung ảnh/chi tiết sau ở "Sửa địa điểm"
+function quickSave() {
+    const name = document.getElementById('newName').value.trim();
+    if (!name) { alert('Hãy nhập tên địa điểm đã nhé!'); wizSet(1); document.getElementById('newName').focus(); return; }
+    const lat = parseFloat(document.getElementById('newLat').value);
+    const lng = parseFloat(document.getElementById('newLng').value);
+    if (isNaN(lat) || isNaN(lng)) {
+        alert('Hãy bấm chọn vị trí trên bản đồ trước (bước Vị trí).');
+        wizSet(3); return;
+    }
+    submitPlace();
 }
 
 // ── Drag & drop upload + preview ───────────────────────────────────────────
@@ -977,7 +991,7 @@ async function submitPlace() {
 
     if (!name) { alert('Vui lòng nhập tên địa điểm!'); return; }
     if (isNaN(lat) || isNaN(lng)) { alert('Vui lòng chọn vị trí trên bản đồ (hoặc nhập tọa độ)!'); return; }
-    if (!imageUrl && !imageFile) { alert('Vui lòng thêm ảnh đại diện (dán URL hoặc tải từ máy)!'); return; }
+    // Ảnh KHÔNG bắt buộc — thiếu thì dùng ảnh mặc định, chủ địa điểm bổ sung sau ở "Sửa địa điểm"
 
     const data = {
         Name:       name,
