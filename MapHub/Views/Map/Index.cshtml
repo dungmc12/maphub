@@ -565,23 +565,39 @@ function getWeatherSuitability(weatherCode, category) {
     return indoor ? 'mid' : 'bad';
 }
 
-function createWeatherMarker(suitability) {
+// Icon danh mục (Bootstrap Icons) — cố định theo loại địa điểm, để nhìn là biết như Google Maps
+function catIconClass(cat) {
+    const m = {
+        restaurant:'bi-egg-fried', cafe:'bi-cup-hot-fill', entertainment:'bi-controller',
+        hotel:'bi-building-fill', culture:'bi-bank', temple:'bi-moon-stars-fill',
+        nature:'bi-tree-fill', education:'bi-mortarboard-fill',
+        home:'bi-house-fill', work:'bi-briefcase-fill', school:'bi-mortarboard-fill',
+        favorite:'bi-star-fill', other:'bi-geo-alt-fill'
+    };
+    return m[(cat || '').toLowerCase()] || 'bi-geo-alt-fill';
+}
+
+// Marker: giọt nước đổi MÀU theo thời tiết + ICON trắng theo danh mục (cố định)
+function createWeatherMarker(suitability, category) {
     const palette = {
         good: { fill: '#22c55e', ring: '#16a34a' },
         mid:  { fill: '#f59e0b', ring: '#d97706' },
         bad:  { fill: '#ef4444', ring: '#dc2626' }
     };
     const c = palette[suitability] || palette.good;
+    const ic = catIconClass(category);
     return L.divIcon({
         className: '',
-        html: `<svg xmlns="http://www.w3.org/2000/svg" width="26" height="36" viewBox="0 0 26 36">
-            <path d="M13 0C5.82 0 0 5.82 0 13c0 8.58 13 23 13 23s13-14.42 13-23C26 5.82 20.18 0 13 0z"
-                  fill="${c.fill}" stroke="${c.ring}" stroke-width="1.5"/>
-            <circle cx="13" cy="13" r="5.5" fill="white" opacity="0.85"/>
-        </svg>`,
-        iconSize:    [26, 36],
-        iconAnchor:  [13, 36],
-        popupAnchor: [0, -36]
+        html: `<div style="position:relative;width:30px;height:40px;filter:drop-shadow(0 2px 2px rgba(0,0,0,.35))">
+            <svg xmlns="http://www.w3.org/2000/svg" width="30" height="40" viewBox="0 0 26 36">
+                <path d="M13 0C5.82 0 0 5.82 0 13c0 8.58 13 23 13 23s13-14.42 13-23C26 5.82 20.18 0 13 0z"
+                      fill="${c.fill}" stroke="${c.ring}" stroke-width="1.5"/>
+            </svg>
+            <i class="bi ${ic}" style="position:absolute;top:7px;left:50%;transform:translateX(-50%);color:#fff;font-size:13px;line-height:1"></i>
+        </div>`,
+        iconSize:    [30, 40],
+        iconAnchor:  [15, 40],
+        popupAnchor: [0, -40]
     });
 }
 
@@ -710,8 +726,8 @@ function renderPlaces(list) {
             : 'good';
         const sl = suitLabel(suit);
 
-        // Weather-coloured marker
-        const icon = createWeatherMarker(suit);
+        // Màu theo thời tiết + icon theo danh mục
+        const icon = createWeatherMarker(suit, p.category);
         const weatherPopupLine = currentWeather
             ? `<br><span style="font-size:12px;font-weight:700;color:${suit==='good'?'#16a34a':suit==='mid'?'#d97706':'#dc2626'}">${sl.text}</span>`
             : '';

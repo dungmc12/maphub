@@ -601,8 +601,34 @@ document.addEventListener('DOMContentLoaded', () => {
     const m = L.map('detailMiniMap', { zoomControl:false, dragging:false, scrollWheelZoom:false })
                .setView([lat, lng], 15);
     window.cityTiles(m);
-    L.marker([lat, lng]).addTo(m)
+
+    // Marker icon theo danh mục (trắng) trên giọt nước — đồng bộ với bản đồ lớn
+    const _cat = '@(Model.Category ?? "")'.toLowerCase();
+    const _icMap = { restaurant:'bi-egg-fried', cafe:'bi-cup-hot-fill', entertainment:'bi-controller',
+        hotel:'bi-building-fill', culture:'bi-bank', temple:'bi-moon-stars-fill', nature:'bi-tree-fill',
+        education:'bi-mortarboard-fill', home:'bi-house-fill', work:'bi-briefcase-fill',
+        school:'bi-mortarboard-fill', favorite:'bi-star-fill' };
+    const _ic = _icMap[_cat] || 'bi-geo-alt-fill';
+    const _dIcon = L.divIcon({ className:'',
+        html:`<div style="position:relative;width:30px;height:40px;filter:drop-shadow(0 2px 2px rgba(0,0,0,.35))">
+            <svg width="30" height="40" viewBox="0 0 26 36"><path d="M13 0C5.82 0 0 5.82 0 13c0 8.58 13 23 13 23s13-14.42 13-23C26 5.82 20.18 0 13 0z" fill="#0891b2" stroke="#0e7490" stroke-width="1.5"/></svg>
+            <i class="bi ${_ic}" style="position:absolute;top:7px;left:50%;transform:translateX(-50%);color:#fff;font-size:13px"></i></div>`,
+        iconSize:[30,40], iconAnchor:[15,40], popupAnchor:[0,-40] });
+    L.marker([lat, lng], { icon:_dIcon }).addTo(m)
      .bindPopup('<b>@Html.Raw(Model.Name.Replace("'", "\\'"))</b>').openPopup();
+
+    // Bấm vào mini-map → mở bản đồ lớn, focus đúng địa điểm này (như Google Maps)
+    m.getContainer().style.cursor = 'pointer';
+    m.on('click', () => { window.location.href = '/Map?place=@Model.Id'; });
+    const _hint = L.control({ position:'bottomright' });
+    _hint.onAdd = () => {
+        const d = L.DomUtil.create('div');
+        d.innerHTML = '<span style="background:#fff;padding:4px 9px;border-radius:8px;font-size:12px;font-weight:700;color:#0891b2;box-shadow:0 1px 5px rgba(0,0,0,.25)"><i class="bi bi-arrows-fullscreen"></i> Mở bản đồ lớn</span>';
+        d.style.cursor = 'pointer';
+        L.DomEvent.on(d, 'click', (e) => { L.DomEvent.stop(e); window.location.href = '/Map?place=@Model.Id'; });
+        return d;
+    };
+    _hint.addTo(m);
 
     // Sync carousel ↔ thumbnails
     const carousel = document.getElementById('placeCarousel');
