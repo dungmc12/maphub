@@ -66,13 +66,17 @@
                 }
             </div>
 
-            <!-- Budget filter (thanh kéo, thay cho dropdown) -->
+            <!-- Budget filter — thanh kéo 2 đầu (từ → đến) -->
             <div class="sidebar-search-box" style="margin-top:.55rem">
-                <label style="font-size:.83rem;color:#475569;display:block;margin-bottom:.25rem">
-                    <i class="bi bi-cash-coin" style="color:#0891b2"></i> Ngân sách tối đa: <strong id="budgetLabel" style="color:#0891b2">Mọi mức giá</strong>
+                <label style="font-size:.83rem;color:#475569;display:block;margin-bottom:.4rem">
+                    <i class="bi bi-cash-coin" style="color:#0891b2"></i> Khoảng giá: <strong id="budgetLabel" style="color:#0891b2">Mọi mức giá</strong>
                 </label>
-                <input type="range" id="budgetRange" class="form-range" min="50000" max="2000000" step="50000"
-                       value="2000000" oninput="onBudgetSlide()">
+                <div class="dual-range">
+                    <div class="dr-track"></div>
+                    <div class="dr-fill" id="drFill" style="left:0;right:0"></div>
+                    <input type="range" id="budgetMin" min="0" max="2000000" step="50000" value="0" oninput="onBudgetSlide('min')">
+                    <input type="range" id="budgetMax" min="0" max="2000000" step="50000" value="2000000" oninput="onBudgetSlide('max')">
+                </div>
             </div>
 
             <!-- Quận/huyện + Đang mở cửa: gom 1 hàng gọn -->
@@ -602,17 +606,35 @@ function createWeatherMarker(suitability, category) {
 }
 
 // ── Data ──────────────────────────────────────────────────────────────────
-let currentBudget = '';
+const BUDGET_MAX = 2000000, BUDGET_GAP = 50000;
+let budgetLo = 0, budgetHi = BUDGET_MAX;   // khoảng giá đang chọn (2 đầu)
 let openNowOnly = false;
 let currentDistrict = '';
 
-function onBudgetSlide() {
-    const v = parseInt(document.getElementById('budgetRange').value);
+function fmtMoney(v) { return v >= 1000000 ? (v/1000000).toLocaleString('vi-VN',{maximumFractionDigits:1})+'tr' : (v/1000)+'k'; }
+
+function onBudgetSlide(which) {
+    const minEl = document.getElementById('budgetMin');
+    const maxEl = document.getElementById('budgetMax');
+    let lo = parseInt(minEl.value), hi = parseInt(maxEl.value);
+    // Không cho 2 đầu vượt qua nhau (giữ khoảng cách tối thiểu 1 bước)
+    if (hi - lo < BUDGET_GAP) {
+        if (which === 'min') { lo = Math.min(lo, BUDGET_MAX - BUDGET_GAP); hi = lo + BUDGET_GAP; maxEl.value = hi; }
+        else                 { hi = Math.max(hi, BUDGET_GAP); lo = hi - BUDGET_GAP; minEl.value = lo; }
+    }
+    budgetLo = lo; budgetHi = hi;
+
+    // Nhãn: full = mọi mức giá; còn lại "200k – 400k" (hi tối đa ghi "2tr+")
     const label = document.getElementById('budgetLabel');
-    if (v >= 2000000) { label.textContent = 'Mọi mức giá'; currentBudget = ''; }
-    else { label.textContent = 'Dưới ' + v.toLocaleString('vi-VN') + 'đ'; currentBudget = v; }
-    // Lọc ngay lập tức trên client (không cần tải lại server) — kéo tới đâu lọc tới đó
-    renderPlaces(allPlaces);
+    label.textContent = (lo <= 0 && hi >= BUDGET_MAX) ? 'Mọi mức giá'
+        : fmtMoney(lo) + ' – ' + (hi >= BUDGET_MAX ? '2tr+' : fmtMoney(hi));
+
+    // Tô đoạn đã chọn trên track
+    const fill = document.getElementById('drFill');
+    fill.style.left  = (lo / BUDGET_MAX * 100) + '%';
+    fill.style.right = (100 - hi / BUDGET_MAX * 100) + '%';
+
+    renderPlaces(allPlaces);   // lọc ngay client-side, không tải lại server
 }
 
 function filterOpenNow(checked) {
@@ -696,11 +718,14 @@ function renderPlaces(list) {
     // Lọc client-side: focus 1 địa điểm (từ /Map?place=) + ngân sách + đang mở cửa + quận/huyện
     let view = list;
     if (focusPlaceId != null) view = view.filter(p => p.id === focusPlaceId);
-    if (currentBudget !== '' && currentBudget != null) {
-        // Giá khởi điểm (min, hoặc max nếu thiếu min). MIỄN PHÍ / chưa rõ giá LUÔN hiện (hợp mọi ngân sách).
+    if (budgetLo > 0 || budgetHi < BUDGET_MAX) {
+        // Hiện địa điểm có khoảng giá GIAO với khoảng đã chọn. MIỄN PHÍ / chưa rõ giá LUÔN hiện.
+        const hiCap = (budgetHi >= BUDGET_MAX) ? Infinity : budgetHi;
         view = view.filter(p => {
-            const price = (p.minPrice != null) ? p.minPrice : p.maxPrice;
-            return price == null || price <= currentBudget;
+            if (p.minPrice == null && p.maxPrice == null) return true;
+            const pMin = (p.minPrice != null) ? p.minPrice : p.maxPrice;
+            const pMax = (p.maxPrice != null) ? p.maxPrice : p.minPrice;
+            return pMin <= hiCap && pMax >= budgetLo;
         });
     }
     if (openNowOnly) view = view.filter(p => isOpenNow(p));
