@@ -27,7 +27,7 @@ public class AdminController : Controller
     // ──────────────── Nhập địa điểm hàng loạt bằng Excel ────────────────
     private static readonly string[] ImportHeaders = {
         "Tên (*)","Danh mục","Địa chỉ","Vĩ độ (*)","Kinh độ (*)","Điện thoại","Hotline",
-        "Giờ mở","Giờ đóng","Giá từ","Giá đến","Website","Giới thiệu","Quyền xem"
+        "Giờ mở","Giờ đóng","Giá từ","Giá đến","Website","Giới thiệu","Quyền xem","Ảnh (URL)"
     };
 
     [HttpGet]
@@ -60,6 +60,7 @@ public class AdminController : Controller
         ws.Cell(2, 12).Value = "https://example.com";
         ws.Cell(2, 13).Value = "Phở bò gia truyền, không gian nhỏ ấm cúng.";
         ws.Cell(2, 14).Value = "public";
+        ws.Cell(2, 15).Value = "https://images.unsplash.com/photo-xxxx";
 
         var help = wb.Worksheets.Add("HuongDan");
         help.Cell(1, 1).Value = "HƯỚNG DẪN NHẬP ĐỊA ĐIỂM";
@@ -69,7 +70,8 @@ public class AdminController : Controller
         help.Cell(5, 1).Value = "• Vĩ độ / Kinh độ: số thập phân, dùng dấu chấm (VD 21.0285). Lấy từ Google Maps.";
         help.Cell(6, 1).Value = "• Quyền xem: public (Công khai) hoặc private (Cá nhân). Bỏ trống = Công khai.";
         help.Cell(7, 1).Value = "• Giá từ / Giá đến: số nguyên (đồng), để trống nếu không có.";
-        help.Cell(8, 1).Value = "• XÓA dòng ví dụ (dòng 2) trước khi nhập dữ liệu thật.";
+        help.Cell(8, 1).Value = "• Ảnh (URL): dán đường dẫn ảnh (https://...jpg) làm ảnh đại diện; để trống nếu chưa có (bổ sung sau ở Sửa địa điểm).";
+        help.Cell(9, 1).Value = "• XÓA dòng ví dụ (dòng 2) trước khi nhập dữ liệu thật.";
         help.Column(1).Width = 110;
 
         ws.Columns().AdjustToContents();
@@ -133,7 +135,7 @@ public class AdminController : Controller
                 var vis = (visRaw.Contains("priv") || visRaw.Contains("cá nhân") || visRaw.Contains("ca nhan")) ? "private" : "public";
                 double minN = Num(10), maxN = Num(11);
 
-                _context.Places.Add(new Place {
+                var place = new Place {
                     Name = name, Category = cat, Address = NullIf(Str(3)),
                     Latitude = (decimal)lat, Longitude = (decimal)lng,
                     Phone = NullIf(Str(6)), Phone2 = NullIf(Str(7)),
@@ -143,7 +145,13 @@ public class AdminController : Controller
                     WebsiteUrl = NullIf(Str(12)), About = NullIf(Str(13)),
                     Visibility = vis, IsApproved = true, CreatedByUserId = uid,
                     CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow
-                });
+                };
+                // Ảnh đại diện theo URL (cột 15) — EF tự gắn FK khi lưu
+                var imgUrl = Str(15);
+                if (!string.IsNullOrWhiteSpace(imgUrl) && (imgUrl.StartsWith("http://") || imgUrl.StartsWith("https://")))
+                    place.Images.Add(new PlaceImage { Url = imgUrl, IsPrimary = true, UploadedByUserId = uid });
+
+                _context.Places.Add(place);
                 added++;
             }
             await _context.SaveChangesAsync();
