@@ -54,10 +54,17 @@
         </footer>
     }
 
-    @{ var mbToken = Configuration["Mapbox:Token"] ?? Environment.GetEnvironmentVariable("MAPBOX_TOKEN"); }
+    @{
+        var mbToken = Configuration["Mapbox:Token"] ?? Environment.GetEnvironmentVariable("MAPBOX_TOKEN");
+        var mbStyle = Configuration["Mapbox:Style"] ?? Environment.GetEnvironmentVariable("MAPBOX_STYLE");
+    }
     @if (!string.IsNullOrWhiteSpace(mbToken))
     {
         <script>window.MAPBOX_TOKEN = "@Html.Raw(mbToken)";</script>
+    }
+    @if (!string.IsNullOrWhiteSpace(mbStyle))
+    {
+        <script>window.MAPBOX_STYLE = "@Html.Raw(mbStyle)";</script>
     }
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
