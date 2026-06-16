@@ -450,10 +450,13 @@ body.map-view { overflow: hidden; height: 100vh; }
   background: linear-gradient(135deg, var(--accent-dark), #075985);
   padding: 2.5rem 0; margin-top: 1.5rem;
 }
+.cta-banner.cta-compact { padding: 1.7rem 0; }          /* thấp hơn ~30% */
 .cta-inner { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1.5rem; }
-.cta-inner h3 { color: #fff; margin: 0 0 .35rem; }
-.cta-inner p  { color: rgba(255,255,255,.8); margin: 0; }
-.cta-actions  { display: flex; gap: .8rem; flex-wrap: wrap; }
+.cta-inner h3 { color: #fff; margin: 0 0 .3rem; font-size: 1.25rem; font-weight: 800; }
+.cta-inner p  { color: rgba(255,255,255,.85); margin: 0; font-size: .92rem; }
+.cta-actions  { display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; }
+.cta-link { color: #fff; font-weight: 700; font-size: .9rem; text-decoration: none; opacity: .9; white-space: nowrap; }
+.cta-link:hover { color: #fff; opacity: 1; text-decoration: underline; }
 
 /* ── Category pills — text-first, 1 màu active ────────────────────────── */
 .map-tagbar {
@@ -1732,19 +1735,21 @@ body.map-view { overflow: hidden; height: 100vh; }
 .hero-search button:hover { background: var(--accent-hover); }
 
 /* ── City Guide section ───────────────────────────────────────────────── */
-.guide-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px,1fr)); gap: 1.4rem; }
+.guide-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px,1fr)); gap: 1.2rem; }
 .guide-card {
-  position: relative; display: block; min-height: 220px; border-radius: var(--radius-lg);
+  position: relative; display: block; aspect-ratio: 320/220; min-height: 200px; border-radius: 20px;
   overflow: hidden; text-decoration: none; color: #fff;
+  background: linear-gradient(145deg, var(--g1,#0891B2), var(--g2,#0E7490));
   box-shadow: var(--shadow-card); transition: transform .25s var(--ease), box-shadow .25s var(--ease);
 }
 .guide-card:hover { transform: translateY(-5px); box-shadow: var(--shadow-lift); color: #fff; }
-.guide-card img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: transform .5s var(--ease); }
-.guide-card:hover img { transform: scale(1.08); }
-.guide-card-overlay { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(15,23,42,0) 30%, rgba(15,23,42,.82) 100%); display: flex; flex-direction: column; justify-content: flex-end; padding: 1.2rem; }
-.guide-card-kicker { font-size: .72rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--secondary); margin-bottom: .35rem; }
-.guide-card-title { font-size: 1.15rem; font-weight: 700; letter-spacing: -.02em; line-height: 1.25; }
-.guide-card-meta { font-size: .82rem; color: rgba(255,255,255,.8); margin-top: .3rem; }
+.guide-emoji { position: absolute; top: -.12em; right: .04em; font-size: 6.2rem; line-height: 1; opacity: .34;
+  transform: rotate(-8deg); transition: transform .5s var(--ease), opacity .3s; filter: drop-shadow(0 6px 10px rgba(0,0,0,.18)); }
+.guide-card:hover .guide-emoji { transform: rotate(-8deg) scale(1.14); opacity: .46; }
+.guide-card-overlay { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,0) 38%, rgba(0,0,0,.58) 100%); display: flex; flex-direction: column; justify-content: flex-end; padding: 1.2rem; }
+.guide-card-kicker { font-size: .7rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: rgba(255,255,255,.92); margin-bottom: .3rem; }
+.guide-card-title { font-size: 1.2rem; font-weight: 800; letter-spacing: -.02em; line-height: 1.22; text-shadow: 0 1px 6px rgba(0,0,0,.25); }
+.guide-card-meta { font-size: .82rem; color: rgba(255,255,255,.88); margin-top: .3rem; }
 
 /* ── Pro page: stats ──────────────────────────────────────────────────── */
 .pro-stats { display: grid; grid-template-columns: repeat(3,1fr); gap: 1.2rem; max-width: 860px; margin: 2.5rem auto 0; padding: 0 1rem; position: relative; z-index: 3; }
