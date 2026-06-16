@@ -384,7 +384,7 @@ else if (isAuth)
 
 @section Scripts {
 <script>
-let map, allPlaces = [], markers = [], miniMap, miniMarker, routingControl;
+let map, allPlaces = [], markers = [], clusterGroup = null, miniMap, miniMarker, routingControl;
 let currentCat = '';
 let focusPlaceId = null;   // khi mở /Map?place=id → chỉ hiện đúng 1 địa điểm
 let currentWeather = null;
@@ -412,6 +412,18 @@ function toggleSave(placeId, btn, full) {
 document.addEventListener('DOMContentLoaded', () => {
     map = L.map('map').setView([21.0285, 105.8542], 12);
     window.cityTiles(map);
+
+    // Gom marker thành cụm (Leaflet.markercluster) → hàng nghìn địa điểm vẫn mượt,
+    // chỉ vẽ cụm trong vùng nhìn thay vì toàn bộ marker. Bỏ qua nếu thư viện chưa nạp.
+    if (window.L && L.markerClusterGroup) {
+        clusterGroup = L.markerClusterGroup({
+            chunkedLoading: true,          // nạp marker theo lô, không block UI
+            maxClusterRadius: 55,
+            spiderfyOnMaxZoom: true,
+            disableClusteringAtZoom: 17    // ở mức zoom sát thì tách marker riêng
+        });
+        map.addLayer(clusterGroup);
+    }
 
     // Mobile: đảm bảo map nhận đúng kích thước (sau khi layout xếp cột) + khi xoay/đổi cỡ
     setTimeout(() => map.invalidateSize(), 200);
@@ -730,7 +742,8 @@ function suitLabel(s) {
 }
 
 function renderPlaces(list) {
-    markers.forEach(m => map.removeLayer(m));
+    if (clusterGroup) clusterGroup.clearLayers();
+    else markers.forEach(m => map.removeLayer(m));
     markers = [];
     const container = document.getElementById('placeList');
 
@@ -764,25 +777,33 @@ function renderPlaces(list) {
         bar.innerHTML = '<span>Đang xem 1 địa điểm của bạn</span><button onclick="clearFocus()" style="border:none;background:#fff;border-radius:8px;padding:.25rem .6rem;font-weight:600;cursor:pointer;color:var(--accent)">Xem tất cả</button>';
         container.appendChild(bar);
     }
-    view.forEach((p, _idx) => {
-        const suit = currentWeather
-            ? getWeatherSuitability(currentWeather.weatherCode, p.category)
-            : 'good';
+    // 1) MARKER — dựng tất cả rồi nạp 1 lần vào cluster (nhanh hơn add từng cái nhiều).
+    //    Cluster chỉ vẽ phần trong vùng nhìn → hàng nghìn điểm vẫn mượt.
+    const markerOf = {};
+    view.forEach(p => {
+        const suit = currentWeather ? getWeatherSuitability(currentWeather.weatherCode, p.category) : 'good';
         const sl = suitLabel(suit);
-
-        // Màu theo thời tiết + icon theo danh mục
         const icon = createWeatherMarker(suit, p.category);
         const weatherPopupLine = currentWeather
             ? `<br><span style="font-size:12px;font-weight:700;color:${suit==='good'?'#16a34a':suit==='mid'?'#d97706':'#dc2626'}">${sl.text}</span>`
             : '';
-
-        const m = L.marker([p.latitude, p.longitude], { icon }).addTo(map)
+        const m = L.marker([p.latitude, p.longitude], { icon })
             .bindPopup(`<b>${p.name}</b><br><small>${p.address || ''}</small>${weatherPopupLine}<br>
                         <a href="/Map/Details/${p.id}" style="display:inline-block;margin-top:6px;padding:4px 12px;background:#0891b2;color:#fff;border-radius:8px;text-decoration:none;font-size:13px;font-weight:600">Xem chi tiết →</a>
                         <button type="button" onclick="toggleSave(${p.id}, this, true)" style="display:inline-block;margin:6px 0 0 6px;padding:4px 10px;background:#fff;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">${p.isSaved ? '<i class="bi bi-heart-fill" style="color:#e11d48"></i> Đã lưu' : '<i class="bi bi-heart"></i> Lưu'}</button>`);
         markers.push(m);
+        markerOf[p.id] = m;
+    });
+    if (clusterGroup) clusterGroup.addLayers(markers);   // bulk add — không block UI
+    else markers.forEach(m => m.addTo(map));
 
-        // Sidebar card
+    // 2) SIDEBAR — render theo lô + nạp tiếp khi cuộn tới (tránh dựng hàng nghìn DOM cùng lúc).
+    const BATCH = 40;
+    let rendered = 0;
+    function makeCard(p, idx) {
+        const suit = currentWeather ? getWeatherSuitability(currentWeather.weatherCode, p.category) : 'good';
+        const sl = suitLabel(suit);
+        const m = markerOf[p.id];
         const card = document.createElement('div');
         card.className = 'place-list-card';
         card.innerHTML = `
@@ -808,10 +829,31 @@ function renderPlaces(list) {
                 </div>
                 ${currentWeather ? `<div class="place-weather-badge ${sl.cls}">${sl.text}</div>` : ''}
             </div>`;
-        card.onclick = () => { map.setView([p.latitude, p.longitude], 16); m.openPopup(); };
-        card.style.animationDelay = Math.min(_idx, 12) * 30 + 'ms';   // stagger entrance
-        container.appendChild(card);
-    });
+        card.onclick = () => { if (clusterGroup && m) clusterGroup.zoomToShowLayer(m, () => m.openPopup()); else { map.setView([p.latitude, p.longitude], 16); if (m) m.openPopup(); } };
+        card.style.animationDelay = Math.min(idx, 12) * 30 + 'ms';
+        return card;
+    }
+    let sentinel = null, io = null;
+    function renderBatch() {
+        const frag = document.createDocumentFragment();
+        const end = Math.min(rendered + BATCH, view.length);
+        for (let i = rendered; i < end; i++) frag.appendChild(makeCard(view[i], i - rendered));
+        if (sentinel) container.removeChild(sentinel);
+        container.appendChild(frag);
+        rendered = end;
+        if (rendered < view.length) {
+            sentinel = document.createElement('div');
+            sentinel.style.height = '1px';
+            container.appendChild(sentinel);
+            io.observe(sentinel);
+        } else if (io) { io.disconnect(); }
+    }
+    io = ('IntersectionObserver' in window)
+        ? new IntersectionObserver(es => { if (es.some(e => e.isIntersecting)) renderBatch(); }, { root: container, rootMargin: '300px' })
+        : { observe(){}, disconnect(){} };
+    renderBatch();
+    // Trình duyệt cũ không có IO → render hết phần còn lại
+    if (!('IntersectionObserver' in window)) while (rendered < view.length) renderBatch();
 
     // Focus 1 địa điểm (từ /Map?place=) → căn giữa + mở popup
     if (focusPlaceId != null && markers.length && view.length) {
