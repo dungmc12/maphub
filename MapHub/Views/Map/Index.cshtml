@@ -418,10 +418,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (window.L && L.markerClusterGroup) {
         clusterGroup = L.markerClusterGroup({
             chunkedLoading: true,          // nạp marker theo lô, không block UI
-            // Bán kính gom nhỏ + giảm dần khi zoom vào → cụm ít điểm (2–5) tự tách sớm.
-            maxClusterRadius: z => (z >= 15 ? 20 : 50),
+            // Bán kính gom nhỏ + giảm mạnh khi zoom vào → cụm ít điểm (2–5) tách sớm.
+            maxClusterRadius: z => (z >= 13 ? 12 : 45),
             spiderfyOnMaxZoom: true,
-            disableClusteringAtZoom: 16    // phóng tới mức thấy đường (≥16) là hiện hết từng địa điểm
+            disableClusteringAtZoom: 15    // phóng tới mức thấy đường (≥15) là hiện hết từng địa điểm
         });
         map.addLayer(clusterGroup);
     }
