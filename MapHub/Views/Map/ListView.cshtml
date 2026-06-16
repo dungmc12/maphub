@@ -1,0 +1,102 @@
+@model List<MapHub.Models.Place>
+@{
+    var list = ViewBag.List as MapHub.Models.UserList;
+    bool isOwner = (bool)(ViewBag.IsOwner ?? false);
+    var ratings = ViewBag.Ratings as Dictionary<int, (double Avg, int Count)> ?? new();
+    var inv = System.Globalization.CultureInfo.InvariantCulture;
+    ViewData["Title"] = list?.Name ?? "Danh sách";
+
+    var iconMeta = new Dictionary<string,(string L,string Ic,string C)>{
+        ["favorites"]=("Yêu thích","bi-heart-fill","#e11d48"), ["want"]=("Muốn đến","bi-flag-fill","#f59e0b"),
+        ["starred"]=("Đã gắn sao","bi-star-fill","#eab308"), ["travel"]=("Kế hoạch đi","bi-airplane-fill","#0891b2"),
+        ["saved"]=("Đã lưu","bi-bookmark-fill","#8b5cf6")
+    };
+    var visMeta = new Dictionary<string,(string L,string Ic)>{
+        ["private"]=("Riêng tư","bi-lock-fill"), ["shared"]=("Có link","bi-link-45deg"), ["public"]=("Công khai","bi-globe2")
+    };
+    var (il, iic, icc) = list != null && iconMeta.TryGetValue(list.IconKey, out var im) ? im : ("Danh sách","bi-bookmark-fill","#0891b2");
+    var (vl, vic) = list != null && visMeta.TryGetValue(list.Visibility, out var vm) ? vm : ("Riêng tư","bi-lock-fill");
+
+    var catMeta = new Dictionary<string,(string L,string Icon,string Color)>(StringComparer.OrdinalIgnoreCase){
+        ["restaurant"]=("Nhà hàng","bi-egg-fried","#e06d1b"), ["cafe"]=("Cà phê","bi-cup-hot-fill","#d97706"),
+        ["entertainment"]=("Vui chơi","bi-controller","#7c3aed"), ["hotel"]=("Lưu trú","bi-building-fill","#db2777"),
+        ["culture"]=("Văn hóa","bi-bank","#2563eb"), ["temple"]=("Tâm linh","bi-moon-stars-fill","#a16207"),
+        ["nature"]=("Thiên nhiên","bi-tree-fill","#16a34a"), ["education"]=("Giáo dục","bi-mortarboard-fill","#0d9488"),
+        ["home"]=("Nhà riêng","bi-house-fill","#0891b2"), ["work"]=("Công ty","bi-briefcase-fill","#475569"),
+        ["school"]=("Trường học","bi-mortarboard-fill","#0d9488"), ["favorite"]=("Yêu thích","bi-star-fill","#e11d48")
+    };
+}
+@Html.AntiForgeryToken()
+
+<div class="container-xl py-4 mpx">
+    <a href="/Map/Lists" class="back-link"><i class="bi bi-arrow-left-circle-fill" style="color:@icc"></i> Danh sách của tôi</a>
+
+    <div class="lstv-hero" style="--c:@icc">
+        <span class="lstv-ic"><i class="bi @iic"></i></span>
+        <div>
+            <h1 class="mpx-title" style="font-size:1.5rem">@(list?.Name)</h1>
+            <p class="mpx-sub"><i class="bi @vic"></i> @vl · @Model.Count địa điểm</p>
+        </div>
+    </div>
+
+    @if (!Model.Any())
+    {
+        <div class="mpx-empty">
+            <div class="mpx-empty-ic" style="background:#f1f5f9;color:@icc"><i class="bi @iic"></i></div>
+            <h5>Danh sách trống</h5>
+            <p>Mở bản đồ, bấm <i class="bi bi-heart"></i> trên địa điểm để thêm vào đây.</p>
+            <a href="/Map" class="btn-accent mt-2"><i class="bi bi-compass"></i> Khám phá địa điểm</a>
+        </div>
+    }
+    else
+    {
+        <div class="mpx-grid">
+            @foreach (var p in Model)
+            {
+                var (cl, cic, cc) = catMeta.TryGetValue(p.Category ?? "", out var cm) ? cm : ("Khác","bi-geo-alt-fill","#64748b");
+                var imgObj = p.Images.FirstOrDefault();
+                var img = imgObj != null ? $"/Map/Image/{imgObj.Id}?v={p.UpdatedAt.Ticks}" : "https://placehold.co/400x250?text=No+Image";
+                var route = $"/Map?route={p.Latitude.ToString(inv)},{p.Longitude.ToString(inv)}";
+                var hasRt = ratings.TryGetValue(p.Id, out var rt);
+                <article class="mpx-card" id="li-@p.Id">
+                    <a href="/Map/Details/@p.Id" class="mpx-thumb">
+                        <img src="@img" alt="@p.Name" loading="lazy" onerror="this.onerror=null;this.src='https://placehold.co/400x250?text=No+Img'">
+                        <span class="mpx-chip" style="--cc:@cc"><i class="bi @cic"></i> @cl</span>
+                    </a>
+                    <div class="mpx-body">
+                        <a href="/Map/Details/@p.Id" class="mpx-name">@p.Name</a>
+                        <div class="mpx-rating">
+                            @if (hasRt)
+                            { <span class="mpx-star">★ @rt.Avg.ToString("0.0")</span> <span class="mpx-rc">· @rt.Count đánh giá</span> }
+                            else
+                            { <span class="mpx-rc">Chưa có đánh giá</span> }
+                        </div>
+                        @if (!string.IsNullOrEmpty(p.Address))
+                        { <div class="mpx-addr"><i class="bi bi-geo-alt"></i> @p.Address</div> }
+                        <div class="mpx-actions">
+                            <a href="@route" class="mpx-btn mpx-btn-primary"><i class="bi bi-signpost-2-fill"></i> Chỉ đường</a>
+                            <a href="/Map/Details/@p.Id" class="mpx-btn" title="Chi tiết"><i class="bi bi-eye-fill"></i></a>
+                            @if (isOwner && list != null)
+                            {
+                                <button type="button" class="mpx-btn mpx-btn-danger" style="margin-left:auto" onclick="removeFromList(@list.Id, @p.Id)" title="Bỏ khỏi danh sách"><i class="bi bi-x-lg"></i></button>
+                            }
+                        </div>
+                    </div>
+                </article>
+            }
+        </div>
+    }
+</div>
+
+@section Scripts {
+<script>
+function removeFromList(listId, placeId) {
+    const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
+    const fd = new URLSearchParams({ listId, placeId });
+    fetch('/Map/RemoveFromList', { method:'POST', headers:{ 'RequestVerificationToken': token, 'Content-Type':'application/x-www-form-urlencoded' }, body: fd.toString() })
+        .then(r => r.json()).then(d => {
+            if (d.ok) { const c = document.getElementById('li-' + placeId); if (c) { c.style.transition='opacity .2s'; c.style.opacity='0'; setTimeout(()=>c.remove(),200); } }
+        }).catch(() => alert('Lỗi, thử lại.'));
+}
+</script>
+}

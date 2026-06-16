@@ -491,8 +491,153 @@ public class MapController : Controller
         bool saved;
         if (item != null) { _context.UserListItems.Remove(item); saved = false; }
         else { _context.UserListItems.Add(new UserListItem { ListId = list.Id, PlaceId = placeId }); saved = true; }
+        list.UpdatedAt = DateTime.UtcNow;
         await _context.SaveChangesAsync();
         return Json(new { ok = true, saved });
+    }
+
+    // ──────────────── Hệ thống Danh sách (Lists) — kiểu Google Maps Saved ────────────────
+    private static readonly string[] _iconKeys = { "favorites", "want", "starred", "travel", "saved" };
+    private static readonly string[] _visKeys  = { "private", "shared", "public" };
+
+    [Authorize]
+    [HttpGet]
+    public async Task<IActionResult> Lists()
+    {
+        var uid = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value!;
+        await GetOrCreateFavListAsync(uid);   // luôn có sẵn list "Yêu thích"
+
+        var rows = await _context.UserLists.Where(l => l.UserId == uid)
+            .OrderByDescending(l => l.UpdatedAt)
+            .Select(l => new { l.Id, l.Name, l.Visibility, l.IconKey, Count = l.Items.Count,
+                FirstPlaceId = l.Items.OrderByDescending(i => i.AddedAt).Select(i => (int?)i.PlaceId).FirstOrDefault() })
+            .ToListAsync();
+
+        var fpIds = rows.Where(x => x.FirstPlaceId != null).Select(x => x.FirstPlaceId!.Value).Distinct().ToList();
+        var covers = (await _context.PlaceImages.Where(im => im.IsPrimary && fpIds.Contains(im.PlaceId))
+            .Select(im => new { im.PlaceId, im.Id }).ToListAsync())
+            .GroupBy(c => c.PlaceId).ToDictionary(g => g.Key, g => g.First().Id);
+
+        var vm = rows.Select(l => (
+            Id: l.Id, Name: l.Name, Visibility: l.Visibility, IconKey: l.IconKey, Count: l.Count,
+            CoverImageId: (l.FirstPlaceId != null && covers.TryGetValue(l.FirstPlaceId.Value, out var cid)) ? (int?)cid : null
+        )).ToList();
+        return View(vm);
+    }
+
+    [Authorize]
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> CreateList(string name, string iconKey = "favorites", string visibility = "private")
+    {
+        var uid = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value!;
+        if (!string.IsNullOrWhiteSpace(name))
+        {
+            _context.UserLists.Add(new UserList {
+                UserId = uid, Name = name.Trim(),
+                IconKey = _iconKeys.Contains(iconKey) ? iconKey : "favorites",
+                Visibility = _visKeys.Contains(visibility) ? visibility : "private"
+            });
+            await _context.SaveChangesAsync();
+        }
+        return RedirectToAction(nameof(Lists));
+    }
+
+    [Authorize]
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> RenameList(int id, string name)
+    {
+        var uid = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value!;
+        var list = await _context.UserLists.FirstOrDefaultAsync(l => l.Id == id && l.UserId == uid);
+        if (list != null && !string.IsNullOrWhiteSpace(name))
+        { list.Name = name.Trim(); list.UpdatedAt = DateTime.UtcNow; await _context.SaveChangesAsync(); }
+        return RedirectToAction(nameof(Lists));
+    }
+
+    [Authorize]
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> SetListVisibility(int id, string visibility)
+    {
+        var uid = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value!;
+        var list = await _context.UserLists.FirstOrDefaultAsync(l => l.Id == id && l.UserId == uid);
+        if (list != null && _visKeys.Contains(visibility))
+        { list.Visibility = visibility; list.UpdatedAt = DateTime.UtcNow; await _context.SaveChangesAsync(); }
+        return RedirectToAction(nameof(Lists));
+    }
+
+    [Authorize]
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> DeleteList(int id)
+    {
+        var uid = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value!;
+        var list = await _context.UserLists.FirstOrDefaultAsync(l => l.Id == id && l.UserId == uid);
+        if (list != null)
+        {
+            _context.UserListItems.RemoveRange(_context.UserListItems.Where(i => i.ListId == id));
+            _context.UserLists.Remove(list);
+            await _context.SaveChangesAsync();
+        }
+        return RedirectToAction(nameof(Lists));
+    }
+
+    [Authorize]
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> DuplicateList(int id)
+    {
+        var uid = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value!;
+        var list = await _context.UserLists.FirstOrDefaultAsync(l => l.Id == id && l.UserId == uid);
+        if (list != null)
+        {
+            var copy = new UserList { UserId = uid, Name = list.Name + " (bản sao)", IconKey = list.IconKey, Visibility = "private" };
+            _context.UserLists.Add(copy);
+            await _context.SaveChangesAsync();
+            var items = await _context.UserListItems.Where(i => i.ListId == id).Select(i => i.PlaceId).ToListAsync();
+            foreach (var pid in items) _context.UserListItems.Add(new UserListItem { ListId = copy.Id, PlaceId = pid });
+            await _context.SaveChangesAsync();
+        }
+        return RedirectToAction(nameof(Lists));
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> ListView(int id)
+    {
+        var uid = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        var list = await _context.UserLists.FirstOrDefaultAsync(l => l.Id == id);
+        if (list == null) return NotFound();
+        bool isowner = list.UserId == uid;
+        if (!isowner && list.Visibility == "private") return Forbid();
+
+        var placeIds = await _context.UserListItems.Where(i => i.ListId == id)
+            .OrderByDescending(i => i.AddedAt).Select(i => i.PlaceId).ToListAsync();
+        var loaded = await _context.Places.Where(p => placeIds.Contains(p.Id))
+            .Include(p => p.Images.Where(im => im.IsPrimary)).ToListAsync();
+        var places = placeIds.Select(pid => loaded.FirstOrDefault(p => p.Id == pid)).Where(p => p != null).Select(p => p!).ToList();
+
+        var ratingRows = await _context.PlaceReviews.Where(r => placeIds.Contains(r.PlaceId))
+            .GroupBy(r => r.PlaceId)
+            .Select(g => new { PlaceId = g.Key, Avg = Math.Round(g.Average(r => (double)r.QualityRating), 1), Count = g.Count() })
+            .ToListAsync();
+        ViewBag.Ratings = ratingRows.ToDictionary(x => x.PlaceId, x => (x.Avg, x.Count));
+        ViewBag.List = list;
+        ViewBag.IsOwner = isowner;
+        return View(places);
+    }
+
+    [Authorize]
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> RemoveFromList(int listId, int placeId)
+    {
+        var uid = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value!;
+        var list = await _context.UserLists.FirstOrDefaultAsync(l => l.Id == listId && l.UserId == uid);
+        if (list == null) return Forbid();
+        var item = await _context.UserListItems.FirstOrDefaultAsync(i => i.ListId == listId && i.PlaceId == placeId);
+        if (item != null) { _context.UserListItems.Remove(item); list.UpdatedAt = DateTime.UtcNow; await _context.SaveChangesAsync(); }
+        return Json(new { ok = true });
     }
 
     [Authorize]

@@ -681,6 +681,51 @@ body.map-view { overflow: hidden; height: 100vh; }
   .mpx-select { max-width:none; flex:1; }
 }
 
+/* ── Hệ thống Danh sách (Lists) ───────────────────────────────────────── */
+.lst-new { display:inline-flex; align-items:center; gap:.45rem; border:none; cursor:pointer;
+           background:var(--accent-soft,#ecfeff); color:var(--accent-dark,#0E7490); font-weight:800; font-size:.95rem;
+           padding:.7rem 1.4rem; border-radius:9999px; transition:all .16s; }
+.lst-new:hover { background:#cffafe; transform:translateY(-1px); }
+.lst-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(248px, 1fr)); gap:1.1rem; }
+.lst-card { background:#fff; border:1px solid var(--line,#E2E8F0); border-radius:18px; overflow:hidden;
+            box-shadow:0 1px 3px rgba(15,23,42,.05); transition:transform .2s cubic-bezier(.22,1,.36,1), box-shadow .2s; }
+.lst-card:hover { transform:translateY(-4px); box-shadow:0 12px 28px rgba(15,23,42,.12); }
+.lst-cover { display:block; position:relative; aspect-ratio:16/9; overflow:hidden;
+             background:linear-gradient(135deg, color-mix(in srgb, var(--c,#0891b2) 22%, #fff), color-mix(in srgb, var(--c,#0891b2) 8%, #fff)); }
+.lst-cover img { width:100%; height:100%; object-fit:cover; transition:transform .35s; }
+.lst-card:hover .lst-cover img { transform:scale(1.05); }
+.lst-cover-ic { position:absolute; inset:0; display:grid; place-items:center; font-size:2.6rem; color:var(--c,#0891b2); opacity:.85; }
+.lst-body { padding:.8rem .9rem 1rem; }
+.lst-row { display:flex; align-items:center; gap:.55rem; }
+.lst-ic { width:30px; height:30px; border-radius:9px; display:grid; place-items:center; flex-shrink:0;
+          background:color-mix(in srgb, var(--c,#0891b2) 14%, #fff); color:var(--c,#0891b2); font-size:.95rem; }
+.lst-name { flex:1; font-weight:700; font-size:1rem; color:var(--ink-primary,#0F172A); text-decoration:none;
+            overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.lst-name:hover { color:var(--accent,#0891B2); }
+.lst-meta { margin-top:.5rem; font-size:.82rem; color:var(--ink-secondary,#64748B); }
+.lst-menu-btn { border:none; background:none; color:var(--ink-secondary,#94a3b8); width:32px; height:32px; border-radius:8px; cursor:pointer; flex-shrink:0; }
+.lst-menu-btn:hover { background:#f1f5f9; color:var(--ink-primary,#0F172A); }
+.lst-menu { border:1px solid var(--line,#E2E8F0); border-radius:14px; box-shadow:0 12px 32px rgba(0,0,0,.14); padding:.35rem; min-width:210px; }
+.lst-menu .dropdown-item { border-radius:9px; padding:.5rem .7rem; font-size:.88rem; font-weight:500; display:flex; align-items:center; gap:.55rem; }
+.lst-menu .dropdown-item .bi { width:16px; }
+.lst-menu .dropdown-item.active { background:var(--accent-soft,#ecfeff); color:var(--accent-dark,#0E7490); }
+.lst-menu .dropdown-item:hover { background:#f1f5f9; }
+.lst-menu form { margin:0; }
+.lst-danger { color:#dc2626 !important; }
+.lst-danger:hover { background:#fef2f2 !important; }
+.lst-menu .dropdown-header { font-size:.72rem; text-transform:uppercase; letter-spacing:.5px; color:#94a3b8; padding:.3rem .7rem; }
+
+.lst-icon-pick { display:flex; gap:.6rem; flex-wrap:wrap; }
+.lst-icon-opt { width:46px; height:46px; border-radius:12px; display:grid; place-items:center; cursor:pointer;
+                border:2px solid var(--line,#E2E8F0); color:var(--c,#0891b2); font-size:1.2rem; transition:all .15s; }
+.lst-icon-opt.on { border-color:var(--c,#0891b2); background:color-mix(in srgb, var(--c,#0891b2) 12%, #fff); transform:scale(1.05); }
+
+.lstv-hero { display:flex; align-items:center; gap:1rem; margin:1rem 0 1.5rem; }
+.lstv-ic { width:60px; height:60px; border-radius:16px; display:grid; place-items:center; flex-shrink:0;
+           background:color-mix(in srgb, var(--c,#0891b2) 14%, #fff); color:var(--c,#0891b2); font-size:1.7rem; }
+
+@media (max-width:520px){ .lst-grid { grid-template-columns:1fr; } .lst-new { width:100%; justify-content:center; } }
+
 /* ── Map toast ────────────────────────────────────────────────────────── */
 .map-toast {
   position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(8px);

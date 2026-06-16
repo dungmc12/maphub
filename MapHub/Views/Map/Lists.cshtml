@@ -1,0 +1,188 @@
+@model List<(int Id, string Name, string Visibility, string IconKey, int Count, int? CoverImageId)>
+@{
+    ViewData["Title"] = "Danh sách của tôi";
+    var iconMeta = new Dictionary<string,(string L,string Ic,string C)>{
+        ["favorites"]=("Yêu thích","bi-heart-fill","#e11d48"),
+        ["want"]=("Muốn đến","bi-flag-fill","#f59e0b"),
+        ["starred"]=("Đã gắn sao","bi-star-fill","#eab308"),
+        ["travel"]=("Kế hoạch đi","bi-airplane-fill","#0891b2"),
+        ["saved"]=("Đã lưu","bi-bookmark-fill","#8b5cf6")
+    };
+    var visMeta = new Dictionary<string,(string L,string Ic)>{
+        ["private"]=("Riêng tư","bi-lock-fill"), ["shared"]=("Có link","bi-link-45deg"), ["public"]=("Công khai","bi-globe2")
+    };
+    var sharedCount = Model.Count(m => m.Visibility != "private");
+}
+@Html.AntiForgeryToken()
+
+<div class="container-xl py-4 lst">
+    <div class="mpx-head">
+        <div>
+            <h1 class="mpx-title"><i class="bi bi-collection-fill"></i> Danh sách của tôi</h1>
+            <p class="mpx-sub">Sắp xếp địa điểm theo bộ sưu tập — như Google Maps</p>
+        </div>
+        <button type="button" class="lst-new" data-bs-toggle="modal" data-bs-target="#createListModal">
+            <i class="bi bi-plus-lg"></i> Danh sách mới
+        </button>
+    </div>
+
+    <div class="mpx-tabs">
+        <button type="button" class="mpx-tab active" data-tab="all" onclick="lstTab('all')">Danh sách <span class="mpx-tab-n">@Model.Count</span></button>
+        <button type="button" class="mpx-tab" data-tab="shared" onclick="lstTab('shared')">Đã chia sẻ <span class="mpx-tab-n">@sharedCount</span></button>
+        <a href="/Map" class="mpx-tab" style="text-decoration:none">Bản đồ</a>
+    </div>
+
+    @if (!Model.Any())
+    {
+        <div class="mpx-empty">
+            <div class="mpx-empty-ic"><i class="bi bi-collection"></i></div>
+            <h5>Chưa có danh sách nào</h5>
+            <p>Tạo danh sách đầu tiên để sắp xếp các địa điểm yêu thích của bạn.</p>
+            <button type="button" class="btn-accent mt-2" data-bs-toggle="modal" data-bs-target="#createListModal"><i class="bi bi-plus-lg"></i> Tạo danh sách</button>
+        </div>
+    }
+    else
+    {
+        <div class="lst-grid" id="lstGrid">
+            @foreach (var l in Model)
+            {
+                var (il, ic, icc) = iconMeta.TryGetValue(l.IconKey, out var im) ? im : ("Danh sách","bi-bookmark-fill","#0891b2");
+                var (vl, vic) = visMeta.TryGetValue(l.Visibility, out var vm) ? vm : ("Riêng tư","bi-lock-fill");
+                <article class="lst-card" data-vis="@l.Visibility" data-shared="@((l.Visibility != "private").ToString().ToLower())">
+                    <a href="/Map/ListView/@l.Id" class="lst-cover" style="--c:@icc">
+                        @if (l.CoverImageId.HasValue)
+                        { <img src="/Map/Image/@l.CoverImageId" alt="@l.Name" loading="lazy"> }
+                        else
+                        { <span class="lst-cover-ic"><i class="bi @ic"></i></span> }
+                    </a>
+                    <div class="lst-body">
+                        <div class="lst-row">
+                            <span class="lst-ic" style="--c:@icc"><i class="bi @ic"></i></span>
+                            <a href="/Map/ListView/@l.Id" class="lst-name">@l.Name</a>
+                            <div class="dropdown">
+                                <button class="lst-menu-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Tùy chọn"><i class="bi bi-three-dots-vertical"></i></button>
+                                <ul class="dropdown-menu dropdown-menu-end lst-menu">
+                                    <li><a class="dropdown-item" href="/Map/ListView/@l.Id"><i class="bi bi-box-arrow-up-right"></i> Mở</a></li>
+                                    <li><button class="dropdown-item" type="button" onclick="openRename(@l.Id, this)" data-name="@l.Name"><i class="bi bi-pencil"></i> Đổi tên</button></li>
+                                    <li><button class="dropdown-item" type="button" onclick="shareList(@l.Id)"><i class="bi bi-share"></i> Chia sẻ (sao chép link)</button></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li class="dropdown-header">Quyền xem</li>
+                                    @foreach (var v in visMeta)
+                                    {
+                                        <li>
+                                            <form method="post" action="/Map/SetListVisibility" class="d-inline w-100">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="id" value="@l.Id">
+                                                <input type="hidden" name="visibility" value="@v.Key">
+                                                <button type="submit" class="dropdown-item @(l.Visibility == v.Key ? "active" : "")"><i class="bi @v.Value.Ic"></i> @v.Value.L</button>
+                                            </form>
+                                        </li>
+                                    }
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li>
+                                        <form method="post" action="/Map/DuplicateList" class="d-inline w-100">
+                                            @Html.AntiForgeryToken()<input type="hidden" name="id" value="@l.Id">
+                                            <button type="submit" class="dropdown-item"><i class="bi bi-files"></i> Nhân bản</button>
+                                        </form>
+                                    </li>
+                                    <li>
+                                        <form method="post" action="/Map/DeleteList" class="d-inline w-100" onsubmit="return confirm('Xóa danh sách &quot;@l.Name&quot;? (Địa điểm vẫn còn trên bản đồ)')">
+                                            @Html.AntiForgeryToken()<input type="hidden" name="id" value="@l.Id">
+                                            <button type="submit" class="dropdown-item lst-danger"><i class="bi bi-trash3"></i> Xóa danh sách</button>
+                                        </form>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="lst-meta"><i class="bi @vic"></i> @vl · @l.Count địa điểm</div>
+                    </div>
+                </article>
+            }
+        </div>
+    }
+</div>
+
+<!-- Modal: Tạo danh sách -->
+<div class="modal fade" id="createListModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border-radius:18px;border:none">
+      <form method="post" action="/Map/CreateList">
+        @Html.AntiForgeryToken()
+        <div class="modal-header border-0"><h5 class="modal-title fw-bold">Danh sách mới</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+        <div class="modal-body">
+          <label class="form-label fw-semibold">Tên danh sách</label>
+          <input type="text" name="name" class="form-control mb-3" placeholder="VD: Quán cà phê yêu thích" maxlength="60" required>
+          <label class="form-label fw-semibold">Biểu tượng</label>
+          <div class="lst-icon-pick mb-3">
+            @{ var picks = new[]{ ("favorites","bi-heart-fill","#e11d48"),("want","bi-flag-fill","#f59e0b"),("starred","bi-star-fill","#eab308"),("travel","bi-airplane-fill","#0891b2"),("saved","bi-bookmark-fill","#8b5cf6") }; }
+            @for (int i = 0; i < picks.Length; i++)
+            {
+                <label class="lst-icon-opt" style="--c:@picks[i].Item3">
+                    <input type="radio" name="iconKey" value="@picks[i].Item1" @(i==0 ? "checked" : "") hidden>
+                    <i class="bi @picks[i].Item2"></i>
+                </label>
+            }
+          </div>
+          <label class="form-label fw-semibold">Quyền xem</label>
+          <select name="visibility" class="form-select">
+            <option value="private">🔒 Riêng tư — chỉ mình tôi</option>
+            <option value="shared">🔗 Có link — ai có link đều xem được</option>
+            <option value="public">🌍 Công khai — mọi người tìm thấy</option>
+          </select>
+        </div>
+        <div class="modal-footer border-0">
+          <button type="button" class="btn-ghost" data-bs-dismiss="modal">Hủy</button>
+          <button type="submit" class="btn-accent"><i class="bi bi-plus-lg"></i> Tạo danh sách</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Đổi tên -->
+<div class="modal fade" id="renameListModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border-radius:18px;border:none">
+      <form method="post" action="/Map/RenameList">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="id" id="renameListId">
+        <div class="modal-header border-0"><h5 class="modal-title fw-bold">Đổi tên danh sách</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+        <div class="modal-body">
+          <input type="text" name="name" id="renameListName" class="form-control" maxlength="60" required>
+        </div>
+        <div class="modal-footer border-0">
+          <button type="button" class="btn-ghost" data-bs-dismiss="modal">Hủy</button>
+          <button type="submit" class="btn-accent">Lưu</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+@section Scripts {
+<script>
+function lstTab(t) {
+    document.querySelectorAll('.mpx-tab[data-tab]').forEach(b => b.classList.toggle('active', b.dataset.tab === t));
+    document.querySelectorAll('.lst-card').forEach(c => {
+        c.style.display = (t === 'all' || c.dataset.shared === 'true') ? '' : 'none';
+    });
+}
+function openRename(id, btn) {
+    document.getElementById('renameListId').value = id;
+    document.getElementById('renameListName').value = btn.dataset.name || '';
+    new bootstrap.Modal(document.getElementById('renameListModal')).show();
+}
+function shareList(id) {
+    const url = location.origin + '/Map/ListView/' + id;
+    navigator.clipboard.writeText(url).then(() => alert('Đã sao chép link danh sách:\n' + url))
+        .catch(() => prompt('Sao chép link này:', url));
+}
+function lstIconPick() {
+    document.querySelectorAll('.lst-icon-opt input').forEach(r => {
+        r.closest('.lst-icon-opt').classList.toggle('on', r.checked);
+        r.addEventListener('change', () => document.querySelectorAll('.lst-icon-opt').forEach(o => o.classList.toggle('on', o.querySelector('input').checked)));
+    });
+}
+lstIconPick();
+</script>
+}

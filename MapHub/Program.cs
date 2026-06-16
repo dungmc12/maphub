@@ -225,6 +225,25 @@ using (var scope = app.Services.CreateScope())
         app.Logger.LogError(ex, "Auto-migration UserLists lỗi");
     }
 
+    // Cột mở rộng cho UserLists (Visibility, IconKey, UpdatedAt) — cho hệ thống Danh sách
+    try
+    {
+        if (dbProvider == "postgres")
+            await context.Database.ExecuteSqlRawAsync(
+                "ALTER TABLE \"UserLists\" ADD COLUMN IF NOT EXISTS \"Visibility\" text NOT NULL DEFAULT 'private'; " +
+                "ALTER TABLE \"UserLists\" ADD COLUMN IF NOT EXISTS \"IconKey\" text NOT NULL DEFAULT 'favorites'; " +
+                "ALTER TABLE \"UserLists\" ADD COLUMN IF NOT EXISTS \"UpdatedAt\" timestamptz NOT NULL DEFAULT now();");
+        else
+            await context.Database.ExecuteSqlRawAsync(
+                "IF COL_LENGTH('UserLists','Visibility') IS NULL ALTER TABLE UserLists ADD Visibility nvarchar(20) NOT NULL DEFAULT 'private'; " +
+                "IF COL_LENGTH('UserLists','IconKey') IS NULL ALTER TABLE UserLists ADD IconKey nvarchar(20) NOT NULL DEFAULT 'favorites'; " +
+                "IF COL_LENGTH('UserLists','UpdatedAt') IS NULL ALTER TABLE UserLists ADD UpdatedAt datetime2 NOT NULL DEFAULT SYSUTCDATETIME();");
+    }
+    catch (Exception ex)
+    {
+        app.Logger.LogError(ex, "Auto-migration UserLists cột mở rộng lỗi");
+    }
+
     // Thêm cột mở rộng cho FeedPosts (Slug, Content, SEO, ViewCount)
     try
     {

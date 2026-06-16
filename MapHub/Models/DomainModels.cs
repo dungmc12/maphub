@@ -190,7 +190,10 @@ public class UserList
     public string UserId { get; set; } = null!;
     public string Name { get; set; } = null!;
     public string? Description { get; set; }
+    public string Visibility { get; set; } = "private";   // private | shared | public
+    public string IconKey { get; set; } = "favorites";    // favorites | want | starred | travel | saved
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
     public ICollection<UserListItem> Items { get; set; } = new List<UserListItem>();
 }
