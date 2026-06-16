@@ -12,8 +12,21 @@
 
 <div class="admin-page dash">
     <div class="admin-section-header mb-3">
-        <h2 class="admin-section-title">Doanh thu</h2>
-        <p class="admin-section-sub">Tổng hợp các đơn Pro đã thanh toán thành công</p>
+        <div>
+            <h2 class="admin-section-title">Doanh thu</h2>
+            <p class="admin-section-sub">Tổng hợp các đơn Pro đã thanh toán thành công</p>
+        </div>
+        @{ int testCount = (int)(ViewBag.TestCount ?? 0); }
+        @if (testCount > 0)
+        {
+            <form method="post" action="/Admin/ClearTestPayments"
+                  onsubmit="return confirm('Xóa @testCount giao dịch thử nghiệm (giá cũ dưới 59.000đ)? Không thể hoàn tác.');">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn-ghost" style="color:#b91c1c;border-color:#fecaca">
+                    <i class="fa-solid fa-trash"></i> Xóa @testCount giao dịch thử nghiệm
+                </button>
+            </form>
+        }
     </div>
 
     <!-- KPI cards -->

@@ -620,12 +620,29 @@ public class AdminController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> DeletePlace(int id)
+    public async Task<IActionResult> DeletePlace(int id, string? filter = null)
     {
         var place = await _context.Places.FindAsync(id);
         if (place != null) { _context.Places.Remove(place); await _context.SaveChangesAsync(); }
         TempData["Success"] = "Đã xóa địa điểm.";
-        return RedirectToAction(nameof(Index));
+        return RedirectToAction(nameof(Places), new { filter });
+    }
+
+    // Xóa nhiều địa điểm cùng lúc (chọn checkbox)
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> DeletePlaces(int[]? ids, string? filter = null)
+    {
+        if (ids == null || ids.Length == 0)
+        {
+            TempData["Success"] = "Chưa chọn địa điểm nào để xóa.";
+            return RedirectToAction(nameof(Places), new { filter });
+        }
+        var places = await _context.Places.Where(p => ids.Contains(p.Id)).ToListAsync();
+        _context.Places.RemoveRange(places);
+        await _context.SaveChangesAsync();
+        TempData["Success"] = $"Đã xóa {places.Count} địa điểm.";
+        return RedirectToAction(nameof(Places), new { filter });
     }
 
     // ── Tag management ───────────────────────────────────────────────────────
@@ -879,7 +896,21 @@ public class AdminController : Controller
         ViewBag.ChannelLabels = System.Text.Json.JsonSerializer.Serialize(
             byPlan.Select(g => g.Key == "year" ? "Gói năm" : g.Key == "month" ? "Gói tháng" : (g.Key ?? "Khác")).ToList());
         ViewBag.ChannelData   = System.Text.Json.JsonSerializer.Serialize(byPlan.Select(g => g.Sum(x => x.Amount)).ToList());
+        // Số giao dịch thử nghiệm (giá cũ < 59.000) để hiện nút dọn dẹp
+        ViewBag.TestCount = await _context.Payments.CountAsync(p => p.Amount < 59000m);
         return View(paid);
+    }
+
+    // Dọn các giao dịch thử nghiệm (giá cũ < 59.000đ — mấy cái 5.000 test) để bắt đầu giá mới
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ClearTestPayments()
+    {
+        var test = await _context.Payments.Where(p => p.Amount < 59000m).ToListAsync();
+        _context.Payments.RemoveRange(test);
+        await _context.SaveChangesAsync();
+        TempData["Success"] = $"Đã xóa {test.Count} giao dịch thử nghiệm (giá cũ < 59.000đ).";
+        return RedirectToAction(nameof(Revenue));
     }
 
     // ── Helper ───────────────────────────────────────────────────────────────

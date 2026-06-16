@@ -46,10 +46,22 @@
     }
     else
     {
+        <div class="admin-bulkbar" id="bulkBar">
+            <span class="abulk-count"><strong id="bulkN">0</strong> đã chọn</span>
+            <button type="button" class="aact-btn aact-del" style="width:auto;padding:.4rem .9rem" onclick="bulkDelete()">
+                <i class="fa-solid fa-trash"></i> Xóa đã chọn
+            </button>
+        </div>
+        <form method="post" action="/Admin/DeletePlaces" id="bulkForm" class="d-none">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="filter" value="@filter">
+            <div id="bulkIds"></div>
+        </form>
         <div class="admin-table-wrap">
             <table class="admin-table">
                 <thead>
                     <tr>
+                        <th style="width:34px"><input type="checkbox" id="chkAll" title="Chọn tất cả"></th>
                         <th>Địa điểm</th>
                         <th>Danh mục</th>
                         <th>Người tạo</th>
@@ -71,6 +83,7 @@
                     {
                         var (cL,cC) = catVi.TryGetValue(p.Category??"",out var cv2)?cv2:(p.Category??"Khác","");
                         <tr class="@(!p.IsApproved && p.Visibility == "public" ? "admin-row-warn" : "")">
+                            <td><input type="checkbox" class="chkRow" name="ids" value="@p.Id"></td>
                             <td>
                                 <div style="display:flex;align-items:center;gap:.6rem">
                                     @{ var img = p.Images.FirstOrDefault()?.Url; }
@@ -133,3 +146,31 @@
         </div>
     }
 </div>
+
+@section Scripts {
+<script>
+(function () {
+    const chkAll = document.getElementById('chkAll');
+    const rows = Array.from(document.querySelectorAll('.chkRow'));
+    const bar = document.getElementById('bulkBar');
+    const n = document.getElementById('bulkN');
+    function refresh() {
+        const sel = rows.filter(c => c.checked);
+        n.textContent = sel.length;
+        bar.classList.toggle('show', sel.length > 0);
+        if (chkAll) chkAll.checked = sel.length > 0 && sel.length === rows.length;
+    }
+    if (chkAll) chkAll.addEventListener('change', () => { rows.forEach(c => c.checked = chkAll.checked); refresh(); });
+    rows.forEach(c => c.addEventListener('change', refresh));
+    window.bulkDelete = function () {
+        const ids = rows.filter(c => c.checked).map(c => c.value);
+        if (!ids.length) return;
+        if (!confirm('Xóa ' + ids.length + ' địa điểm đã chọn?')) return;
+        const box = document.getElementById('bulkIds');
+        box.innerHTML = ids.map(id => '<input type="hidden" name="ids" value="' + id + '">').join('');
+        document.getElementById('bulkForm').submit();
+    };
+    refresh();
+})();
+</script>
+}
