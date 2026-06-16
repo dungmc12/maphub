@@ -18,6 +18,56 @@ public class MapController : Controller
         _env = env;
     }
 
+    // ──────────────── Validation dùng chung cho dữ liệu người dùng nhập ────────────────
+    private static readonly HashSet<string> ValidCategories = new(StringComparer.OrdinalIgnoreCase) {
+        "restaurant","cafe","entertainment","hotel","culture","temple","nature","education","home","work","school","favorite","other"
+    };
+    private static readonly HashSet<string> ValidVisibility = new(StringComparer.OrdinalIgnoreCase) { "public", "private" };
+
+    // Kiểm tra dữ liệu địa điểm (thêm/sửa). Trả về thông báo lỗi tiếng Việt, hoặc null nếu hợp lệ.
+    private static string? ValidatePlaceInput(string? name, string? category, decimal lat, decimal lng,
+        decimal? minPrice, decimal? maxPrice, string? visibility,
+        string? address, string? about, string? phone, string? phone2, string? website)
+    {
+        name = name?.Trim();
+        if (string.IsNullOrWhiteSpace(name)) return "Vui lòng nhập tên địa điểm.";
+        if (name.Length > 200) return "Tên địa điểm quá dài (tối đa 200 ký tự).";
+        if (!string.IsNullOrWhiteSpace(category) && !ValidCategories.Contains(category))
+            return "Danh mục không hợp lệ.";
+        if (lat < -90m || lat > 90m || lng < -180m || lng > 180m)
+            return "Toạ độ không hợp lệ (vĩ độ -90..90, kinh độ -180..180).";
+        if (lat == 0m && lng == 0m)
+            return "Vui lòng chọn vị trí trên bản đồ.";
+        if (minPrice.HasValue && minPrice < 0) return "Giá không được âm.";
+        if (maxPrice.HasValue && maxPrice < 0) return "Giá không được âm.";
+        if (minPrice.HasValue && maxPrice.HasValue && minPrice > maxPrice)
+            return "Giá từ không được lớn hơn giá đến.";
+        if (minPrice > 1_000_000_000m || maxPrice > 1_000_000_000m) return "Giá vượt quá mức cho phép.";
+        if (!string.IsNullOrWhiteSpace(visibility) && !ValidVisibility.Contains(visibility))
+            return "Quyền xem không hợp lệ.";
+        if ((address?.Length ?? 0) > 300) return "Địa chỉ quá dài (tối đa 300 ký tự).";
+        if ((about?.Length ?? 0) > 5000) return "Phần giới thiệu quá dài (tối đa 5000 ký tự).";
+        if ((phone?.Length ?? 0) > 30 || (phone2?.Length ?? 0) > 30) return "Số điện thoại quá dài.";
+        if (!string.IsNullOrWhiteSpace(website))
+        {
+            if (website.Length > 300) return "Đường dẫn website quá dài.";
+            if (!Uri.TryCreate(website, UriKind.Absolute, out var u) || (u.Scheme != "http" && u.Scheme != "https"))
+                return "Website phải là đường dẫn hợp lệ bắt đầu bằng http:// hoặc https://.";
+        }
+        return null;
+    }
+
+    // Kiểm tra điểm đánh giá 1..5 (food cho phép null)
+    private static string? ValidateReviewInput(byte quality, byte service, byte? food, string? content, string? foodReview, string? staffReview)
+    {
+        if (quality < 1 || quality > 5) return "Điểm chất lượng phải từ 1 đến 5 sao.";
+        if (service < 1 || service > 5) return "Điểm phục vụ phải từ 1 đến 5 sao.";
+        if (food.HasValue && (food < 1 || food > 5)) return "Điểm đồ ăn phải từ 1 đến 5 sao.";
+        if ((content?.Length ?? 0) > 4000 || (foodReview?.Length ?? 0) > 2000 || (staffReview?.Length ?? 0) > 2000)
+            return "Nội dung đánh giá quá dài.";
+        return null;
+    }
+
     public async Task<IActionResult> Index(string? cat = null)
     {
         ViewBag.AllTags = await _context.Tags.OrderBy(t => t.Name).ToListAsync();
@@ -207,7 +257,12 @@ public class MapController : Controller
     [HttpPost]
     public async Task<IActionResult> AddPlace([FromBody] PlaceDto dto)
     {
-        if (dto == null) return BadRequest("Dữ liệu không hợp lệ.");
+        if (dto == null) return BadRequest(new { error = "validation", message = "Dữ liệu không hợp lệ." });
+
+        // Validate dữ liệu người dùng nhập (server-side, không tin client)
+        var verr = ValidatePlaceInput(dto.Name, dto.Category, dto.Latitude, dto.Longitude,
+            dto.MinPrice, dto.MaxPrice, dto.Visibility, dto.Address, dto.About, dto.Phone, dto.Phone2, dto.WebsiteUrl);
+        if (verr != null) return BadRequest(new { error = "validation", message = verr });
 
         var currentUserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value!;
         var isAdmin = User.IsInRole("Admin");
@@ -225,7 +280,7 @@ public class MapController : Controller
 
         var place = new Place
         {
-            Name = dto.Name,
+            Name = dto.Name.Trim(),
             Category = dto.Category,
             About = dto.About,
             Address = dto.Address,
@@ -345,6 +400,12 @@ public class MapController : Controller
     {
         var currentUserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value!;
 
+        // Validate điểm số + độ dài nội dung (server-side)
+        var verr = ValidateReviewInput(qualityRating, serviceRating, foodRating, content, foodReview, staffReview);
+        if (verr != null) { TempData["ReviewError"] = verr; return RedirectToAction(nameof(Details), new { id = placeId }); }
+        if (!await _context.Places.AnyAsync(p => p.Id == placeId))
+            return NotFound();
+
         // Chống gửi trùng (double-click / resubmit): nếu cùng user vừa đánh giá địa điểm này
         // trong 30 giây gần đây thì bỏ qua, không tạo bản ghi thứ 2.
         var since = DateTime.UtcNow.AddSeconds(-30);
@@ -403,6 +464,9 @@ public class MapController : Controller
         var currentUserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
         if (review.UserId != currentUserId && !User.IsInRole("Admin"))
             return Forbid();
+
+        var verr = ValidateReviewInput(qualityRating, serviceRating, foodRating, content, foodReview, staffReview);
+        if (verr != null) { TempData["ReviewError"] = verr; return RedirectToAction(nameof(Details), new { id = review.PlaceId }); }
 
         review.QualityRating = qualityRating;
         review.ServiceRating = serviceRating;
@@ -533,8 +597,10 @@ public class MapController : Controller
         var uid = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value!;
         if (!string.IsNullOrWhiteSpace(name))
         {
+            name = name.Trim();
+            if (name.Length > 100) name = name[..100];
             _context.UserLists.Add(new UserList {
-                UserId = uid, Name = name.Trim(),
+                UserId = uid, Name = name,
                 IconKey = _iconKeys.Contains(iconKey) ? iconKey : "favorites",
                 Visibility = _visKeys.Contains(visibility) ? visibility : "private"
             });
@@ -551,7 +617,7 @@ public class MapController : Controller
         var uid = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value!;
         var list = await _context.UserLists.FirstOrDefaultAsync(l => l.Id == id && l.UserId == uid);
         if (list != null && !string.IsNullOrWhiteSpace(name))
-        { list.Name = name.Trim(); list.UpdatedAt = DateTime.UtcNow; await _context.SaveChangesAsync(); }
+        { var n = name.Trim(); list.Name = n.Length > 100 ? n[..100] : n; list.UpdatedAt = DateTime.UtcNow; await _context.SaveChangesAsync(); }
         return RedirectToAction(nameof(Lists));
     }
 
@@ -682,7 +748,14 @@ public class MapController : Controller
         if (place == null) return NotFound();
         if (place.CreatedByUserId != currentUserId && !User.IsInRole("Admin")) return Forbid();
 
-        place.Name       = name;
+        // Toạ độ 0 nghĩa là "giữ nguyên" (form không đổi vị trí) → validate theo giá trị sẽ lưu thật
+        var effLat = (latitude != 0 && longitude != 0) ? latitude : place.Latitude;
+        var effLng = (latitude != 0 && longitude != 0) ? longitude : place.Longitude;
+        var verr = ValidatePlaceInput(name, category, effLat, effLng, minPrice, maxPrice, visibility,
+            address, about, phone, phone2, null);
+        if (verr != null) { TempData["Error"] = verr; return RedirectToAction(nameof(EditMyPlace), new { id }); }
+
+        place.Name       = name.Trim();
         place.Category   = category;
         place.About      = about;
         place.Address    = address;

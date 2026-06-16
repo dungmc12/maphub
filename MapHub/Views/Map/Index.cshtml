@@ -1226,8 +1226,8 @@ async function submitPlace() {
             : `Đã lưu địa điểm cá nhân "${data.Name}".`;
         showToast(msg, 'success');
         loadPlaces(currentCat);
-    } else if (json.error === 'limit') {
-        alert(json.message);
+    } else if (json.message) {
+        alert(json.message);   // thông báo lỗi cụ thể từ server (giới hạn gói, validation…)
     } else {
         alert('Lỗi khi lưu địa điểm. Vui lòng thử lại.');
     }
