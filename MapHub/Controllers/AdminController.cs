@@ -101,7 +101,17 @@ public class AdminController : Controller
             "restaurant","cafe","entertainment","hotel","culture","temple","nature","education","home","work","school","favorite","other"
         };
 
-        int added = 0; var errors = new List<string>();
+        int added = 0, dup = 0; var errors = new List<string>();
+
+        // Khóa chống trùng: tên (bỏ dấu) + toạ độ làm tròn ~11m. Nạp sẵn địa điểm đang có
+        // để re-import cùng file KHÔNG tạo bản sao, và báo rõ số dòng bị bỏ qua.
+        static string DupKey(string name, double lat, double lng)
+            => $"{StripVn(name)}|{Math.Round(lat, 4)}|{Math.Round(lng, 4)}";
+        var existingKeys = (await _context.Places
+                .Select(p => new { p.Name, p.Latitude, p.Longitude }).ToListAsync())
+            .Select(p => DupKey(p.Name, (double)p.Latitude, (double)p.Longitude))
+            .ToHashSet();
+
         try
         {
             using var stream = file.OpenReadStream();
@@ -127,6 +137,10 @@ public class AdminController : Controller
                 double lat = Num(4), lng = Num(5);
                 if (double.IsNaN(lat) || double.IsNaN(lng))
                 { errors.Add($"Dòng {rn}: thiếu/sai toạ độ — bỏ qua."); continue; }
+
+                // Trùng với địa điểm đã có (hoặc trùng trong chính file) → bỏ qua, không tạo bản sao
+                var key = DupKey(name, lat, lng);
+                if (!existingKeys.Add(key)) { dup++; continue; }
 
                 var catRaw = Str(2);
                 string cat = string.IsNullOrWhiteSpace(catRaw) ? "other"
@@ -162,11 +176,28 @@ public class AdminController : Controller
             return RedirectToAction(nameof(ImportPlaces));
         }
 
-        TempData["ImportMsg"] = $"Đã nhập {added} địa điểm." + (errors.Any() ? " ⚠ " + string.Join(" ", errors.Take(8)) : "");
+        if (added == 0 && dup > 0)
+            TempData["ImportErr"] = $"Không có địa điểm mới — {dup} dòng đã tồn tại (trùng tên + vị trí). File này có thể đã được nhập trước đó.";
+        else
+            TempData["ImportMsg"] = $"Đã nhập {added} địa điểm."
+                + (dup > 0 ? $" Bỏ qua {dup} dòng trùng (đã có sẵn)." : "")
+                + (errors.Any() ? " ⚠ " + string.Join(" ", errors.Take(8)) : "");
         return RedirectToAction(nameof(ImportPlaces));
     }
 
     private static string? NullIf(string s) => string.IsNullOrWhiteSpace(s) ? null : s;
+
+    // Bỏ dấu tiếng Việt + lowercase để so khớp tên không phụ thuộc dấu/hoa-thường
+    private static string StripVn(string? s)
+    {
+        if (string.IsNullOrWhiteSpace(s)) return "";
+        var norm = s.Trim().Normalize(System.Text.NormalizationForm.FormD);
+        var sb = new System.Text.StringBuilder(norm.Length);
+        foreach (var c in norm)
+            if (System.Globalization.CharUnicodeInfo.GetUnicodeCategory(c) != System.Globalization.UnicodeCategory.NonSpacingMark)
+                sb.Append(c);
+        return sb.ToString().Normalize(System.Text.NormalizationForm.FormC).ToLowerInvariant().Replace('đ', 'd');
+    }
 
     public async Task<IActionResult> Index()
     {
