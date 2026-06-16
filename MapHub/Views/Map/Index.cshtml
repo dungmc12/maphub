@@ -887,9 +887,8 @@ function drawRoute(slat, slng, dlat, dlng) {
         lineOptions: { styles: [{ color:'#0891b2', opacity:0.9, weight:6 }] },
         createMarker: () => null
     };
-    if (window.MAPBOX_TOKEN && L.Routing.mapbox) {
-        opts.router = L.Routing.mapbox(window.MAPBOX_TOKEN, { profile: 'mapbox/driving' });
-    }
+    // Vẽ tuyến bằng OSRM (miễn phí) → KHÔNG tốn token Mapbox Directions.
+    // Token Mapbox chỉ dùng cho nền bản đồ. Lỗi thì rớt sang Google Maps.
     routingControl = L.Routing.control(opts)
         .on('routesfound', e => renderRoutePanel(e.routes[0]))
         .on('routingerror', () => {
@@ -944,7 +943,8 @@ function toggleRouteSheet(){ rpEl('routePanel')?.classList.toggle('rp-collapsed'
 function startNav(){
     if (!routeDest) return;
     const o = routeStart ? `&origin=${routeStart.lat},${routeStart.lng}` : '';
-    window.open(`https://www.google.com/maps/dir/?api=1&destination=${routeDest.lat},${routeDest.lng}${o}&travelmode=driving`, '_blank');
+    // dir_action=navigate → Google Maps BẮT ĐẦU dẫn đường ngay (không chỉ xem tuyến)
+    window.open(`https://www.google.com/maps/dir/?api=1&destination=${routeDest.lat},${routeDest.lng}${o}&travelmode=driving&dir_action=navigate`, '_blank');
 }
 function copyRouteLink(){
     if (!routeDest) return;
