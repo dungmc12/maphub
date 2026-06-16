@@ -4,174 +4,189 @@
     bool isPro     = User.IsInRole("Admin") || User.IsInRole("Pro") || (bool)(ViewBag.IsPro ?? false);
     int  maxPlaces = isPro ? int.MaxValue : (int)(ViewBag.MaxPlaces ?? 3);
     int  count     = (int)(ViewBag.PlaceCount ?? 0);
-}
+    var  savedPlaces = ViewBag.SavedPlaces as List<MapHub.Models.Place> ?? new List<MapHub.Models.Place>();
+    var  ratings   = ViewBag.Ratings as Dictionary<int, (double Avg, int Count)> ?? new();
+    var  inv       = System.Globalization.CultureInfo.InvariantCulture;
 
-<div class="container-xl py-4">
-    <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
+    var catMeta = new Dictionary<string,(string L,string Icon,string Color)>(StringComparer.OrdinalIgnoreCase){
+        ["restaurant"]=("Nhà hàng","bi-egg-fried","#e06d1b"), ["cafe"]=("Cà phê","bi-cup-hot-fill","#d97706"),
+        ["entertainment"]=("Vui chơi","bi-controller","#7c3aed"), ["hotel"]=("Lưu trú","bi-building-fill","#db2777"),
+        ["culture"]=("Văn hóa","bi-bank","#2563eb"), ["temple"]=("Tâm linh","bi-moon-stars-fill","#a16207"),
+        ["nature"]=("Thiên nhiên","bi-tree-fill","#16a34a"), ["education"]=("Giáo dục","bi-mortarboard-fill","#0d9488"),
+        ["home"]=("Nhà riêng","bi-house-fill","#0891b2"), ["work"]=("Công ty","bi-briefcase-fill","#475569"),
+        ["school"]=("Trường học","bi-mortarboard-fill","#0d9488"), ["favorite"]=("Yêu thích","bi-star-fill","#e11d48")
+    };
+}
+@Html.AntiForgeryToken()
+
+<div class="container-xl py-4 mpx">
+
+    <!-- Header -->
+    <div class="mpx-head">
         <div>
-            <h2 class="mb-0">📍 Địa điểm của tôi</h2>
+            <h1 class="mpx-title"><i class="bi bi-bookmark-heart-fill"></i> Địa điểm của tôi</h1>
             @if (!isPro)
             {
-                <p class="text-muted mt-1">
-                    @count / @maxPlaces địa điểm —
-                    <a href="/Payments/Premium" class="text-warning fw-bold">Nâng cấp Pro</a> để thêm không giới hạn
-                </p>
+                <p class="mpx-sub">@count / @maxPlaces địa điểm cá nhân · <a href="/Payments/Premium" class="mpx-pro">Nâng cấp Pro</a> để thêm không giới hạn</p>
             }
             else
             {
-                <p class="text-muted mt-1">@count địa điểm</p>
+                <p class="mpx-sub">@count địa điểm cá nhân</p>
             }
         </div>
-        <a href="/Map" class="btn-accent">＋ Thêm địa điểm mới</a>
+        <a href="/Map" class="btn-accent"><i class="bi bi-plus-lg"></i> Thêm địa điểm</a>
     </div>
 
     @if (!string.IsNullOrEmpty(TempData["Success"]?.ToString()))
     {
-        <div class="alert alert-success alert-dismissible fade show">
-            @TempData["Success"]
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
+        <div class="admin-alert admin-alert-success">@TempData["Success"]</div>
     }
 
-    @if (!Model.Any())
-    {
-        <div class="plans-empty">
-            <div class="plans-empty-icon">📍</div>
-            <h5>Bạn chưa thêm địa điểm nào</h5>
-            <p>Mở bản đồ và nhấn <strong>+ Thêm địa điểm</strong> để bắt đầu!</p>
-            <a href="/Map" class="btn-accent mt-2">🗺️ Mở bản đồ</a>
-        </div>
-    }
-    else
-    {
-        <div class="d-flex flex-wrap gap-2 mb-3">
-            <input type="text" id="searchMy" class="form-control" style="max-width:260px"
-                   placeholder="🔍 Tìm theo tên..." oninput="filterMy()">
-            <select id="catMy" class="form-select" style="max-width:190px" onchange="filterMy()">
-                <option value="">Mọi danh mục</option>
-                <option value="home">🏠 Nhà riêng</option>
-                <option value="work">🏢 Công ty</option>
-                <option value="school">🏫 Trường học</option>
-                <option value="favorite">❤️ Quán yêu thích</option>
-                <option value="restaurant">🍽️ Nhà hàng</option>
-                <option value="cafe">☕ Cà phê</option>
-                <option value="entertainment">🎯 Vui chơi</option>
-                <option value="hotel">🏨 Lưu trú</option>
-                <option value="culture">🏛️ Văn hóa</option>
-                <option value="temple">🛕 Tâm linh</option>
-                <option value="nature">🌿 Thiên nhiên</option>
-                <option value="education">🎓 Giáo dục</option>
-                <option value="other">📌 Khác</option>
-            </select>
-            <select id="sortMy" class="form-select" style="max-width:150px" onchange="sortMy()">
-                <option value="new">Mới nhất</option>
-                <option value="old">Cũ nhất</option>
-                <option value="name">Tên A→Z</option>
-            </select>
-        </div>
+    <!-- Tabs -->
+    <div class="mpx-tabs">
+        <button type="button" class="mpx-tab active" data-tab="mine" onclick="mpxTab('mine')">
+            Của tôi <span class="mpx-tab-n">@count</span>
+        </button>
+        <button type="button" class="mpx-tab" data-tab="saved" onclick="mpxTab('saved')">
+            Đã lưu <span class="mpx-tab-n">@savedPlaces.Count</span>
+        </button>
+    </div>
 
-        <div class="row g-3" id="placeGrid">
-            @foreach (var p in Model)
-            {
-                var imgObj = p.Images.FirstOrDefault();
-                var img = imgObj != null ? $"/Map/Image/{imgObj.Id}?v={p.UpdatedAt.Ticks}" : "https://placehold.co/400x250?text=No+Image";
-                var inv = System.Globalization.CultureInfo.InvariantCulture;
-                var dir = $"/Map?route={p.Latitude.ToString(inv)},{p.Longitude.ToString(inv)}";
-                var delMsg = $"Xóa địa điểm \"{p.Name}\"? Hành động này không thể hoàn tác.";
-                <div class="col-md-4 col-sm-6 my-place-card" data-name="@p.Name.ToLower()" data-cat="@(p.Category?.ToLower())" data-created="@p.CreatedAt.Ticks">
-                    <div class="plan-card" style="overflow:hidden">
-                        <img src="@img" alt="@p.Name"
-                             onerror="this.onerror=null;this.src='https://placehold.co/400x300?text=No+Img'"
-                             style="width:100%;height:160px;object-fit:cover;border-radius:10px 10px 0 0">
-                        <div style="padding:.85rem">
-                            <div class="fw-bold mb-1"><a href="/Map/Details/@p.Id" style="color:inherit;text-decoration:none">@p.Name</a></div>
-                            <div class="text-muted small mb-1">
-                                @switch(p.Category?.ToLower())
-                                {
-                                    case "home":          <text>🏠 Nhà riêng</text>      break;
-                                    case "work":          <text>🏢 Công ty</text>        break;
-                                    case "school":        <text>🏫 Trường học</text>     break;
-                                    case "favorite":      <text>❤️ Quán yêu thích</text> break;
-                                    case "restaurant":    <text>🍽️ Nhà hàng</text>     break;
-                                    case "cafe":          <text>☕ Cà phê</text>          break;
-                                    case "entertainment": <text>🎯 Vui chơi</text>        break;
-                                    case "hotel":         <text>🏨 Lưu trú</text>         break;
-                                    case "culture":       <text>🏛️ Văn hóa</text>        break;
-                                    case "temple":        <text>🛕 Tâm linh</text>        break;
-                                    case "nature":        <text>🌿 Thiên nhiên</text>     break;
-                                    case "education":     <text>🎓 Giáo dục</text>        break;
-                                    default:              <text>📌 @p.Category</text>     break;
-                                }
+    <!-- PANEL: Của tôi -->
+    <div id="panMine" class="mpx-panel">
+        @if (!Model.Any())
+        {
+            <div class="mpx-empty">
+                <div class="mpx-empty-ic"><i class="bi bi-geo-alt"></i></div>
+                <h5>Bạn chưa thêm địa điểm nào</h5>
+                <p>Mở bản đồ và bấm <strong>Thêm địa điểm</strong> để lưu chỗ yêu thích của bạn.</p>
+                <a href="/Map" class="btn-accent mt-2"><i class="bi bi-map"></i> Mở bản đồ</a>
+            </div>
+        }
+        else
+        {
+            <div class="mpx-filters">
+                <div class="mpx-search"><i class="bi bi-search"></i>
+                    <input type="text" id="searchMy" placeholder="Tìm theo tên…" oninput="filterMy()">
+                </div>
+                <select id="catMy" class="form-select mpx-select" onchange="filterMy()">
+                    <option value="">Mọi danh mục</option>
+                    <option value="home">Nhà riêng</option><option value="work">Công ty</option>
+                    <option value="school">Trường học</option><option value="favorite">Yêu thích</option>
+                    <option value="restaurant">Nhà hàng</option><option value="cafe">Cà phê</option>
+                    <option value="entertainment">Vui chơi</option><option value="hotel">Lưu trú</option>
+                    <option value="culture">Văn hóa</option><option value="temple">Tâm linh</option>
+                    <option value="nature">Thiên nhiên</option><option value="education">Giáo dục</option>
+                    <option value="other">Khác</option>
+                </select>
+                <select id="sortMy" class="form-select mpx-select" onchange="sortMy()">
+                    <option value="new">Mới nhất</option><option value="old">Cũ nhất</option><option value="name">Tên A→Z</option>
+                </select>
+            </div>
+
+            <div class="mpx-grid" id="placeGrid">
+                @foreach (var p in Model)
+                {
+                    var (cl, cic, cc) = catMeta.TryGetValue(p.Category ?? "", out var cm) ? cm : ("Khác", "bi-geo-alt-fill", "#64748b");
+                    var imgObj = p.Images.FirstOrDefault();
+                    var img = imgObj != null ? $"/Map/Image/{imgObj.Id}?v={p.UpdatedAt.Ticks}" : "https://placehold.co/400x250?text=No+Image";
+                    var route = $"/Map?route={p.Latitude.ToString(inv)},{p.Longitude.ToString(inv)}";
+                    var hasRt = ratings.TryGetValue(p.Id, out var rt);
+                    <article class="mpx-card my-place-card" data-name="@p.Name.ToLower()" data-cat="@(p.Category?.ToLower())" data-created="@p.CreatedAt.Ticks">
+                        <a href="/Map/Details/@p.Id" class="mpx-thumb">
+                            <img src="@img" alt="@p.Name" loading="lazy" onerror="this.onerror=null;this.src='https://placehold.co/400x250?text=No+Img'">
+                            <span class="mpx-chip" style="--cc:@cc"><i class="bi @cic"></i> @cl</span>
+                            @if (p.Visibility == "public")
+                            { <span class="mpx-vis mpx-vis-pub"><i class="bi bi-globe2"></i> Công khai</span> }
+                            else
+                            { <span class="mpx-vis mpx-vis-priv"><i class="bi bi-lock-fill"></i> Cá nhân</span> }
+                        </a>
+                        <div class="mpx-body">
+                            <a href="/Map/Details/@p.Id" class="mpx-name">@p.Name</a>
+                            <div class="mpx-rating">
+                                @if (hasRt)
+                                { <span class="mpx-star">★ @rt.Avg.ToString("0.0")</span> <span class="mpx-rc">· @rt.Count đánh giá</span> }
+                                else
+                                { <span class="mpx-rc">Chưa có đánh giá</span> }
                             </div>
                             @if (!string.IsNullOrEmpty(p.Address))
-                            {
-                                <div class="text-muted small">📍 @p.Address</div>
-                            }
-                            <div class="mt-2 mb-1">
-                                @if (p.Visibility == "public")
-                                { <span class="badge bg-success">🌍 Công khai</span> }
-                                else
-                                { <span class="badge bg-secondary">🔒 Cá nhân</span> }
-                            </div>
-                            <div class="mp-actions mt-2">
-                                <a href="/Map?place=@p.Id" class="mp-act" title="Xem trên bản đồ"><i class="fa-solid fa-location-dot"></i></a>
-                                <a href="/Map/EditMyPlace/@p.Id" class="mp-act mp-edit" title="Sửa"><i class="fa-solid fa-pen"></i></a>
-                                <a href="@dir" class="mp-act" title="Chỉ đường"><i class="fa-solid fa-diamond-turn-right"></i></a>
-                                <form method="post" action="/Map/DeleteMyPlace"
-                                      onsubmit="return confirm(this.dataset.msg)" data-msg="@delMsg"
-                                      class="d-inline" style="margin-left:auto">
+                            { <div class="mpx-addr"><i class="bi bi-geo-alt"></i> @p.Address</div> }
+                            <div class="mpx-actions">
+                                <a href="@route" class="mpx-btn mpx-btn-primary"><i class="bi bi-signpost-2-fill"></i> Chỉ đường</a>
+                                <a href="/Map?place=@p.Id" class="mpx-btn" title="Xem trên bản đồ"><i class="bi bi-pin-map-fill"></i></a>
+                                <a href="/Map/EditMyPlace/@p.Id" class="mpx-btn" title="Sửa"><i class="bi bi-pencil-fill"></i></a>
+                                <form method="post" action="/Map/DeleteMyPlace" class="d-inline" style="margin-left:auto"
+                                      onsubmit="return confirm('Xóa địa điểm &quot;@p.Name&quot;? Không thể hoàn tác.')">
                                     @Html.AntiForgeryToken()
                                     <input type="hidden" name="id" value="@p.Id">
-                                    <button type="submit" class="mp-act mp-del" title="Xóa"><i class="fa-solid fa-trash"></i></button>
+                                    <button type="submit" class="mpx-btn mpx-btn-danger" title="Xóa"><i class="bi bi-trash3-fill"></i></button>
                                 </form>
                             </div>
                         </div>
-                    </div>
-                </div>
-            }
-        </div>
-        <p id="noMyResult" class="text-muted text-center p-4" style="display:none">Không tìm thấy địa điểm nào.</p>
-    }
+                    </article>
+                }
+            </div>
+            <p id="noMyResult" class="mpx-noresult" style="display:none">Không tìm thấy địa điểm nào khớp bộ lọc.</p>
+        }
+    </div>
 
-    @{
-        var savedPlaces = ViewBag.SavedPlaces as List<MapHub.Models.Place> ?? new List<MapHub.Models.Place>();
-    }
-    @if (savedPlaces.Any())
-    {
-        @Html.AntiForgeryToken()
-        <hr class="my-4">
-        <h4 class="mb-3">❤️ Địa điểm đã lưu <span class="text-muted fs-6">(@savedPlaces.Count)</span></h4>
-        <div class="row g-3">
-            @foreach (var p in savedPlaces)
-            {
-                var simgObj = p.Images.FirstOrDefault();
-                var simg = simgObj != null ? $"/Map/Image/{simgObj.Id}?v={p.UpdatedAt.Ticks}" : "https://placehold.co/400x250?text=No+Image";
-                var sinv = System.Globalization.CultureInfo.InvariantCulture;
-                var sdir = $"/Map?route={p.Latitude.ToString(sinv)},{p.Longitude.ToString(sinv)}";
-                <div class="col-md-4 col-sm-6" id="saved-@p.Id">
-                    <div class="plan-card" style="overflow:hidden">
-                        <img src="@simg" alt="@p.Name" onerror="this.onerror=null;this.src='https://placehold.co/400x300?text=No+Img'" style="width:100%;height:160px;object-fit:cover;border-radius:10px 10px 0 0">
-                        <div style="padding:.85rem">
-                            <div class="fw-bold mb-1">@p.Name</div>
+    <!-- PANEL: Đã lưu -->
+    <div id="panSaved" class="mpx-panel" style="display:none">
+        @if (!savedPlaces.Any())
+        {
+            <div class="mpx-empty">
+                <div class="mpx-empty-ic"><i class="bi bi-heart"></i></div>
+                <h5>Chưa lưu địa điểm nào</h5>
+                <p>Bấm <i class="bi bi-heart"></i> trên thẻ địa điểm bất kỳ để lưu vào đây.</p>
+                <a href="/Map" class="btn-accent mt-2"><i class="bi bi-compass"></i> Khám phá địa điểm</a>
+            </div>
+        }
+        else
+        {
+            <div class="mpx-grid">
+                @foreach (var p in savedPlaces)
+                {
+                    var (cl, cic, cc) = catMeta.TryGetValue(p.Category ?? "", out var cm) ? cm : ("Khác", "bi-geo-alt-fill", "#64748b");
+                    var simgObj = p.Images.FirstOrDefault();
+                    var simg = simgObj != null ? $"/Map/Image/{simgObj.Id}?v={p.UpdatedAt.Ticks}" : "https://placehold.co/400x250?text=No+Image";
+                    var sroute = $"/Map?route={p.Latitude.ToString(inv)},{p.Longitude.ToString(inv)}";
+                    var sHasRt = ratings.TryGetValue(p.Id, out var srt);
+                    <article class="mpx-card" id="saved-@p.Id">
+                        <a href="/Map/Details/@p.Id" class="mpx-thumb">
+                            <img src="@simg" alt="@p.Name" loading="lazy" onerror="this.onerror=null;this.src='https://placehold.co/400x250?text=No+Img'">
+                            <span class="mpx-chip" style="--cc:@cc"><i class="bi @cic"></i> @cl</span>
+                        </a>
+                        <div class="mpx-body">
+                            <a href="/Map/Details/@p.Id" class="mpx-name">@p.Name</a>
+                            <div class="mpx-rating">
+                                @if (sHasRt)
+                                { <span class="mpx-star">★ @srt.Avg.ToString("0.0")</span> <span class="mpx-rc">· @srt.Count đánh giá</span> }
+                                else
+                                { <span class="mpx-rc">Chưa có đánh giá</span> }
+                            </div>
                             @if (!string.IsNullOrEmpty(p.Address))
-                            {
-                                <div class="text-muted small">📍 @p.Address</div>
-                            }
-                            <div class="mp-actions mt-2">
-                                <a href="/Map/Details/@p.Id" class="mp-act" title="Xem chi tiết"><i class="fa-solid fa-eye"></i></a>
-                                <a href="@sdir" class="mp-act" title="Chỉ đường"><i class="fa-solid fa-diamond-turn-right"></i></a>
-                                <button type="button" class="mp-act mp-del" style="margin-left:auto" onclick="unsavePlace(@p.Id)" title="Bỏ lưu"><i class="fa-solid fa-heart-circle-minus"></i></button>
+                            { <div class="mpx-addr"><i class="bi bi-geo-alt"></i> @p.Address</div> }
+                            <div class="mpx-actions">
+                                <a href="@sroute" class="mpx-btn mpx-btn-primary"><i class="bi bi-signpost-2-fill"></i> Chỉ đường</a>
+                                <a href="/Map/Details/@p.Id" class="mpx-btn" title="Chi tiết"><i class="bi bi-eye-fill"></i></a>
+                                <button type="button" class="mpx-btn mpx-btn-danger" style="margin-left:auto" onclick="unsavePlace(@p.Id)" title="Bỏ lưu"><i class="bi bi-heart-fill"></i></button>
                             </div>
                         </div>
-                    </div>
-                </div>
-            }
-        </div>
-    }
+                    </article>
+                }
+            </div>
+        }
+    </div>
 </div>
 
 @section Scripts {
 <script>
+function mpxTab(t) {
+    document.querySelectorAll('.mpx-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === t));
+    document.getElementById('panMine').style.display  = t === 'mine'  ? '' : 'none';
+    document.getElementById('panSaved').style.display = t === 'saved' ? '' : 'none';
+}
+
 function unsavePlace(id) {
     const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
     fetch('/Map/ToggleSave', {
@@ -179,7 +194,12 @@ function unsavePlace(id) {
         headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'RequestVerificationToken': token },
         body: 'placeId=' + id
     }).then(r => r.json()).then(d => {
-        if (d.ok) { const c = document.getElementById('saved-' + id); if (c) c.remove(); }
+        if (d.ok) {
+            const c = document.getElementById('saved-' + id);
+            if (c) { c.style.transition = 'opacity .2s'; c.style.opacity = '0'; setTimeout(() => c.remove(), 200); }
+            const n = document.querySelector('.mpx-tab[data-tab="saved"] .mpx-tab-n');
+            if (n) n.textContent = Math.max(0, (+n.textContent || 1) - 1);
+        }
     }).catch(() => alert('Lỗi, thử lại.'));
 }
 
@@ -188,9 +208,7 @@ function filterMy() {
     const cat = document.getElementById('catMy').value;
     let shown = 0;
     document.querySelectorAll('.my-place-card').forEach(card => {
-        const okName = !q || (card.dataset.name || '').includes(q);
-        const okCat  = !cat || card.dataset.cat === cat;
-        const ok = okName && okCat;
+        const ok = (!q || (card.dataset.name || '').includes(q)) && (!cat || card.dataset.cat === cat);
         card.style.display = ok ? '' : 'none';
         if (ok) shown++;
     });
@@ -201,13 +219,11 @@ function filterMy() {
 function sortMy() {
     const mode = document.getElementById('sortMy').value;
     const grid = document.getElementById('placeGrid');
-    const cards = Array.from(grid.querySelectorAll('.my-place-card'));
-    cards.sort((a, b) => {
+    Array.from(grid.querySelectorAll('.my-place-card')).sort((a, b) => {
         if (mode === 'name') return (a.dataset.name || '').localeCompare(b.dataset.name || '');
         const ca = Number(a.dataset.created || 0), cb = Number(b.dataset.created || 0);
         return mode === 'old' ? ca - cb : cb - ca;
-    });
-    cards.forEach(c => grid.appendChild(c));
+    }).forEach(c => grid.appendChild(c));
 }
 </script>
 }

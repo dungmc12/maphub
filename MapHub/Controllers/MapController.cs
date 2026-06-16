@@ -447,6 +447,14 @@ public class MapController : Controller
             .Where(p => p != null)
             .ToList();
 
+        // Rating (★ + số đánh giá) — projection nhẹ, KHÔNG kéo base64; value tuple cho view
+        var allIds = places.Select(p => p.Id).Concat(saved.Select(p => p!.Id)).Distinct().ToList();
+        var ratingRows = await _context.PlaceReviews.Where(r => allIds.Contains(r.PlaceId))
+            .GroupBy(r => r.PlaceId)
+            .Select(g => new { PlaceId = g.Key, Avg = Math.Round(g.Average(r => (double)r.QualityRating), 1), Count = g.Count() })
+            .ToListAsync();
+        ViewBag.Ratings = ratingRows.ToDictionary(x => x.PlaceId, x => (x.Avg, x.Count));
+
         var profile = await _context.UserProfiles.FindAsync(currentUserId);
         ViewBag.MaxPlaces  = profile?.MaxPlaces ?? 3;
         ViewBag.PlaceCount = places.Count;
