@@ -5,6 +5,8 @@ using Microsoft.EntityFrameworkCore;
 using MapHub.Data;
 using MapHub.Models;
 using MapHub.Services;
+using ClosedXML.Excel;
+using System.Globalization;
 
 namespace MapHub.Controllers;
 
@@ -21,6 +23,142 @@ public class AdminController : Controller
         _env = env;
         _userManager = userManager;
     }
+
+    // ──────────────── Nhập địa điểm hàng loạt bằng Excel ────────────────
+    private static readonly string[] ImportHeaders = {
+        "Tên (*)","Danh mục","Địa chỉ","Vĩ độ (*)","Kinh độ (*)","Điện thoại","Hotline",
+        "Giờ mở","Giờ đóng","Giá từ","Giá đến","Website","Giới thiệu","Quyền xem"
+    };
+
+    [HttpGet]
+    public IActionResult ImportPlaces() => View();
+
+    [HttpGet]
+    public IActionResult ImportPlacesTemplate()
+    {
+        using var wb = new XLWorkbook();
+        var ws = wb.Worksheets.Add("DiaDiem");
+        for (int i = 0; i < ImportHeaders.Length; i++)
+        {
+            var c = ws.Cell(1, i + 1);
+            c.Value = ImportHeaders[i];
+            c.Style.Font.Bold = true;
+            c.Style.Fill.BackgroundColor = XLColor.FromHtml("#0891B2");
+            c.Style.Font.FontColor = XLColor.White;
+        }
+        // Dòng ví dụ
+        ws.Cell(2, 1).Value = "Quán Phở Bắc";
+        ws.Cell(2, 2).Value = "restaurant";
+        ws.Cell(2, 3).Value = "12 Phố Huế, Hai Bà Trưng, Hà Nội";
+        ws.Cell(2, 4).Value = 21.012580;
+        ws.Cell(2, 5).Value = 105.851380;
+        ws.Cell(2, 6).Value = "0912345678";
+        ws.Cell(2, 8).Value = "07:00";
+        ws.Cell(2, 9).Value = "22:00";
+        ws.Cell(2, 10).Value = 30000d;
+        ws.Cell(2, 11).Value = 80000d;
+        ws.Cell(2, 12).Value = "https://example.com";
+        ws.Cell(2, 13).Value = "Phở bò gia truyền, không gian nhỏ ấm cúng.";
+        ws.Cell(2, 14).Value = "public";
+
+        var help = wb.Worksheets.Add("HuongDan");
+        help.Cell(1, 1).Value = "HƯỚNG DẪN NHẬP ĐỊA ĐIỂM";
+        help.Cell(1, 1).Style.Font.Bold = true;
+        help.Cell(3, 1).Value = "• Cột có (*) là BẮT BUỘC: Tên, Vĩ độ, Kinh độ. Thiếu thì dòng đó bị bỏ qua.";
+        help.Cell(4, 1).Value = "• Danh mục (mã hoặc tiếng Việt): restaurant=Nhà hàng, cafe=Cà phê, entertainment=Vui chơi, hotel=Lưu trú, culture=Văn hóa, temple=Tâm linh, nature=Thiên nhiên, education=Giáo dục, other=Khác.";
+        help.Cell(5, 1).Value = "• Vĩ độ / Kinh độ: số thập phân, dùng dấu chấm (VD 21.0285). Lấy từ Google Maps.";
+        help.Cell(6, 1).Value = "• Quyền xem: public (Công khai) hoặc private (Cá nhân). Bỏ trống = Công khai.";
+        help.Cell(7, 1).Value = "• Giá từ / Giá đến: số nguyên (đồng), để trống nếu không có.";
+        help.Cell(8, 1).Value = "• XÓA dòng ví dụ (dòng 2) trước khi nhập dữ liệu thật.";
+        help.Column(1).Width = 110;
+
+        ws.Columns().AdjustToContents();
+        using var ms = new MemoryStream();
+        wb.SaveAs(ms);
+        return File(ms.ToArray(),
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "mau-them-dia-diem.xlsx");
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [RequestSizeLimit(10_000_000)]
+    public async Task<IActionResult> ImportPlaces(IFormFile? file)
+    {
+        if (file == null || file.Length == 0)
+        { TempData["ImportErr"] = "Vui lòng chọn file Excel (.xlsx)."; return RedirectToAction(nameof(ImportPlaces)); }
+
+        var uid = _userManager.GetUserId(User);
+        var catMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) {
+            ["nhà hàng"]="restaurant", ["cà phê"]="cafe", ["ca phe"]="cafe", ["vui chơi"]="entertainment",
+            ["lưu trú"]="hotel", ["văn hóa"]="culture", ["tâm linh"]="temple", ["thiên nhiên"]="nature",
+            ["giáo dục"]="education", ["nhà riêng"]="home", ["công ty"]="work", ["trường học"]="school",
+            ["yêu thích"]="favorite", ["khác"]="other"
+        };
+        var validCats = new HashSet<string>(StringComparer.OrdinalIgnoreCase){
+            "restaurant","cafe","entertainment","hotel","culture","temple","nature","education","home","work","school","favorite","other"
+        };
+
+        int added = 0; var errors = new List<string>();
+        try
+        {
+            using var stream = file.OpenReadStream();
+            using var wb = new XLWorkbook(stream);
+            var ws = wb.Worksheet(1);
+            var used = ws.RangeUsed();
+            if (used == null) { TempData["ImportErr"] = "File trống."; return RedirectToAction(nameof(ImportPlaces)); }
+
+            foreach (var row in used.RowsUsed().Skip(1))   // bỏ dòng tiêu đề
+            {
+                string Str(int c) => row.Cell(c).GetString().Trim();
+                double Num(int c)
+                {
+                    var cell = row.Cell(c);
+                    if (cell.TryGetValue<double>(out var d)) return d;
+                    var s = cell.GetString().Trim().Replace(",", ".");
+                    return double.TryParse(s, NumberStyles.Any, CultureInfo.InvariantCulture, out var p) ? p : double.NaN;
+                }
+
+                var name = Str(1);
+                if (string.IsNullOrWhiteSpace(name)) continue;
+                int rn = row.RowNumber();
+                double lat = Num(4), lng = Num(5);
+                if (double.IsNaN(lat) || double.IsNaN(lng))
+                { errors.Add($"Dòng {rn}: thiếu/sai toạ độ — bỏ qua."); continue; }
+
+                var catRaw = Str(2);
+                string cat = string.IsNullOrWhiteSpace(catRaw) ? "other"
+                    : (catMap.TryGetValue(catRaw, out var cc) ? cc : (validCats.Contains(catRaw) ? catRaw.ToLower() : "other"));
+                var visRaw = Str(14).ToLower();
+                var vis = (visRaw.Contains("priv") || visRaw.Contains("cá nhân") || visRaw.Contains("ca nhan")) ? "private" : "public";
+                double minN = Num(10), maxN = Num(11);
+
+                _context.Places.Add(new Place {
+                    Name = name, Category = cat, Address = NullIf(Str(3)),
+                    Latitude = (decimal)lat, Longitude = (decimal)lng,
+                    Phone = NullIf(Str(6)), Phone2 = NullIf(Str(7)),
+                    OpenTime = NullIf(Str(8)), CloseTime = NullIf(Str(9)),
+                    MinPrice = double.IsNaN(minN) ? null : (decimal?)minN,
+                    MaxPrice = double.IsNaN(maxN) ? null : (decimal?)maxN,
+                    WebsiteUrl = NullIf(Str(12)), About = NullIf(Str(13)),
+                    Visibility = vis, IsApproved = true, CreatedByUserId = uid,
+                    CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow
+                });
+                added++;
+            }
+            await _context.SaveChangesAsync();
+        }
+        catch (Exception ex)
+        {
+            TempData["ImportErr"] = "Lỗi đọc file: " + ex.Message;
+            return RedirectToAction(nameof(ImportPlaces));
+        }
+
+        TempData["ImportMsg"] = $"Đã nhập {added} địa điểm." + (errors.Any() ? " ⚠ " + string.Join(" ", errors.Take(8)) : "");
+        return RedirectToAction(nameof(ImportPlaces));
+    }
+
+    private static string? NullIf(string s) => string.IsNullOrWhiteSpace(s) ? null : s;
 
     public async Task<IActionResult> Index()
     {

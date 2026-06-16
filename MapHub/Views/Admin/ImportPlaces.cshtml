@@ -1,0 +1,68 @@
+@{
+    ViewData["Title"] = "Nhập địa điểm bằng Excel";
+}
+
+<partial name="_AdminNav" />
+
+<div class="admin-page" style="max-width:760px">
+    <div class="admin-section-header mb-1">
+        <div>
+            <h2 class="admin-section-title">Nhập địa điểm bằng Excel</h2>
+            <p class="admin-section-sub">Thêm nhiều địa điểm cùng lúc theo file mẫu</p>
+        </div>
+        <a href="/Admin/Places" class="btn-ghost">← Danh sách địa điểm</a>
+    </div>
+
+    @if (!string.IsNullOrEmpty(TempData["ImportMsg"]?.ToString()))
+    {
+        <div class="admin-alert admin-alert-success">@TempData["ImportMsg"]</div>
+    }
+    @if (!string.IsNullOrEmpty(TempData["ImportErr"]?.ToString()))
+    {
+        <div class="admin-alert" style="background:#fef2f2;color:#b91c1c;border:1px solid #fecaca">@TempData["ImportErr"]</div>
+    }
+
+    <!-- Bước 1: tải mẫu -->
+    <div class="dash-card mb-3">
+        <div class="dash-card-head"><h3 class="dash-card-title"><span class="imp-step">1</span> Tải file mẫu</h3></div>
+        <p class="text-muted" style="font-size:.9rem">File mẫu có sẵn cột đúng như form thêm địa điểm + 1 dòng ví dụ và sheet hướng dẫn. Mở bằng Excel/Google Sheets, điền dữ liệu, lưu lại dạng <strong>.xlsx</strong>.</p>
+        <a href="/Admin/ImportPlacesTemplate" class="btn-accent"><i class="bi bi-file-earmark-excel"></i> Tải file mẫu (.xlsx)</a>
+    </div>
+
+    <!-- Bước 2: tải lên -->
+    <div class="dash-card mb-3">
+        <div class="dash-card-head"><h3 class="dash-card-title"><span class="imp-step">2</span> Tải file đã điền lên</h3></div>
+        <form method="post" action="/Admin/ImportPlaces" enctype="multipart/form-data"
+              onsubmit="this.querySelector('button[type=submit]').disabled=true;this.querySelector('button[type=submit]').textContent='Đang nhập…';">
+            @Html.AntiForgeryToken()
+            <input type="file" name="file" accept=".xlsx" class="form-control mb-3" required>
+            <button type="submit" class="btn-accent"><i class="bi bi-upload"></i> Nhập địa điểm</button>
+        </form>
+    </div>
+
+    <!-- Ghi chú cột -->
+    <div class="dash-card">
+        <div class="dash-card-head"><h3 class="dash-card-title">Các cột trong file</h3></div>
+        <div class="table-responsive">
+            <table class="admin-table">
+                <thead><tr><th>Cột</th><th>Bắt buộc</th><th>Ghi chú</th></tr></thead>
+                <tbody>
+                    <tr><td>Tên</td><td>✔</td><td>Tên địa điểm</td></tr>
+                    <tr><td>Danh mục</td><td>—</td><td>mã (restaurant, cafe, nature…) hoặc tiếng Việt (Nhà hàng, Cà phê…); trống = Khác</td></tr>
+                    <tr><td>Địa chỉ</td><td>—</td><td>Số nhà, đường, quận, thành phố</td></tr>
+                    <tr><td>Vĩ độ / Kinh độ</td><td>✔</td><td>Số thập phân dấu chấm (VD 21.0285 / 105.8542) — lấy từ Google Maps</td></tr>
+                    <tr><td>Điện thoại / Hotline</td><td>—</td><td>Số liên hệ</td></tr>
+                    <tr><td>Giờ mở / Giờ đóng</td><td>—</td><td>VD 07:00 / 22:00</td></tr>
+                    <tr><td>Giá từ / Giá đến</td><td>—</td><td>Số nguyên (đồng)</td></tr>
+                    <tr><td>Website / Giới thiệu</td><td>—</td><td>Tùy chọn</td></tr>
+                    <tr><td>Quyền xem</td><td>—</td><td>public (Công khai) / private (Cá nhân); trống = Công khai</td></tr>
+                </tbody>
+            </table>
+        </div>
+        <p class="text-muted mt-2" style="font-size:.85rem">Dòng nào thiếu Tên hoặc toạ độ sẽ bị bỏ qua. Địa điểm nhập vào được duyệt sẵn, ảnh bổ sung sau ở phần Sửa địa điểm.</p>
+    </div>
+</div>
+
+<style>
+.imp-step { display:inline-grid; place-items:center; width:24px; height:24px; border-radius:50%; background:var(--accent,#0891B2); color:#fff; font-size:.8rem; font-weight:800; margin-right:.4rem; }
+</style>

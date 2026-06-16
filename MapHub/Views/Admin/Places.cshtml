@@ -18,7 +18,10 @@
             <h2 class="admin-section-title"><i class="fa-solid fa-location-dot"></i> Quản lý Địa điểm</h2>
             <p class="admin-section-sub">@total địa điểm</p>
         </div>
-        <a href="/Admin/AddPlace" class="btn-accent">＋ Thêm địa điểm</a>
+        <div class="d-flex gap-2 flex-wrap">
+            <a href="/Admin/ImportPlaces" class="btn-ghost"><i class="bi bi-file-earmark-excel"></i> Nhập Excel</a>
+            <a href="/Admin/AddPlace" class="btn-accent">＋ Thêm địa điểm</a>
+        </div>
     </div>
 
     @if (!string.IsNullOrEmpty(TempData["Success"]?.ToString()))
