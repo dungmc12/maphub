@@ -726,6 +726,67 @@ body.map-view { overflow: hidden; height: 100vh; }
 
 @media (max-width:520px){ .lst-grid { grid-template-columns:1fr; } .lst-new { width:100%; justify-content:center; } }
 
+/* ── Route panel (Material 3) ─────────────────────────────────────────── */
+.leaflet-routing-container { display:none !important; }   /* ẩn panel mặc định của LRM */
+
+.route-panel { position:fixed; z-index:1100; background:#fff; display:flex; flex-direction:column;
+               box-shadow:0 8px 40px rgba(15,23,42,.16); overflow:hidden; }
+.route-panel.rp-hidden { display:none; }
+.rp-grab { display:none; }
+
+.rp-header { display:flex; align-items:flex-start; gap:.6rem; padding:1rem 1.1rem .75rem; }
+.rp-head-main { flex:1; min-width:0; }
+.rp-name { font-weight:800; font-size:1.05rem; color:var(--ink-primary,#0F172A); letter-spacing:-.01em;
+           overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.rp-summary { font-size:1.05rem; color:var(--ink-secondary,#475569); margin-top:.2rem; }
+.rp-summary strong { color:var(--accent-dark,#0E7490); font-weight:800; font-size:1.15rem; }
+.rp-dot { color:#cbd5e1; margin:0 .15rem; }
+.rp-x { border:none; background:#f1f5f9; color:var(--ink-secondary,#64748B); width:34px; height:34px; border-radius:50%;
+        cursor:pointer; flex-shrink:0; display:grid; place-items:center; transition:all .15s; }
+.rp-x:hover { background:#e2e8f0; color:var(--ink-primary,#0F172A); }
+
+.rp-actions { display:flex; gap:.5rem; padding:0 1.1rem 1rem; flex-wrap:wrap; }
+.rp-btn { flex:1; min-width:72px; height:44px; border:1px solid var(--line,#E2E8F0); background:#fff; border-radius:12px;
+          display:inline-flex; align-items:center; justify-content:center; gap:.35rem; cursor:pointer;
+          font-size:.88rem; font-weight:700; color:var(--ink-primary,#334155); transition:all .15s; }
+.rp-btn:hover { background:#f1f5f9; }
+.rp-btn-primary { flex:1.4; background:var(--accent,#0891B2); border-color:var(--accent,#0891B2); color:#fff; }
+.rp-btn-primary:hover { background:var(--accent-dark,#0E7490); }
+.rp-btn-ghost { color:#dc2626; }
+.rp-btn-ghost:hover { background:#fef2f2; border-color:#fecaca; }
+.rp-badge { background:var(--accent-soft,#ecfeff); color:var(--accent-dark,#0E7490); font-size:.7rem; font-weight:800;
+            border-radius:999px; padding:.04rem .4rem; }
+
+.rp-steps { list-style:none; margin:0; padding:.3rem .6rem 1rem; overflow-y:auto; flex:1; border-top:1px solid var(--line,#E2E8F0); }
+.rp-step { display:flex; align-items:center; gap:.7rem; padding:.6rem .5rem; border-radius:12px; }
+.rp-step:hover { background:#f8fafc; }
+.rp-step-ic { width:34px; height:34px; flex-shrink:0; border-radius:10px; display:grid; place-items:center;
+              background:var(--accent-soft,#ecfeff); color:var(--accent-dark,#0E7490); font-size:1.05rem; }
+.rp-step-text { flex:1; font-size:.9rem; color:var(--ink-primary,#1e293b); line-height:1.35; }
+.rp-step-dist { font-size:.8rem; font-weight:700; color:var(--ink-secondary,#94a3b8); white-space:nowrap; }
+
+/* Skeleton loading */
+.rp-sk { display:inline-block; border-radius:8px; background:linear-gradient(90deg,#eef2f6 25%,#e2e8f0 37%,#eef2f6 63%);
+         background-size:400% 100%; animation:rpShimmer 1.3s ease infinite; }
+.rp-sk-sum { width:60%; height:20px; }
+.rp-sk-ic { width:34px; height:34px; border-radius:10px; }
+.rp-sk-line { flex:1; height:14px; }
+@keyframes rpShimmer { 0%{background-position:100% 0} 100%{background-position:0 0} }
+
+/* Desktop: panel bên phải (≈30%) */
+@media (min-width:768px){
+  .route-panel { top:82px; right:16px; width:360px; max-width:32vw; min-width:320px; max-height:calc(100vh - 110px); border-radius:20px; }
+}
+/* Mobile: bottom sheet */
+@media (max-width:767px){
+  .route-panel { left:0; right:0; bottom:0; max-height:78vh; border-radius:22px 22px 0 0;
+                 transition:transform .28s cubic-bezier(.22,1,.36,1); }
+  .rp-grab { display:block; width:42px; height:5px; border-radius:3px; background:#cbd5e1; margin:.55rem auto .1rem; cursor:grab; }
+  .route-panel.rp-collapsed .rp-steps { display:none; }
+  .route-panel.rp-collapsed { max-height:none; }
+  .rp-header { cursor:pointer; }
+}
+
 /* ── Map toast ────────────────────────────────────────────────────────── */
 .map-toast {
   position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(8px);
