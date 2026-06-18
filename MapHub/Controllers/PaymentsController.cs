@@ -141,7 +141,7 @@ public class PaymentsController : Controller
         if (payment == null) return NotFound();
 
         var price = _pricing.For(payment.PlanType);
-        var addInfo = Uri.EscapeDataString(payment.Code);
+        var addInfo = Uri.EscapeDataString(payment.Code ?? "");
         var accountName = Uri.EscapeDataString(_sepay.AccountName ?? "");
         ViewBag.QrUrl = $"https://img.vietqr.io/image/{_sepay.BankCode}-{_sepay.AccountNumber}-compact2.png" +
                         $"?amount={(long)payment.Amount}&addInfo={addInfo}&accountName={accountName}";
