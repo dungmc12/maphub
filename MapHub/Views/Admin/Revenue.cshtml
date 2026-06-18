@@ -9,6 +9,7 @@
 }
 
 <partial name="_AdminNav" />
+@Html.AntiForgeryToken()
 
 <div class="admin-page dash">
     <div class="admin-section-header mb-3">
@@ -88,12 +89,13 @@
                         <th>Trạng thái</th>
                         <th>Kênh</th>
                         <th>Ngày trả</th>
+                        <th>Hành động</th>
                     </tr>
                 </thead>
                 <tbody>
                     @if (!Model.Any())
                     {
-                        <tr><td colspan="7" class="text-center text-muted p-4">Chưa có giao dịch nào.</td></tr>
+                        <tr><td colspan="8" class="text-center text-muted p-4">Chưa có giao dịch nào.</td></tr>
                     }
                     else
                     {
@@ -116,6 +118,14 @@
                                 </td>
                                 <td><span class="admin-sub">@(r.Provider ?? "—")</span></td>
                                 <td><span class="admin-sub">@(r.PaidAt?.ToLocalTime().ToString("dd/MM/yyyy HH:mm") ?? "—")</span></td>
+                                <td>
+                                    @if (r.Status != "paid")
+                                    {
+                                        <button class="aact-btn aact-approve" onclick="approvePay(@r.Id)"><i class="fa-solid fa-check"></i> Duyệt</button>
+                                        <button class="aact-btn aact-reject" onclick="rejectPay(@r.Id)"><i class="fa-solid fa-xmark"></i></button>
+                                    }
+                                    else { <span class="admin-sub">—</span> }
+                                </td>
                             </tr>
                         }
                     }
@@ -163,5 +173,22 @@
         }).render();
     }
 })();
+
+// Duyệt / từ chối thanh toán thủ công (cho đơn chưa "paid")
+const _tok = document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
+async function approvePay(id) {
+    if (!confirm('Duyệt giao dịch này và kích hoạt Pro cho user?')) return;
+    const fd = new FormData(); fd.append('id', id); fd.append('__RequestVerificationToken', _tok);
+    const r = await fetch('/Payments/Approve', { method: 'POST', body: fd });
+    const d = await r.json();
+    if (d.ok) { alert('Đã duyệt — user lên Pro!'); location.reload(); } else alert('Lỗi: ' + (d.msg || ''));
+}
+async function rejectPay(id) {
+    if (!confirm('Từ chối giao dịch này?')) return;
+    const fd = new FormData(); fd.append('id', id); fd.append('__RequestVerificationToken', _tok);
+    const r = await fetch('/Payments/Reject', { method: 'POST', body: fd });
+    const d = await r.json();
+    if (d.ok) location.reload(); else alert('Lỗi: ' + (d.msg || ''));
+}
 </script>
 }
