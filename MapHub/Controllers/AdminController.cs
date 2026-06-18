@@ -902,13 +902,15 @@ public class AdminController : Controller
     [HttpGet]
     public async Task<IActionResult> Revenue()
     {
-        var paid = await _context.Payments
-            .Where(p => p.Status == "paid")
-            .OrderByDescending(p => p.PaidAt)
+        // Tất cả giao dịch (mọi trạng thái) — để bảng lịch sử hiện ĐỦ mọi người
+        var all = await _context.Payments
+            .OrderByDescending(p => p.CreatedAt)
             .Select(p => new RevenueRow(
-                p.Id, p.Amount, p.PlanType, p.Code, p.Provider, p.PaidAt,
+                p.Id, p.Amount, p.PlanType, p.Code, p.Provider, p.PaidAt, p.Status,
                 _context.Users.Where(u => u.Id == p.UserId).Select(u => u.Email).FirstOrDefault()))
             .ToListAsync();
+        // Doanh thu & biểu đồ chỉ cộng đơn đã thanh toán
+        var paid = all.Where(p => p.Status == "paid").ToList();
 
         const int VN = 7;                               // Việt Nam = UTC+7 (không DST)
         var vnNow = DateTime.UtcNow.AddHours(VN);
@@ -933,7 +935,7 @@ public class AdminController : Controller
         ViewBag.ChannelData   = System.Text.Json.JsonSerializer.Serialize(byPlan.Select(g => g.Sum(x => x.Amount)).ToList());
         // Số giao dịch thử nghiệm (giá cũ < 59.000) để hiện nút dọn dẹp
         ViewBag.TestCount = await _context.Payments.CountAsync(p => p.Amount < 59000m);
-        return View(paid);
+        return View(all);
     }
 
     // Dọn các giao dịch thử nghiệm (giá cũ < 59.000đ — mấy cái 5.000 test) để bắt đầu giá mới
@@ -993,4 +995,4 @@ public class AdminController : Controller
     }
 }
 
-public record RevenueRow(int Id, decimal Amount, string PlanType, string? Code, string? Provider, DateTime? PaidAt, string? Email);
+public record RevenueRow(int Id, decimal Amount, string PlanType, string? Code, string? Provider, DateTime? PaidAt, string? Status, string? Email);

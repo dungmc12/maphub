@@ -85,6 +85,7 @@
                         <th>Người dùng</th>
                         <th>Gói</th>
                         <th class="text-end">Số tiền</th>
+                        <th>Trạng thái</th>
                         <th>Kênh</th>
                         <th>Ngày trả</th>
                     </tr>
@@ -92,7 +93,7 @@
                 <tbody>
                     @if (!Model.Any())
                     {
-                        <tr><td colspan="6" class="text-center text-muted p-4">Chưa có giao dịch nào.</td></tr>
+                        <tr><td colspan="7" class="text-center text-muted p-4">Chưa có giao dịch nào.</td></tr>
                     }
                     else
                     {
@@ -107,7 +108,12 @@
                                     </div>
                                 </td>
                                 <td><span class="abadge @(r.PlanType == "year" ? "abadge-gold" : "abadge-blue")">@(r.PlanType == "year" ? "1 năm" : "1 tháng")</span></td>
-                                <td class="text-end"><strong style="color:var(--green)">@Vnd(r.Amount)</strong></td>
+                                <td class="text-end"><strong style="color:@(r.Status == "paid" ? "var(--green)" : "#94a3b8")">@Vnd(r.Amount)</strong></td>
+                                <td>
+                                    @if (r.Status == "paid")           { <span class="abadge abadge-green">Đã thanh toán</span> }
+                                    else if (r.Status == "confirming") { <span class="abadge abadge-orange">Chờ duyệt</span> }
+                                    else                               { <span class="abadge abadge-gray">Chưa trả</span> }
+                                </td>
                                 <td><span class="admin-sub">@(r.Provider ?? "—")</span></td>
                                 <td><span class="admin-sub">@(r.PaidAt?.ToLocalTime().ToString("dd/MM/yyyy HH:mm") ?? "—")</span></td>
                             </tr>
