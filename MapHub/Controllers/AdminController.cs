@@ -232,13 +232,13 @@ public class AdminController : Controller
 
         try
         {
-            var monthStart = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
-            var months = Enumerable.Range(0, 6).Select(i => monthStart.AddMonths(-i)).Reverse().ToList();
-
-            // Tăng trưởng: địa điểm tạo mỗi tháng (6 tháng)
+            // Tăng trưởng: địa điểm tạo mỗi NGÀY (30 ngày gần nhất, gom theo giờ VN +7)
+            const int VN = 7;
+            var vnToday = now.AddHours(VN).Date;
+            var days = Enumerable.Range(0, 30).Select(i => vnToday.AddDays(-29 + i)).ToList();
             var placeDates = await _context.Places.Select(p => p.CreatedAt).ToListAsync();
-            ViewBag.GrowthLabels = System.Text.Json.JsonSerializer.Serialize(months.Select(m => $"T{m.Month}").ToList());
-            ViewBag.GrowthData   = System.Text.Json.JsonSerializer.Serialize(months.Select(m => placeDates.Count(d => d >= m && d < m.AddMonths(1))).ToList());
+            ViewBag.GrowthLabels = System.Text.Json.JsonSerializer.Serialize(days.Select(d => d.ToString("dd/MM")).ToList());
+            ViewBag.GrowthData   = System.Text.Json.JsonSerializer.Serialize(days.Select(d => placeDates.Count(t => t.AddHours(VN).Date == d)).ToList());
 
             // Phân bố theo danh mục
             var catVi = new Dictionary<string, string> {
@@ -909,18 +909,20 @@ public class AdminController : Controller
                 _context.Users.Where(u => u.Id == p.UserId).Select(u => u.Email).FirstOrDefault()))
             .ToListAsync();
 
-        var now = DateTime.UtcNow;
-        var monthStart = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+        const int VN = 7;                               // Việt Nam = UTC+7 (không DST)
+        var vnNow = DateTime.UtcNow.AddHours(VN);
+        var vnMonthStart = new DateTime(vnNow.Year, vnNow.Month, 1);
         ViewBag.Total      = paid.Sum(p => p.Amount);
         ViewBag.Count      = paid.Count;
-        ViewBag.MonthTotal = paid.Where(p => p.PaidAt >= monthStart).Sum(p => p.Amount);
-        ViewBag.MonthCount = paid.Count(p => p.PaidAt >= monthStart);
+        ViewBag.MonthTotal = paid.Where(p => p.PaidAt.HasValue && p.PaidAt.Value.AddHours(VN) >= vnMonthStart).Sum(p => p.Amount);
+        ViewBag.MonthCount = paid.Count(p => p.PaidAt.HasValue && p.PaidAt.Value.AddHours(VN) >= vnMonthStart);
 
-        // Doanh thu 6 tháng gần nhất (cho biểu đồ xu hướng)
-        var months = Enumerable.Range(0, 6).Select(i => monthStart.AddMonths(-i)).Reverse().ToList();
-        ViewBag.TrendLabels = System.Text.Json.JsonSerializer.Serialize(months.Select(m => $"T{m.Month}/{m:yy}").ToList());
+        // Doanh thu theo NGÀY (30 ngày gần nhất, gom theo giờ VN +7)
+        var vnToday = vnNow.Date;
+        var days = Enumerable.Range(0, 30).Select(i => vnToday.AddDays(-29 + i)).ToList();
+        ViewBag.TrendLabels = System.Text.Json.JsonSerializer.Serialize(days.Select(d => d.ToString("dd/MM")).ToList());
         ViewBag.TrendData   = System.Text.Json.JsonSerializer.Serialize(
-            months.Select(m => paid.Where(p => p.PaidAt >= m && p.PaidAt < m.AddMonths(1)).Sum(p => p.Amount)).ToList());
+            days.Select(d => paid.Where(p => p.PaidAt.HasValue && p.PaidAt.Value.AddHours(VN).Date == d).Sum(p => p.Amount)).ToList());
 
         // Cơ cấu theo gói (cho biểu đồ tròn)
         var byPlan = paid.GroupBy(p => p.PlanType).OrderByDescending(g => g.Sum(x => x.Amount)).ToList();
