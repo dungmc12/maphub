@@ -4,6 +4,7 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/jpeg" href="~/img/logo.jpg" />
     <title>@ViewData["Title"] - CityScout</title>
     <meta name="description" content="@(ViewData["MetaDescription"] ?? "CityScout — khám phá địa điểm ăn uống, cà phê, vui chơi, văn hóa tại Hà Nội. Lập kế hoạch chuyến đi thông minh cùng AI, lọc theo ngân sách, thời tiết và giờ mở cửa.")" />
     @if (ViewData["Canonical"] != null)
@@ -25,7 +26,7 @@
         <div class="app-shell nav-row">
             <!-- Brand -->
             <a class="brand" asp-controller="Home" asp-action="Index">
-                <span class="brand-mark">CS</span>
+                <img class="brand-mark" src="~/img/logo.jpg" alt="CityScout" />
                 <span class="brand-text">CityScout</span>
             </a>
 
