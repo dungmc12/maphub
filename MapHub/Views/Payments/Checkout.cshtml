@@ -89,7 +89,7 @@
 
         <!-- Bank info -->
         <div class="ck-info">
-            <div class="ck-row"><span>Ngân hàng</span><strong>Vietcombank (VCB)</strong></div>
+            <div class="ck-row"><span>Ngân hàng</span><strong>@(((string)ViewBag.BankCode) switch { "MB" => "MBBank", "VCB" => "Vietcombank", "TCB" => "Techcombank", "ACB" => "ACB", "BIDV" => "BIDV", "VIETIN" => "VietinBank", _ => (string)ViewBag.BankCode })</strong></div>
             <div class="ck-row"><span>Số tài khoản</span><strong>@ViewBag.AccountNumber</strong></div>
             <div class="ck-row"><span>Chủ tài khoản</span><strong>@ViewBag.AccountName</strong></div>
             <div class="ck-row"><span>Số tiền</span><strong class="text-primary">@Model.Amount.ToString("#,##0")đ</strong></div>
