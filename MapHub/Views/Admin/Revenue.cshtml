@@ -135,6 +135,37 @@
     </div>
 </div>
 
+<style>
+.rv-modal { position:fixed; inset:0; background:rgba(15,23,42,.5); display:flex; align-items:center; justify-content:center; z-index:1080; padding:1rem; }
+.rv-modal-card { background:#fff; border-radius:18px; max-width:380px; width:100%; padding:1.6rem 1.5rem; text-align:center; box-shadow:0 20px 60px rgba(0,0,0,.25); }
+.rv-modal-icon { font-size:2.4rem; line-height:1; margin-bottom:.5rem; }
+.rv-modal-title { font-weight:800; font-size:1.1rem; margin:0 0 .4rem; color:#1e293b; }
+.rv-modal-msg { color:#64748b; font-size:.88rem; margin:0 0 1.3rem; line-height:1.55; }
+.rv-modal-actions { display:flex; gap:.6rem; }
+.rv-btn { flex:1; padding:.62rem 1rem; border-radius:10px; font-weight:700; font-size:.88rem; cursor:pointer; border:1px solid transparent; }
+.rv-btn-ghost { background:#fff; border-color:#e2e8f0; color:#475569; }
+.rv-btn-ghost:hover { background:#f8fafc; }
+.rv-btn-primary { background:#16a34a; color:#fff; }
+.rv-btn-danger { background:#ef4444; color:#fff; }
+.rv-btn:disabled { opacity:.6; cursor:default; }
+.rv-toast { position:fixed; bottom:1.5rem; left:50%; transform:translateX(-50%); background:#0f172a; color:#fff; padding:.7rem 1.2rem; border-radius:10px; font-size:.9rem; z-index:1090; box-shadow:0 8px 24px rgba(0,0,0,.25); }
+.rv-toast.ok { background:#16a34a; }
+.rv-toast.err { background:#dc2626; }
+</style>
+
+<div id="rvConfirm" class="rv-modal" style="display:none" onclick="if(event.target===this)rvCloseModal()">
+    <div class="rv-modal-card">
+        <div class="rv-modal-icon" id="rvModalIcon"><i class="fa-solid fa-circle-question"></i></div>
+        <h4 class="rv-modal-title" id="rvModalTitle">Xác nhận</h4>
+        <p class="rv-modal-msg" id="rvModalMsg"></p>
+        <div class="rv-modal-actions">
+            <button type="button" class="rv-btn rv-btn-ghost" onclick="rvCloseModal()">Hủy</button>
+            <button type="button" class="rv-btn rv-btn-primary" id="rvModalOk">Xác nhận</button>
+        </div>
+    </div>
+</div>
+<div id="rvToast" class="rv-toast" style="display:none"></div>
+
 @section Scripts {
 <script src="https://cdn.jsdelivr.net/npm/apexcharts@3.49.0/dist/apexcharts.min.js"></script>
 <script>
@@ -174,21 +205,62 @@
     }
 })();
 
-// Duyệt / từ chối thanh toán thủ công (cho đơn chưa "paid")
+// Duyệt / từ chối thanh toán — modal xác nhận TRÊN WEB (không dùng confirm/alert của trình duyệt)
 const _tok = document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
-async function approvePay(id) {
-    if (!confirm('Duyệt giao dịch này và kích hoạt Pro cho user?')) return;
-    const fd = new FormData(); fd.append('id', id); fd.append('__RequestVerificationToken', _tok);
-    const r = await fetch('/Payments/Approve', { method: 'POST', body: fd });
-    const d = await r.json();
-    if (d.ok) { alert('Đã duyệt — user lên Pro!'); location.reload(); } else alert('Lỗi: ' + (d.msg || ''));
+let _rvAction = null;
+
+function rvCloseModal() { document.getElementById('rvConfirm').style.display = 'none'; _rvAction = null; }
+function rvToast(msg, type) {
+    const t = document.getElementById('rvToast');
+    t.textContent = msg; t.className = 'rv-toast ' + (type || '');
+    t.style.display = 'block';
+    clearTimeout(t._t); t._t = setTimeout(() => t.style.display = 'none', 3000);
 }
-async function rejectPay(id) {
-    if (!confirm('Từ chối giao dịch này?')) return;
+function rvOpenModal(opt) {
+    document.getElementById('rvModalTitle').textContent = opt.title;
+    document.getElementById('rvModalMsg').textContent = opt.msg;
+    const ic = document.getElementById('rvModalIcon');
+    ic.innerHTML = '<i class="fa-solid ' + opt.icon + '"></i>'; ic.style.color = opt.iconColor;
+    const ok = document.getElementById('rvModalOk');
+    ok.textContent = opt.okText; ok.className = 'rv-btn ' + opt.okClass; ok.disabled = false;
+    _rvAction = opt.onOk;
+    document.getElementById('rvConfirm').style.display = 'flex';
+}
+document.getElementById('rvModalOk').addEventListener('click', async function () {
+    if (!_rvAction) return;
+    this.disabled = true; const old = this.textContent; this.textContent = 'Đang xử lý…';
+    try { await _rvAction(); } finally { this.textContent = old; }
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape') rvCloseModal(); });
+
+async function _rvPost(url, id) {
     const fd = new FormData(); fd.append('id', id); fd.append('__RequestVerificationToken', _tok);
-    const r = await fetch('/Payments/Reject', { method: 'POST', body: fd });
-    const d = await r.json();
-    if (d.ok) location.reload(); else alert('Lỗi: ' + (d.msg || ''));
+    const r = await fetch(url, { method: 'POST', body: fd });
+    return r.json();
+}
+function approvePay(id) {
+    rvOpenModal({
+        title: 'Duyệt thanh toán này?',
+        msg: 'Bạn chắc chắn đã nhận được tiền? Sau khi duyệt, đơn sẽ tính vào doanh thu và tài khoản được kích hoạt Pro.',
+        okText: 'Duyệt & lên Pro', okClass: 'rv-btn-primary', icon: 'fa-circle-check', iconColor: '#16a34a',
+        onOk: async () => {
+            const d = await _rvPost('/Payments/Approve', id);
+            if (d.ok) { rvToast('Đã duyệt — tài khoản đã lên Pro!', 'ok'); setTimeout(() => location.reload(), 900); }
+            else { rvCloseModal(); rvToast('Lỗi: ' + (d.msg || 'không duyệt được'), 'err'); }
+        }
+    });
+}
+function rejectPay(id) {
+    rvOpenModal({
+        title: 'Từ chối giao dịch này?',
+        msg: 'Đánh dấu giao dịch là từ chối. Dùng khi người dùng chưa thực sự chuyển tiền.',
+        okText: 'Từ chối', okClass: 'rv-btn-danger', icon: 'fa-circle-xmark', iconColor: '#dc2626',
+        onOk: async () => {
+            const d = await _rvPost('/Payments/Reject', id);
+            if (d.ok) { rvToast('Đã từ chối giao dịch.', 'ok'); setTimeout(() => location.reload(), 900); }
+            else { rvCloseModal(); rvToast('Lỗi: ' + (d.msg || ''), 'err'); }
+        }
+    });
 }
 </script>
 }
