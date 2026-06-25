@@ -435,13 +435,13 @@
                                     </div>
                                 }
                             </div>
-                            <textarea name="content" class="form-control mb-2" rows="3"
+                            <textarea name="content" class="form-control mb-2" rows="3" maxlength="4000"
                                       placeholder="Chia sẻ trải nghiệm của bạn..."></textarea>
                             @if (isRestaurantLike)
                             {
-                                <input type="text" name="foodReview" class="form-control mb-2"
+                                <input type="text" name="foodReview" class="form-control mb-2" maxlength="2000"
                                        placeholder="Nhận xét về đồ ăn/uống (tùy chọn)">
-                                <input type="text" name="staffReview" class="form-control mb-2"
+                                <input type="text" name="staffReview" class="form-control mb-2" maxlength="2000"
                                        placeholder="Nhận xét về nhân viên (tùy chọn)">
                             }
                             <div class="row g-2 mb-3">

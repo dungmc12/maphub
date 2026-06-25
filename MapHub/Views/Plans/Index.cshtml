@@ -169,7 +169,7 @@
             <h5><i class="fa-solid fa-clipboard-list"></i> Tạo kế hoạch mới</h5>
             <button onclick="document.getElementById('createPlanModal').style.display='none'"><i class="fa-solid fa-xmark"></i></button>
         </div>
-        <form method="post" action="/Plans/Create" id="createPlanForm" onsubmit="return validatePlanDates()">
+        <form method="post" action="/Plans/Create" id="createPlanForm" novalidate onsubmit="return validatePlanDates()">
             @Html.AntiForgeryToken()
             <div class="custom-modal-body">
                 <!-- Gợi ý nhanh tên kế hoạch (đồng bộ với modal AI) -->
@@ -182,7 +182,7 @@
                 </div>
                 <div class="mb-3">
                     <label class="form-label fw-semibold">Tên kế hoạch <span class="text-danger">*</span></label>
-                    <input type="text" name="title" id="planTitleInput" class="form-control" required
+                    <input type="text" name="title" id="planTitleInput" class="form-control" maxlength="150"
                            placeholder="VD: Hà Nội cuối tuần, Dã ngoại Hòa Lạc...">
                 </div>
                 <div class="row g-2">
@@ -295,6 +295,11 @@ function updateEndDateMin() {
 }
 
 function validatePlanDates() {
+    // Tên kế hoạch bắt buộc — báo lỗi inline trong trang
+    const titleEl = document.getElementById('planTitleInput');
+    cs.clear(titleEl);
+    if (!titleEl.value.trim()) { cs.err(titleEl, 'Vui lòng nhập tên kế hoạch.'); titleEl.focus(); return false; }
+
     const startEl = document.getElementById('planStartDate');
     const start = startEl.value;
     const end   = document.getElementById('planEndDate').value;

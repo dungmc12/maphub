@@ -72,22 +72,22 @@
         {
             <p class="text-muted small">Tài khoản của bạn đăng nhập bằng Google và chưa có mật khẩu. Tạo mật khẩu để đăng nhập trực tiếp bằng email.</p>
         }
-        <form method="post" action="/Account/ChangePassword">
+        <form method="post" action="/Account/ChangePassword" id="pwForm" novalidate onsubmit="return validatePw()">
             @Html.AntiForgeryToken()
             @if (hasPassword)
             {
                 <div class="mb-3">
                     <label class="form-label fw-semibold">Mật khẩu hiện tại</label>
-                    <input type="password" name="currentPassword" class="form-control" required>
+                    <input type="password" name="currentPassword" id="pwCur" class="form-control">
                 </div>
             }
             <div class="mb-3">
                 <label class="form-label fw-semibold">Mật khẩu mới (tối thiểu 6 ký tự)</label>
-                <input type="password" name="newPassword" class="form-control" minlength="6" required>
+                <input type="password" name="newPassword" id="pwNew" class="form-control">
             </div>
             <div class="mb-3">
                 <label class="form-label fw-semibold">Xác nhận mật khẩu mới</label>
-                <input type="password" name="confirmPassword" class="form-control" minlength="6" required>
+                <input type="password" name="confirmPassword" id="pwConfirm" class="form-control">
             </div>
             <button type="submit" class="btn-accent">@(hasPassword ? "Đổi mật khẩu" : "Tạo mật khẩu")</button>
         </form>
@@ -96,6 +96,21 @@
 
 @section Scripts {
 <script>
+var pwHasCurrent = @(hasPassword ? "true" : "false");
+// Validate đổi mật khẩu — báo lỗi inline trong trang
+function validatePw() {
+    cs.clearAll(document.getElementById('pwForm'));
+    let ok = true, first = null;
+    if (pwHasCurrent) {
+        const cur = document.getElementById('pwCur');
+        if (!cur.value) { cs.err(cur, 'Nhập mật khẩu hiện tại.'); ok = false; first = first || cur; }
+    }
+    const nw = document.getElementById('pwNew'), cf = document.getElementById('pwConfirm');
+    if (nw.value.length < 6) { cs.err(nw, 'Mật khẩu mới tối thiểu 6 ký tự.'); ok = false; first = first || nw; }
+    if (cf.value !== nw.value) { cs.err(cf, 'Xác nhận mật khẩu không khớp.'); ok = false; first = first || cf; }
+    if (first) first.focus();
+    return ok;
+}
 // Xem trước avatar ngay khi chọn ảnh từ máy
 function previewAvatar(input) {
     const f = input.files && input.files[0];

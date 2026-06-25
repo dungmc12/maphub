@@ -230,7 +230,7 @@ else if (isAuth)
                         <div class="row g-3">
                             <div class="col-md-7">
                                 <label class="form-label fw-semibold">Tên địa điểm <span class="text-danger">*</span></label>
-                                <input type="text" id="newName" class="form-control" placeholder="VD: Quán Phở Bắc" required>
+                                <input type="text" id="newName" class="form-control" placeholder="VD: Quán Phở Bắc" maxlength="200">
                             </div>
                             <div class="col-md-5">
                                 <label class="form-label fw-semibold">Danh mục</label>
@@ -260,11 +260,11 @@ else if (isAuth)
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Điện thoại</label>
-                                <input type="tel" id="newPhone" class="form-control" placeholder="0912 345 678" inputmode="numeric">
+                                <input type="tel" id="newPhone" class="form-control" placeholder="0912345678" data-digits maxlength="11">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Hotline phụ <small class="text-muted">(tùy chọn)</small></label>
-                                <input type="tel" id="newPhone2" class="form-control" placeholder="Số dự phòng khi số trên bận" inputmode="numeric">
+                                <input type="tel" id="newPhone2" class="form-control" placeholder="Số dự phòng khi số trên bận" data-digits maxlength="11">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Giờ mở cửa</label>
@@ -362,10 +362,11 @@ else if (isAuth)
                         <p class="text-muted" style="font-size:.86rem;margin-bottom:.5rem">Bấm vào bản đồ để chọn vị trí, hoặc nhập toạ độ.</p>
                         <div class="input-group mb-2">
                             <span class="input-group-text">Vĩ độ</span>
-                            <input type="text" id="newLat" class="form-control" placeholder="VD: 21.0285" oninput="syncMiniMarker()" required>
+                            <input type="text" id="newLat" class="form-control" placeholder="VD: 21.0285" oninput="syncMiniMarker()">
                             <span class="input-group-text">Kinh độ</span>
-                            <input type="text" id="newLng" class="form-control" placeholder="VD: 105.8542" oninput="syncMiniMarker()" required>
+                            <input type="text" id="newLng" class="form-control" placeholder="VD: 105.8542" oninput="syncMiniMarker()">
                         </div>
+                        <div id="coordErr" class="field-err"></div>
                         <div id="miniMap" style="height:400px; border-radius:14px; overflow:hidden; border:1px solid var(--line)"></div>
                     </div>
                 </div>
@@ -1029,33 +1030,60 @@ function wizSet(n) {
     const body = document.querySelector('#addPlaceModal .modal-body'); if (body) body.scrollTop = 0;
     if (wizStep === 3 && miniMap) setTimeout(() => miniMap.invalidateSize(), 80);
 }
-function isValidPhone(s) {
-    const d = (s || '').replace(/\D/g, '');   // chỉ giữ chữ số
-    return d.length >= 9 && d.length <= 11;
+function isValidPhone(s) { return cs.isPhone(s); }
+
+// Kiểm tra bước 1 (Tên + điện thoại). Trả về true nếu hợp lệ, đồng thời hiện lỗi inline.
+function validateStep1() {
+    cs.clear('newName'); cs.clear('newPhone'); cs.clear('newPhone2');
+    let ok = true, first = null;
+    const name = document.getElementById('newName').value.trim();
+    if (!name) { cs.err('newName', 'Vui lòng nhập tên địa điểm.'); ok = false; first = first || 'newName'; }
+    else if (name.length > 200) { cs.err('newName', 'Tên quá dài (tối đa 200 ký tự).'); ok = false; first = first || 'newName'; }
+    const ph = document.getElementById('newPhone').value.trim();
+    const ph2 = document.getElementById('newPhone2').value.trim();
+    if (ph && !cs.isPhone(ph)) { cs.err('newPhone', 'Số điện thoại phải có 9–11 chữ số.'); ok = false; first = first || 'newPhone'; }
+    if (ph2 && !cs.isPhone(ph2)) { cs.err('newPhone2', 'Hotline phụ phải có 9–11 chữ số.'); ok = false; first = first || 'newPhone2'; }
+    if (first) document.getElementById(first).focus();
+    return ok;
 }
-function wizGo(dir) {
-    if (dir > 0 && wizStep === 1) {
-        if (!document.getElementById('newName').value.trim()) {
-            alert('Vui lòng nhập tên địa điểm!'); document.getElementById('newName').focus(); return;
-        }
-        const ph = document.getElementById('newPhone').value.trim();
-        const ph2 = document.getElementById('newPhone2').value.trim();
-        if (ph && !isValidPhone(ph)) { alert('Số điện thoại phải có 9–11 chữ số.'); document.getElementById('newPhone').focus(); return; }
-        if (ph2 && !isValidPhone(ph2)) { alert('Hotline phụ phải có 9–11 chữ số.'); document.getElementById('newPhone2').focus(); return; }
+
+// Kiểm tra giá (bước 2): không âm, giá từ ≤ giá đến
+function validatePrice() {
+    cs.clear('newMinPrice'); cs.clear('newMaxPrice');
+    const mn = parseInt(document.getElementById('newMinPrice').value);
+    const mx = parseInt(document.getElementById('newMaxPrice').value);
+    if (!isNaN(mn) && !isNaN(mx) && mn > mx) { cs.err('newMaxPrice', 'Giá đến phải lớn hơn hoặc bằng giá từ.'); return false; }
+    return true;
+}
+
+// Kiểm tra vị trí (bước 3)
+function validateLocation() {
+    cs.clear('newLat');
+    const errEl = document.getElementById('coordErr'); if (errEl) errEl.classList.remove('show');
+    const lat = parseFloat(document.getElementById('newLat').value);
+    const lng = parseFloat(document.getElementById('newLng').value);
+    if (isNaN(lat) || isNaN(lng) || (lat === 0 && lng === 0)) {
+        if (errEl) { errEl.textContent = 'Hãy bấm chọn vị trí trên bản đồ (hoặc nhập toạ độ).'; errEl.classList.add('show'); }
+        return false;
     }
+    if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+        if (errEl) { errEl.textContent = 'Toạ độ không hợp lệ (vĩ độ -90..90, kinh độ -180..180).'; errEl.classList.add('show'); }
+        return false;
+    }
+    return true;
+}
+
+function wizGo(dir) {
+    if (dir > 0 && wizStep === 1 && !validateStep1()) return;
+    if (dir > 0 && wizStep === 2 && !validatePrice()) return;
     wizSet(wizStep + dir);
 }
 
 // Lưu nhanh: chỉ cần TÊN + VỊ TRÍ → tạo địa điểm tạm, bổ sung ảnh/chi tiết sau ở "Sửa địa điểm"
 function quickSave() {
-    const name = document.getElementById('newName').value.trim();
-    if (!name) { alert('Hãy nhập tên địa điểm đã nhé!'); wizSet(1); document.getElementById('newName').focus(); return; }
-    const lat = parseFloat(document.getElementById('newLat').value);
-    const lng = parseFloat(document.getElementById('newLng').value);
-    if (isNaN(lat) || isNaN(lng)) {
-        alert('Hãy bấm chọn vị trí trên bản đồ trước (bước Vị trí).');
-        wizSet(3); return;
-    }
+    if (!validateStep1()) { wizSet(1); return; }
+    if (!validatePrice()) { wizSet(2); return; }
+    if (!validateLocation()) { wizSet(3); return; }
     submitPlace();
 }
 
@@ -1164,13 +1192,15 @@ function syncMiniMarker() {
 
 
 async function submitPlace() {
+    // Kiểm tra lại toàn bộ (báo lỗi inline, nhảy về đúng bước nếu sai)
+    if (!validateStep1()) { wizSet(1); return; }
+    if (!validatePrice()) { wizSet(2); return; }
+    if (!validateLocation()) { wizSet(3); return; }
+
     const lat = parseFloat(document.getElementById('newLat').value);
     const lng = parseFloat(document.getElementById('newLng').value);
     const name = document.getElementById('newName').value.trim();
     const imageFile = document.getElementById('newImageFile').files[0];
-
-    if (!name) { alert('Vui lòng nhập tên địa điểm!'); return; }
-    if (isNaN(lat) || isNaN(lng)) { alert('Vui lòng chọn vị trí trên bản đồ (hoặc nhập tọa độ)!'); return; }
     // Ảnh KHÔNG bắt buộc — thiếu thì dùng ảnh mặc định, chủ địa điểm bổ sung sau ở "Sửa địa điểm"
 
     const data = {

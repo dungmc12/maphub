@@ -1171,6 +1171,14 @@ img.brand-mark { display: block; object-fit: cover; background: none; padding: 0
 .afc-warn { background: #fde68a; color: #92400e; }
 
 /* ── Admin Table ─────────────────────────────────────────────────────── */
+/* ── Validation inline dùng chung ── */
+.field-err { color: #dc2626; font-size: .8rem; margin-top: .25rem; display: none; line-height: 1.35; }
+.field-err.show { display: block; }
+.field-err::before { content: "\26A0"; margin-right: .3rem; }
+.input-invalid,
+.form-control.input-invalid,
+.form-select.input-invalid { border-color: #dc2626 !important; box-shadow: 0 0 0 .15rem rgba(220,38,38,.15) !important; }
+
 .admin-table-wrap {
   background: #fff; border: 1px solid var(--line);
   border-radius: var(--radius); overflow: hidden;

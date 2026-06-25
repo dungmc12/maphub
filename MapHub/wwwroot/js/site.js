@@ -1,4 +1,50 @@
-﻿// ── Lớp nền bản đồ dùng chung ─────────────────────────────────────────────
+﻿// ── Validation dùng chung (báo lỗi inline trong trang, KHÔNG dùng popup mặc định của trình duyệt) ──
+// Hiện lỗi ngay dưới ô nhập + viền đỏ. Dùng được ở mọi form: cs.err / cs.clear / cs.digitsOnly...
+window.cs = (function () {
+    function findHost(el) { return el.closest('.col-md-8, .col-md-6, .col-md-4, .col-12, .mb-3, .form-group, td') || el.parentElement; }
+    function err(el, msg) {
+        if (typeof el === 'string') el = document.getElementById(el);
+        if (!el) return false;
+        el.classList.add('input-invalid');
+        const host = findHost(el);
+        let e = host.querySelector(':scope > .field-err');
+        if (!e) { e = document.createElement('div'); e.className = 'field-err'; host.appendChild(e); }
+        e.textContent = msg; e.classList.add('show');
+        return false;
+    }
+    function clear(el) {
+        if (typeof el === 'string') el = document.getElementById(el);
+        if (!el) return;
+        el.classList.remove('input-invalid');
+        const host = findHost(el);
+        const e = host.querySelector(':scope > .field-err');
+        if (e) e.classList.remove('show');
+    }
+    function clearAll(form) {
+        (form || document).querySelectorAll('.input-invalid').forEach(el => el.classList.remove('input-invalid'));
+        (form || document).querySelectorAll('.field-err.show').forEach(e => e.classList.remove('show'));
+    }
+    // Chỉ cho nhập chữ SỐ (gỡ mọi ký tự khác ngay khi gõ/dán)
+    function digitsOnly(el) { el.value = (el.value || '').replace(/\D+/g, ''); }
+    function isPhone(s) { const d = (s || '').replace(/\D/g, ''); return d.length >= 9 && d.length <= 11; }
+    function isUrl(s) { return /^https?:\/\/.+/i.test((s || '').trim()); }
+    // Gắn tự động: input[data-digits] → chỉ số; xoá lỗi khi người dùng sửa lại
+    function init(root) {
+        (root || document).querySelectorAll('input[data-digits]').forEach(el => {
+            if (el._csDigits) return; el._csDigits = true;
+            el.setAttribute('inputmode', 'numeric');
+            el.addEventListener('input', () => { digitsOnly(el); clear(el); });
+        });
+        (root || document).querySelectorAll('.input-invalid').forEach(el => {
+            if (el._csClr) return; el._csClr = true;
+            el.addEventListener('input', () => clear(el));
+        });
+    }
+    document.addEventListener('DOMContentLoaded', () => init());
+    return { err, clear, clearAll, digitsOnly, isPhone, isUrl, init };
+})();
+
+// ── Lớp nền bản đồ dùng chung ─────────────────────────────────────────────
 // Có MAPBOX_TOKEN → dùng Mapbox (đẹp hơn); chưa có → tự fallback OpenStreetMap (miễn phí).
 // MAPBOX_STYLE nhận ĐƯỜNG DẪN ĐẦY ĐỦ:
 //   - style mặc định Mapbox: "mapbox/streets-v12" | "mapbox/light-v11" | "mapbox/navigation-day-v1"...
