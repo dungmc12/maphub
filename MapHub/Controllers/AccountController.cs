@@ -128,23 +128,11 @@ public class AccountController : Controller
         var result = await _userManager.CreateAsync(user, model.Password);
         if (result.Succeeded)
         {
-            // 🎁 Dùng thử Pro miễn phí — mỗi tài khoản CHỈ 1 lần (đánh dấu TrialClaimed)
-            var trialUntil = DateTime.UtcNow.AddDays(TrialDays);
-            _context.UserProfiles.Add(new UserProfile
-            {
-                UserId = user.Id,
-                DisplayName = username,
-                Tier = "pro",
-                ProExpiresAt = trialUntil,
-                MaxPlaces = int.MaxValue,
-                MaxPlans = int.MaxValue,
-                TrialClaimed = true
-            });
-            await _context.SaveChangesAsync();
-            await _userManager.AddToRoleAsync(user, "Pro");
-
+            // 🎁 Dùng thử Pro miễn phí — mỗi tài khoản CHỈ 1 lần
+            var trialUntil = await GrantTrialAsync(user, username);
             await _signInManager.SignInAsync(user, isPersistent: false);
-            TempData["TrialMsg"] = $"🎉 Chào mừng {username}! Bạn được dùng thử Pro miễn phí đến hết ngày {trialUntil.ToLocalTime():dd/MM/yyyy}.";
+            if (trialUntil.HasValue)
+                TempData["TrialMsg"] = $"🎉 Chào mừng {username}! Bạn được dùng thử Pro miễn phí đến hết ngày {trialUntil.Value.ToLocalTime():dd/MM/yyyy}.";
             return LocalRedirect(targetUrl);
         }
 
@@ -158,6 +146,32 @@ public class AccountController : Controller
 
     // Số ngày dùng thử Pro khi đăng ký (30 = 1 tháng; đổi 90 nếu muốn 3 tháng)
     private const int TrialDays = 30;
+
+    // Cấp dùng thử Pro cho tài khoản mới — CHỈ 1 lần/tài khoản (TrialClaimed). Trả về ngày hết hạn, hoặc null nếu đã dùng.
+    private async Task<DateTime?> GrantTrialAsync(ApplicationUser user, string? displayName)
+    {
+        var profile = await _context.UserProfiles.FindAsync(user.Id);
+        if (profile == null)
+        {
+            profile = new UserProfile { UserId = user.Id };
+            _context.UserProfiles.Add(profile);
+        }
+        if (profile.TrialClaimed) return null;   // đã dùng thử rồi → không cấp lại
+
+        var trialUntil = DateTime.UtcNow.AddDays(TrialDays);
+        if (string.IsNullOrWhiteSpace(profile.DisplayName) && !string.IsNullOrWhiteSpace(displayName))
+            profile.DisplayName = displayName.Trim();
+        profile.Tier = "pro";
+        profile.ProExpiresAt = trialUntil;
+        profile.MaxPlaces = int.MaxValue;
+        profile.MaxPlans = int.MaxValue;
+        profile.TrialClaimed = true;
+        profile.UpdatedAt = DateTime.UtcNow;
+        await _context.SaveChangesAsync();
+        if (!await _userManager.IsInRoleAsync(user, "Pro"))
+            await _userManager.AddToRoleAsync(user, "Pro");
+        return trialUntil;
+    }
 
     // Hết hạn dùng thử/Pro → tự hạ về Free (chạy khi đăng nhập). Admin không bị ảnh hưởng.
     private async Task ExpireTrialIfNeededAsync(ApplicationUser user)
@@ -215,7 +229,7 @@ public class AccountController : Controller
         if (result.Succeeded)
         {
             var linked = await _userManager.FindByLoginAsync(info.LoginProvider, info.ProviderKey);
-            if (linked != null) await EnsureDisplayNameAsync(linked, googleName);
+            if (linked != null) { await EnsureDisplayNameAsync(linked, googleName); await ExpireTrialIfNeededAsync(linked); }
             return LocalRedirect(NormalizeReturnUrl(returnUrl));
         }
         if (result.IsLockedOut)
@@ -233,6 +247,7 @@ public class AccountController : Controller
         }
 
         var user = await _userManager.FindByEmailAsync(email);
+        bool isNewGoogleUser = false;
         if (user == null)
         {
             user = new ApplicationUser { UserName = email, Email = email, EmailConfirmed = true };
@@ -242,6 +257,7 @@ public class AccountController : Controller
                 ModelState.AddModelError(string.Empty, "Không thể tạo tài khoản.");
                 return View("Login");
             }
+            isNewGoogleUser = true;
         }
 
         // Chặn user đã bị khóa (đường vòng tạo/liên kết bỏ qua lockout)
@@ -253,7 +269,13 @@ public class AccountController : Controller
 
         await _userManager.AddLoginAsync(user, info);
         await EnsureDisplayNameAsync(user, googleName);
+
+        // Tài khoản Google MỚI cũng được dùng thử Pro 1 lần (giống đăng ký thường)
+        if (isNewGoogleUser) await GrantTrialAsync(user, googleName);
+
         await _signInManager.SignInAsync(user, isPersistent: false);
+        if (isNewGoogleUser)
+            TempData["TrialMsg"] = $"🎉 Chào mừng! Bạn được dùng thử Pro miễn phí đến hết ngày {DateTime.UtcNow.AddDays(TrialDays).ToLocalTime():dd/MM/yyyy}.";
         return LocalRedirect(NormalizeReturnUrl(returnUrl));
     }
 
