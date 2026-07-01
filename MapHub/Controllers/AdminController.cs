@@ -334,6 +334,131 @@ public class AdminController : Controller
         return RedirectToAction(nameof(Index));
     }
 
+    // ──────────────── Sinh đánh giá mẫu (demo) cho địa điểm ────────────────
+    // KHÔNG copy Google. Tạo tài khoản người đánh giá mẫu + đánh giá tiếng Việt, mỗi địa điểm ≥ 10,
+    // không trùng (user, địa điểm), điểm đa dạng thiên tích cực, ngày rải rác 6 tháng.
+    private static readonly (string Name, string Email)[] DemoReviewers = {
+        ("Minh Anh","reviewer.minhanh@cityscout.local"), ("Quốc Huy","reviewer.quochuy@cityscout.local"),
+        ("Thu Trang","reviewer.thutrang@cityscout.local"), ("Hoàng Nam","reviewer.hoangnam@cityscout.local"),
+        ("Lan Phương","reviewer.lanphuong@cityscout.local"), ("Đức Anh","reviewer.ducanh@cityscout.local"),
+        ("Bảo Ngọc","reviewer.baongoc@cityscout.local"), ("Việt Hùng","reviewer.viethung@cityscout.local"),
+        ("Thùy Linh","reviewer.thuylinh@cityscout.local"), ("Gia Bảo","reviewer.giabao@cityscout.local"),
+        ("Khánh Vy","reviewer.khanhvy@cityscout.local"), ("Tuấn Kiệt","reviewer.tuankiet@cityscout.local"),
+        ("Mai Chi","reviewer.maichi@cityscout.local"), ("Đình Phúc","reviewer.dinhphuc@cityscout.local"),
+        ("Ngọc Ánh","reviewer.ngocanh@cityscout.local"), ("Hải Đăng","reviewer.haidang@cityscout.local"),
+    };
+
+    private static readonly string[] ReviewGeneric = {
+        "Không gian đẹp, sạch sẽ, nhân viên thân thiện. Sẽ quay lại.",
+        "Vị trí dễ tìm, phục vụ nhanh. Mình khá hài lòng.",
+        "Trải nghiệm ổn, giá hợp lý so với chất lượng.",
+        "Chỗ này được, phù hợp đi cùng bạn bè và gia đình.",
+        "Nhân viên nhiệt tình, hỏi gì cũng tư vấn kỹ.",
+        "Khá đông vào cuối tuần nhưng phục vụ vẫn chu đáo.",
+        "Lần đầu tới thấy ưng, không gian thoáng và yên tĩnh.",
+        "Mọi thứ đều ok, chỉ hơi khó gửi xe một chút.",
+        "Đáng đồng tiền, mình đánh giá cao thái độ phục vụ.",
+        "Sạch sẽ, gọn gàng, view chụp ảnh đẹp.",
+    };
+    private static readonly string[] ReviewFood = {
+        "Đồ ăn ngon, phần ăn đầy đặn, giá mềm.",
+        "Món ăn đậm đà, hợp khẩu vị, đồ uống cũng ổn.",
+        "Quán sạch, món ra nhanh, sẽ giới thiệu bạn bè.",
+        "Hương vị tròn vị, nêm nếm vừa miệng.",
+        "Menu đa dạng, có nhiều lựa chọn cho nhóm đông.",
+        "Đồ uống pha ngon, bánh ngọt cũng đáng thử.",
+        "Giá hợp lý, chất lượng món ổn định qua nhiều lần ghé.",
+        "Phục vụ nhanh, món nóng sốt, không phải chờ lâu.",
+    };
+    private static readonly string[] ReviewNature = {
+        "Khung cảnh thiên nhiên đẹp, không khí trong lành.",
+        "Rất hợp để đi dạo, thư giãn cuối tuần.",
+        "Yên tĩnh, thoáng mát, chụp ảnh cực đẹp.",
+        "Không gian xanh, thích hợp cả nhà đi chơi.",
+        "Buổi chiều ra đây hóng gió rất dễ chịu.",
+    };
+    private static readonly string[] ReviewCulture = {
+        "Địa điểm ý nghĩa, nhiều thông tin bổ ích.",
+        "Kiến trúc đẹp, được bảo tồn tốt, đáng tham quan.",
+        "Không gian trang nghiêm, sạch sẽ, đáng để ghé.",
+        "Trải nghiệm văn hoá thú vị, học hỏi được nhiều.",
+    };
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> SeedReviews(int perPlace = 10)
+    {
+        if (perPlace < 1) perPlace = 10;
+        if (perPlace > 20) perPlace = 20;
+
+        // 1) Đảm bảo có sẵn tài khoản người đánh giá mẫu (+ hồ sơ có tên hiển thị)
+        var reviewerIds = new List<string>();
+        foreach (var (name, email) in DemoReviewers)
+        {
+            var u = await _userManager.FindByEmailAsync(email);
+            if (u == null)
+            {
+                u = new ApplicationUser { UserName = email, Email = email, EmailConfirmed = true };
+                var res = await _userManager.CreateAsync(u, "Demo@12345");
+                if (!res.Succeeded) continue;
+                if (await _context.UserProfiles.FindAsync(u.Id) == null)
+                    _context.UserProfiles.Add(new UserProfile { UserId = u.Id, DisplayName = name, Tier = "free", MaxPlaces = 3, MaxPlans = 3 });
+                await _context.SaveChangesAsync();
+            }
+            else if (await _context.UserProfiles.FindAsync(u.Id) == null)
+            {
+                _context.UserProfiles.Add(new UserProfile { UserId = u.Id, DisplayName = name, Tier = "free", MaxPlaces = 3, MaxPlans = 3 });
+                await _context.SaveChangesAsync();
+            }
+            reviewerIds.Add(u.Id);
+        }
+        if (reviewerIds.Count == 0)
+        { TempData["Error"] = "Không tạo được tài khoản đánh giá mẫu."; return RedirectToAction(nameof(Places)); }
+
+        var rnd = new Random();
+        int quality() { var r = rnd.NextDouble(); return r < 0.55 ? 5 : r < 0.85 ? 4 : r < 0.96 ? 3 : 2; }
+        string[] pool(string? cat) => (cat ?? "").ToLower() switch {
+            "restaurant" or "cafe" => ReviewFood,
+            "nature" => ReviewNature,
+            "culture" or "temple" => ReviewCulture,
+            _ => ReviewGeneric
+        };
+
+        // 2) Với mỗi địa điểm còn < perPlace đánh giá → bù thêm bằng user chưa đánh giá địa điểm đó
+        var places = await _context.Places.Select(p => new { p.Id, p.Category }).ToListAsync();
+        int addedReviews = 0, toppedPlaces = 0;
+        foreach (var p in places)
+        {
+            var existingUserIds = await _context.PlaceReviews.Where(r => r.PlaceId == p.Id)
+                .Select(r => r.UserId).ToListAsync();
+            int have = existingUserIds.Count;
+            if (have >= perPlace) continue;
+
+            var avail = reviewerIds.Where(id => !existingUserIds.Contains(id)).OrderBy(_ => rnd.Next()).ToList();
+            int need = Math.Min(perPlace - have, avail.Count);
+            var texts = pool(p.Category);
+            bool isFood = (p.Category ?? "").ToLower() is "restaurant" or "cafe";
+            for (int i = 0; i < need; i++)
+            {
+                int q = quality();
+                int s = Math.Max(2, Math.Min(5, q + rnd.Next(-1, 2)));   // dịch vụ quanh mức chất lượng
+                _context.PlaceReviews.Add(new PlaceReview {
+                    PlaceId = p.Id, UserId = avail[i],
+                    QualityRating = (byte)q, ServiceRating = (byte)s,
+                    FoodRating = isFood ? (byte?)Math.Max(2, Math.Min(5, q + rnd.Next(-1, 2))) : null,
+                    Content = texts[rnd.Next(texts.Length)],
+                    CreatedAt = DateTime.UtcNow.AddDays(-rnd.Next(1, 180)).AddHours(-rnd.Next(0, 24))
+                });
+                addedReviews++;
+            }
+            if (need > 0) toppedPlaces++;
+            await _context.SaveChangesAsync();
+        }
+
+        TempData["Success"] = $"Đã thêm {addedReviews} đánh giá mẫu cho {toppedPlaces} địa điểm (mỗi nơi tối thiểu {perPlace}).";
+        return RedirectToAction(nameof(Places));
+    }
+
     // ── Events ──────────────────────────────────────────────────────────────
     [HttpGet]
     public async Task<IActionResult> Events()

@@ -19,6 +19,11 @@
             <p class="admin-section-sub">@total địa điểm</p>
         </div>
         <div class="d-flex gap-2 flex-wrap">
+            <form method="post" action="/Admin/SeedReviews" class="d-inline"
+                  onsubmit="return confirm('Tạo đánh giá mẫu (tối thiểu 10/địa điểm) cho các địa điểm còn thiếu? Dữ liệu demo, không phải từ Google.');">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn-ghost"><i class="bi bi-star"></i> Tạo đánh giá mẫu</button>
+            </form>
             <a href="/Admin/ImportPlaces" class="btn-ghost"><i class="bi bi-file-earmark-excel"></i> Nhập Excel</a>
             <a href="/Admin/AddPlace" class="btn-accent">＋ Thêm địa điểm</a>
         </div>
@@ -27,6 +32,10 @@
     @if (!string.IsNullOrEmpty(TempData["Success"]?.ToString()))
     {
         <div class="admin-alert admin-alert-success">✅ @TempData["Success"]</div>
+    }
+    @if (!string.IsNullOrEmpty(TempData["Error"]?.ToString()))
+    {
+        <div class="admin-alert" style="background:#fef2f2;color:#b91c1c;border:1px solid #fecaca">@TempData["Error"]</div>
     }
 
     <!-- Filter tabs -->
