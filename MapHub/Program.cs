@@ -276,6 +276,18 @@ using (var scope = app.Services.CreateScope())
     }
     catch (Exception ex) { app.Logger.LogError(ex, "Auto-migration PlaceReviews.VideoUrl lỗi"); }
 
+    // Thêm cột TrialClaimed cho UserProfiles (đánh dấu đã dùng thử Pro) nếu chưa có
+    try
+    {
+        if (dbProvider == "postgres")
+            await context.Database.ExecuteSqlRawAsync(
+                "ALTER TABLE \"UserProfiles\" ADD COLUMN IF NOT EXISTS \"TrialClaimed\" boolean NOT NULL DEFAULT false;");
+        else
+            await context.Database.ExecuteSqlRawAsync(
+                "IF COL_LENGTH('UserProfiles','TrialClaimed') IS NULL ALTER TABLE UserProfiles ADD TrialClaimed bit NOT NULL DEFAULT 0;");
+    }
+    catch (Exception ex) { app.Logger.LogError(ex, "Auto-migration UserProfiles.TrialClaimed lỗi"); }
+
     // Thêm cột Phone2 / OpenTime / CloseTime cho Places nếu chưa có
     try
     {

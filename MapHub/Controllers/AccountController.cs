@@ -51,14 +51,24 @@ public class AccountController : Controller
             return View(model);
         }
 
+        // Cho đăng nhập bằng TÊN ĐĂNG NHẬP hoặc EMAIL: nếu nhập email thì tra ra tên đăng nhập tương ứng
+        var loginId = (model.Email ?? "").Trim();
+        if (loginId.Contains('@'))
+        {
+            var byEmail = await _userManager.FindByEmailAsync(loginId);
+            if (byEmail != null) loginId = byEmail.UserName!;
+        }
+
         var result = await _signInManager.PasswordSignInAsync(
-            model.Email,
+            loginId,
             model.Password,
             model.RememberMe,
             lockoutOnFailure: false);
 
         if (result.Succeeded)
         {
+            var u = await _userManager.FindByNameAsync(loginId);
+            if (u != null) await ExpireTrialIfNeededAsync(u);
             return LocalRedirect(targetUrl);
         }
 
@@ -98,24 +108,43 @@ public class AccountController : Controller
             return View(model);
         }
 
-        // Chỉ cho phép Gmail
-        if (!model.Email.EndsWith("@gmail.com", StringComparison.OrdinalIgnoreCase))
+        var username = model.Username.Trim();
+
+        // Tên đăng nhập đã tồn tại?
+        if (await _userManager.FindByNameAsync(username) != null)
         {
-            ModelState.AddModelError(string.Empty, "Chỉ chấp nhận đăng ký bằng tài khoản Gmail (@gmail.com).");
+            ModelState.AddModelError(nameof(model.Username), "Tên đăng nhập đã tồn tại, vui lòng chọn tên khác.");
             return View(model);
         }
 
+        // Không dùng email thật → sinh email nội bộ để thoả ràng buộc Identity (không cần xác thực email)
         var user = new ApplicationUser
         {
-            UserName = model.Email,
-            Email = model.Email,
+            UserName = username,
+            Email = $"{username.ToLowerInvariant()}@cityscout.local",
             EmailConfirmed = true
         };
 
         var result = await _userManager.CreateAsync(user, model.Password);
         if (result.Succeeded)
         {
+            // 🎁 Dùng thử Pro miễn phí — mỗi tài khoản CHỈ 1 lần (đánh dấu TrialClaimed)
+            var trialUntil = DateTime.UtcNow.AddDays(TrialDays);
+            _context.UserProfiles.Add(new UserProfile
+            {
+                UserId = user.Id,
+                DisplayName = username,
+                Tier = "pro",
+                ProExpiresAt = trialUntil,
+                MaxPlaces = int.MaxValue,
+                MaxPlans = int.MaxValue,
+                TrialClaimed = true
+            });
+            await _context.SaveChangesAsync();
+            await _userManager.AddToRoleAsync(user, "Pro");
+
             await _signInManager.SignInAsync(user, isPersistent: false);
+            TempData["TrialMsg"] = $"🎉 Chào mừng {username}! Bạn được dùng thử Pro miễn phí đến hết ngày {trialUntil.ToLocalTime():dd/MM/yyyy}.";
             return LocalRedirect(targetUrl);
         }
 
@@ -125,6 +154,26 @@ public class AccountController : Controller
         }
 
         return View(model);
+    }
+
+    // Số ngày dùng thử Pro khi đăng ký (30 = 1 tháng; đổi 90 nếu muốn 3 tháng)
+    private const int TrialDays = 30;
+
+    // Hết hạn dùng thử/Pro → tự hạ về Free (chạy khi đăng nhập). Admin không bị ảnh hưởng.
+    private async Task ExpireTrialIfNeededAsync(ApplicationUser user)
+    {
+        var p = await _context.UserProfiles.FindAsync(user.Id);
+        if (p == null) return;
+        if (p.Tier == "pro" && p.ProExpiresAt.HasValue && p.ProExpiresAt.Value <= DateTime.UtcNow)
+        {
+            p.Tier = "free";
+            p.MaxPlaces = 3;
+            p.MaxPlans = 3;
+            p.UpdatedAt = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+            if (await _userManager.IsInRoleAsync(user, "Pro"))
+                await _userManager.RemoveFromRoleAsync(user, "Pro");
+        }
     }
 
     // Đăng nhập bằng Google

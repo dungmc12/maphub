@@ -4,10 +4,9 @@ namespace MapHub.Models;
 
 public class LoginInputModel
 {
-    [Required(ErrorMessage = "Vui lòng nhập email.")]
-    [EmailAddress(ErrorMessage = "Email không hợp lệ.")]
-    [Display(Name = "Email")]
-    public string Email { get; set; } = string.Empty;
+    [Required(ErrorMessage = "Vui lòng nhập tên đăng nhập.")]
+    [Display(Name = "Tên đăng nhập")]
+    public string Email { get; set; } = string.Empty;   // giữ tên thuộc tính: nhận tên đăng nhập HOẶC email
 
     [Required(ErrorMessage = "Vui lòng nhập mật khẩu.")]
     [DataType(DataType.Password)]

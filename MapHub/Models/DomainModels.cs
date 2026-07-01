@@ -13,6 +13,7 @@ public class UserProfile
     public DateTime? ProExpiresAt { get; set; }
     public int MaxPlaces { get; set; } = 3;              // Gói Free: tối đa 3 địa điểm
     public int MaxPlans { get; set; } = 3;
+    public bool TrialClaimed { get; set; }               // Đã dùng gói dùng thử Pro (mỗi tài khoản 1 lần)
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
