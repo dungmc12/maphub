@@ -1,0 +1,23 @@
+@model string
+@{
+    ViewData["Title"] = "Kiểm tra email của bạn";
+}
+
+<section class="auth-wrap">
+    <article class="auth-card" style="text-align:center">
+        <div style="font-size:3.2rem;margin-bottom:.4rem">📬</div>
+        <h1 style="font-size:1.35rem">Kiểm tra email của bạn</h1>
+        <p style="color:#475569;font-size:.92rem;line-height:1.65;margin:.8rem 0 1rem">
+            Chúng tôi vừa gửi link xác thực tới<br>
+            <strong style="color:#0F172A">@Model</strong><br>
+            Bấm vào link trong email để kích hoạt tài khoản và nhận <strong>7 ngày dùng thử Pro miễn phí</strong>.
+        </p>
+        <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:.8rem 1rem;font-size:.8rem;color:#64748b;text-align:left">
+            <i class="bi bi-lightbulb"></i> Không thấy email? Kiểm tra mục <strong>Spam / Thư rác</strong>,
+            hoặc vào trang đăng nhập và bấm <em>"Gửi lại email xác thực"</em>.
+        </div>
+        <p class="auth-switch" style="margin-top:1.2rem">
+            <a asp-action="Login">← Về trang đăng nhập</a>
+        </p>
+    </article>
+</section>

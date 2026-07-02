@@ -4,11 +4,11 @@ namespace MapHub.Models;
 
 public class RegisterInputModel
 {
-    [Required(ErrorMessage = "Vui lòng nhập tên đăng nhập.")]
-    [StringLength(30, MinimumLength = 4, ErrorMessage = "Tên đăng nhập phải từ 4 đến 30 ký tự.")]
-    [RegularExpression("^[a-zA-Z0-9._-]+$", ErrorMessage = "Tên đăng nhập chỉ gồm chữ, số và các ký tự . _ -")]
-    [Display(Name = "Tên đăng nhập")]
-    public string Username { get; set; } = string.Empty;
+    [Required(ErrorMessage = "Vui lòng nhập email.")]
+    [EmailAddress(ErrorMessage = "Email không đúng định dạng (vd: ban@gmail.com).")]
+    [StringLength(100, ErrorMessage = "Email quá dài.")]
+    [Display(Name = "Email")]
+    public string Email { get; set; } = string.Empty;
 
     [Required(ErrorMessage = "Vui lòng nhập mật khẩu.")]
     [DataType(DataType.Password)]

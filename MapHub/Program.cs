@@ -79,6 +79,7 @@ builder.Services
     .AddIdentity<ApplicationUser, IdentityRole>(options =>
     {
         options.SignIn.RequireConfirmedAccount = false;
+        options.SignIn.RequireConfirmedEmail = true;   // phải bấm link xác thực trong email mới đăng nhập được
         options.User.RequireUniqueEmail = true;
         options.Password.RequireDigit = true;
         options.Password.RequiredLength = 8;          // khớp với RegisterInputModel + giảm khả năng trùng mật khẩu đã rò rỉ
@@ -135,6 +136,7 @@ builder.Services.Configure<CassoOptions>(builder.Configuration.GetSection("Casso
 builder.Services.AddHttpClient<ICassoApiService, CassoApiService>();
 builder.Services.AddHttpClient<PayOSService>();
 builder.Services.AddScoped<IProService, ProService>();
+builder.Services.AddScoped<IAppEmailSender, SmtpEmailSender>();  // gửi email xác thực tài khoản (Smtp__User/Smtp__Pass)
 builder.Services.AddHostedService<ProExpiryService>();        // tự hạ Pro hết hạn về Free
 builder.Services.AddHostedService<PaymentAutoCheckService>(); // tự kiểm tra CK qua Casso API → lên Pro
 

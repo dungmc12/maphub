@@ -14,15 +14,21 @@ public class AccountController : Controller
     private readonly SignInManager<ApplicationUser> _signInManager;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly ApplicationDbContext _context;
+    private readonly IAppEmailSender _emailSender;
+    private readonly ILogger<AccountController> _logger;
 
     public AccountController(
         SignInManager<ApplicationUser> signInManager,
         UserManager<ApplicationUser> userManager,
-        ApplicationDbContext context)
+        ApplicationDbContext context,
+        IAppEmailSender emailSender,
+        ILogger<AccountController> logger)
     {
         _signInManager = signInManager;
         _userManager = userManager;
         _context = context;
+        _emailSender = emailSender;
+        _logger = logger;
     }
 
     [HttpGet]
@@ -78,6 +84,18 @@ public class AccountController : Controller
             return View(model);
         }
 
+        // Đúng mật khẩu nhưng CHƯA xác thực email → hướng dẫn + cho gửi lại link
+        if (result.IsNotAllowed)
+        {
+            var pending = await _userManager.FindByNameAsync(loginId);
+            if (pending != null && !pending.EmailConfirmed)
+            {
+                ModelState.AddModelError(string.Empty, "Tài khoản chưa xác thực email. Kiểm tra hộp thư (kể cả Spam) hoặc bấm gửi lại bên dưới.");
+                ViewBag.ShowResend = pending.Email;
+                return View(model);
+            }
+        }
+
         ModelState.AddModelError(string.Empty, "Sai email hoặc mật khẩu.");
         return View(model);
     }
@@ -108,44 +126,141 @@ public class AccountController : Controller
             return View(model);
         }
 
-        var username = model.Username.Trim();
+        var email = model.Email.Trim().ToLowerInvariant();
 
-        // Tên đăng nhập đã tồn tại?
-        if (await _userManager.FindByNameAsync(username) != null)
+        // Email đã có tài khoản?
+        var existing = await _userManager.FindByEmailAsync(email);
+        if (existing != null)
         {
-            ModelState.AddModelError(nameof(model.Username), "Tên đăng nhập đã tồn tại, vui lòng chọn tên khác.");
+            ModelState.AddModelError(nameof(model.Email), existing.EmailConfirmed
+                ? "Email này đã có tài khoản. Hãy đăng nhập (hoặc dùng Quên mật khẩu)."
+                : "Email này đã đăng ký nhưng chưa xác thực — kiểm tra hộp thư hoặc bấm gửi lại email xác thực ở trang đăng nhập.");
             return View(model);
         }
 
-        // Không dùng email thật → sinh email nội bộ để thoả ràng buộc Identity (không cần xác thực email)
+        // Tạo tài khoản CHƯA xác thực — phải bấm link trong email mới đăng nhập được
         var user = new ApplicationUser
         {
-            UserName = username,
-            Email = $"{username.ToLowerInvariant()}@cityscout.local",
-            EmailConfirmed = true
+            UserName = email,
+            Email = email,
+            EmailConfirmed = false
         };
 
         var result = await _userManager.CreateAsync(user, model.Password);
-        if (result.Succeeded)
+        if (!result.Succeeded)
         {
-            // 🎁 Dùng thử Pro miễn phí — mỗi tài khoản CHỈ 1 lần
-            var trialUntil = await GrantTrialAsync(user, username);
+            foreach (var error in result.Errors)
+                ModelState.AddModelError(string.Empty, error.Description);
+            return View(model);
+        }
+
+        // SMTP chưa cấu hình (chưa đặt Smtp__User/Smtp__Pass) → không thể gửi mail:
+        // tự xác nhận để không chặn người dùng, và ghi log nhắc cấu hình.
+        if (!_emailSender.IsConfigured)
+        {
+            _logger.LogWarning("SMTP chưa cấu hình — tự xác nhận email cho {Email}. Đặt env Smtp__User/Smtp__Pass để bật xác thực thật.", email);
+            user.EmailConfirmed = true;
+            await _userManager.UpdateAsync(user);
+            var trialNow = await GrantTrialAsync(user, email.Split('@')[0]);
             await _signInManager.SignInAsync(user, isPersistent: false);
-            if (trialUntil.HasValue)
-                TempData["TrialMsg"] = $"🎉 Chào mừng {username}! Bạn được dùng thử Pro miễn phí đến hết ngày {trialUntil.Value.ToLocalTime():dd/MM/yyyy}.";
+            if (trialNow.HasValue)
+                TempData["TrialMsg"] = $"🎉 Chào mừng! Bạn được dùng thử Pro miễn phí đến hết ngày {trialNow.Value.ToLocalTime():dd/MM/yyyy}.";
             return LocalRedirect(targetUrl);
         }
 
-        foreach (var error in result.Errors)
+        var sent = await SendConfirmationEmailAsync(user, targetUrl);
+        if (!sent)
         {
-            ModelState.AddModelError(string.Empty, error.Description);
+            // Gửi thất bại (SMTP lỗi) → xoá tài khoản vừa tạo để user đăng ký lại được, báo lỗi rõ
+            await _userManager.DeleteAsync(user);
+            ModelState.AddModelError(string.Empty, "Không gửi được email xác thực lúc này. Vui lòng thử lại sau ít phút.");
+            return View(model);
         }
 
-        return View(model);
+        return View("RegisterConfirmation", model: email);
     }
 
-    // Số ngày dùng thử Pro khi đăng ký (30 = 1 tháng; đổi 90 nếu muốn 3 tháng)
-    private const int TrialDays = 30;
+    // Gửi email chứa link xác thực tài khoản. Trả về false nếu SMTP lỗi.
+    private async Task<bool> SendConfirmationEmailAsync(ApplicationUser user, string? returnUrl = null)
+    {
+        try
+        {
+            var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+            var link = Url.Action(nameof(ConfirmEmail), "Account",
+                new { userId = user.Id, token, returnUrl }, protocol: Request.Scheme)!;
+            var html = $@"
+<div style='font-family:Segoe UI,Arial,sans-serif;max-width:520px;margin:auto;border:1px solid #e2e8f0;border-radius:14px;overflow:hidden'>
+  <div style='background:#0891B2;color:#fff;padding:18px 24px;font-size:18px;font-weight:700'>🌏 CityScout</div>
+  <div style='padding:24px'>
+    <h2 style='margin:0 0 10px;font-size:19px;color:#0F172A'>Xác thực email của bạn</h2>
+    <p style='color:#475569;font-size:14px;line-height:1.6'>
+      Cảm ơn bạn đã đăng ký CityScout! Bấm nút bên dưới để xác thực email và kích hoạt tài khoản
+      (kèm <strong>7 ngày dùng thử Pro miễn phí</strong>).
+    </p>
+    <p style='text-align:center;margin:26px 0'>
+      <a href='{link}' style='background:#0891B2;color:#fff;text-decoration:none;padding:12px 28px;border-radius:10px;font-weight:700;font-size:15px'>Xác thực email</a>
+    </p>
+    <p style='color:#94a3b8;font-size:12px;line-height:1.6'>
+      Nếu nút không bấm được, sao chép link này vào trình duyệt:<br>
+      <a href='{link}' style='color:#0891B2;word-break:break-all'>{link}</a><br><br>
+      Nếu bạn không đăng ký CityScout, hãy bỏ qua email này.
+    </p>
+  </div>
+</div>";
+            await _emailSender.SendAsync(user.Email!, "CityScout — Xác thực email đăng ký", html);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Gửi email xác thực thất bại cho {Email}", user.Email);
+            return false;
+        }
+    }
+
+    // Người dùng bấm link trong email → xác nhận + cấp dùng thử Pro + đăng nhập luôn
+    [HttpGet]
+    public async Task<IActionResult> ConfirmEmail(string userId, string token, string? returnUrl = null)
+    {
+        if (string.IsNullOrEmpty(userId) || string.IsNullOrEmpty(token)) return RedirectToAction(nameof(Login));
+        var user = await _userManager.FindByIdAsync(userId);
+        if (user == null) return RedirectToAction(nameof(Login));
+
+        if (user.EmailConfirmed)
+        {
+            TempData["LoginError"] = "Email đã được xác thực trước đó — bạn có thể đăng nhập.";
+            return RedirectToAction(nameof(Login), new { returnUrl });
+        }
+
+        var result = await _userManager.ConfirmEmailAsync(user, token);
+        if (!result.Succeeded)
+        {
+            TempData["LoginError"] = "Link xác thực không hợp lệ hoặc đã hết hạn. Hãy đăng nhập để nhận lại email xác thực.";
+            return RedirectToAction(nameof(Login), new { returnUrl });
+        }
+
+        // 🎁 Xác thực xong mới cấp dùng thử Pro (mỗi tài khoản 1 lần) + đăng nhập luôn
+        var trialUntil = await GrantTrialAsync(user, user.Email!.Split('@')[0]);
+        await _signInManager.SignInAsync(user, isPersistent: false);
+        if (trialUntil.HasValue)
+            TempData["TrialMsg"] = $"🎉 Email đã xác thực! Bạn được dùng thử Pro miễn phí đến hết ngày {trialUntil.Value.ToLocalTime():dd/MM/yyyy}.";
+        return LocalRedirect(NormalizeReturnUrl(returnUrl));
+    }
+
+    // Gửi lại email xác thực (từ trang đăng nhập khi bị chặn vì chưa xác thực)
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ResendConfirmation(string email, string? returnUrl = null)
+    {
+        var user = string.IsNullOrWhiteSpace(email) ? null : await _userManager.FindByEmailAsync(email.Trim());
+        // Không lộ thông tin tài khoản tồn tại hay không — luôn báo chung chung
+        if (user != null && !user.EmailConfirmed && _emailSender.IsConfigured)
+            await SendConfirmationEmailAsync(user, returnUrl);
+        TempData["LoginError"] = "✉️ Nếu email đã đăng ký và chưa xác thực, hệ thống vừa gửi lại link xác thực — kiểm tra hộp thư (kể cả mục Spam).";
+        return RedirectToAction(nameof(Login), new { returnUrl });
+    }
+
+    // Số ngày dùng thử Pro khi đăng ký — mỗi tài khoản chỉ 1 lần
+    private const int TrialDays = 7;
 
     // Cấp dùng thử Pro cho tài khoản mới — CHỈ 1 lần/tài khoản (TrialClaimed). Trả về ngày hết hạn, hoặc null nếu đã dùng.
     private async Task<DateTime?> GrantTrialAsync(ApplicationUser user, string? displayName)
