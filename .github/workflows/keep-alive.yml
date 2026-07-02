@@ -1,0 +1,25 @@
+name: keep-alive
+
+# Giữ cho Render Free không "ngủ": ping /Health đều đặn để reset đồng hồ 15 phút.
+# Lưu ý: cron của GitHub free có thể trễ vài phút, nên đặt 5 phút cho chắc (thực tế ~5–15').
+on:
+  schedule:
+    - cron: "*/5 * * * *"   # mỗi 5 phút
+  workflow_dispatch:          # cho phép bấm chạy tay để test
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Health endpoint
+        run: |
+          URL="https://cityscout-yqb0.onrender.com/Health"
+          echo "Pinging $URL"
+          # Thử tối đa 3 lần, mỗi lần chờ tối đa 60s (đủ để Render tỉnh dậy nếu đang ngủ)
+          for i in 1 2 3; do
+            code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 60 "$URL" || echo "000")
+            echo "Attempt $i -> HTTP $code"
+            if [ "$code" = "200" ]; then exit 0; fi
+            sleep 10
+          done
+          echo "Health check did not return 200 after 3 attempts (app may be spinning up)."
