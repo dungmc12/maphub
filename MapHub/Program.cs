@@ -79,7 +79,7 @@ builder.Services
     .AddIdentity<ApplicationUser, IdentityRole>(options =>
     {
         options.SignIn.RequireConfirmedAccount = false;
-        options.SignIn.RequireConfirmedEmail = true;   // phải bấm link xác thực trong email mới đăng nhập được
+        options.SignIn.RequireConfirmedEmail = false;  // tạm không bắt xác thực email — đăng ký bằng email là vào luôn
         options.User.RequireUniqueEmail = true;
         options.Password.RequireDigit = true;
         options.Password.RequiredLength = 8;          // khớp với RegisterInputModel + giảm khả năng trùng mật khẩu đã rò rỉ

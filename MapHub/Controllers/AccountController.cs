@@ -129,25 +129,18 @@ public class AccountController : Controller
         var email = model.Email.Trim().ToLowerInvariant();
 
         // Email đã có tài khoản?
-        var existing = await _userManager.FindByEmailAsync(email);
-        if (existing != null)
+        if (await _userManager.FindByEmailAsync(email) != null)
         {
-            if (existing.EmailConfirmed)
-            {
-                ModelState.AddModelError(nameof(model.Email), "Email này đã có tài khoản. Hãy đăng nhập (hoặc dùng Quên mật khẩu).");
-                return View(model);
-            }
-            // Tài khoản cũ CHƯA xác thực (đăng ký dở/mail lỗi) → xoá để đăng ký lại từ đầu.
-            // An toàn: chưa kích hoạt thì chưa có dữ liệu, và người giữ hộp mail mới là chủ thật.
-            await _userManager.DeleteAsync(existing);
+            ModelState.AddModelError(nameof(model.Email), "Email này đã có tài khoản. Hãy đăng nhập (hoặc dùng Quên mật khẩu).");
+            return View(model);
         }
 
-        // Tạo tài khoản CHƯA xác thực — phải bấm link trong email mới đăng nhập được
+        // Tạm KHÔNG xác thực email → tạo tài khoản dùng được ngay
         var user = new ApplicationUser
         {
             UserName = email,
             Email = email,
-            EmailConfirmed = false
+            EmailConfirmed = true
         };
 
         var result = await _userManager.CreateAsync(user, model.Password);
@@ -158,30 +151,12 @@ public class AccountController : Controller
             return View(model);
         }
 
-        // SMTP chưa cấu hình (chưa đặt Smtp__User/Smtp__Pass) → không thể gửi mail:
-        // tự xác nhận để không chặn người dùng, và ghi log nhắc cấu hình.
-        if (!_emailSender.IsConfigured)
-        {
-            _logger.LogWarning("SMTP chưa cấu hình — tự xác nhận email cho {Email}. Đặt env Smtp__User/Smtp__Pass để bật xác thực thật.", email);
-            user.EmailConfirmed = true;
-            await _userManager.UpdateAsync(user);
-            var trialNow = await GrantTrialAsync(user, email.Split('@')[0]);
-            await _signInManager.SignInAsync(user, isPersistent: false);
-            if (trialNow.HasValue)
-                TempData["TrialMsg"] = $"🎉 Chào mừng! Bạn được dùng thử Pro miễn phí đến hết ngày {trialNow.Value.ToLocalTime():dd/MM/yyyy}.";
-            return LocalRedirect(targetUrl);
-        }
-
-        var sendError = await SendConfirmationEmailAsync(user, targetUrl);
-        if (sendError != null)
-        {
-            // Gửi thất bại (SMTP lỗi) → xoá tài khoản vừa tạo để user đăng ký lại được, báo LỖI THẬT
-            await _userManager.DeleteAsync(user);
-            ModelState.AddModelError(string.Empty, "Không gửi được email xác thực. Chi tiết lỗi: " + sendError);
-            return View(model);
-        }
-
-        return View("RegisterConfirmation", model: email);
+        // 🎁 Dùng thử Pro miễn phí — mỗi tài khoản CHỈ 1 lần
+        var trialUntil = await GrantTrialAsync(user, email.Split('@')[0]);
+        await _signInManager.SignInAsync(user, isPersistent: false);
+        if (trialUntil.HasValue)
+            TempData["TrialMsg"] = $"🎉 Chào mừng! Bạn được dùng thử Pro miễn phí đến hết ngày {trialUntil.Value.ToLocalTime():dd/MM/yyyy}.";
+        return LocalRedirect(targetUrl);
     }
 
     // Gửi email chứa link xác thực tài khoản. Trả về null nếu OK, hoặc chuỗi lỗi Gmail trả về.
