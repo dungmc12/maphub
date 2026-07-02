@@ -172,20 +172,20 @@ public class AccountController : Controller
             return LocalRedirect(targetUrl);
         }
 
-        var sent = await SendConfirmationEmailAsync(user, targetUrl);
-        if (!sent)
+        var sendError = await SendConfirmationEmailAsync(user, targetUrl);
+        if (sendError != null)
         {
-            // Gửi thất bại (SMTP lỗi) → xoá tài khoản vừa tạo để user đăng ký lại được, báo lỗi rõ
+            // Gửi thất bại (SMTP lỗi) → xoá tài khoản vừa tạo để user đăng ký lại được, báo LỖI THẬT
             await _userManager.DeleteAsync(user);
-            ModelState.AddModelError(string.Empty, "Không gửi được email xác thực lúc này. Vui lòng thử lại sau ít phút.");
+            ModelState.AddModelError(string.Empty, "Không gửi được email xác thực. Chi tiết lỗi: " + sendError);
             return View(model);
         }
 
         return View("RegisterConfirmation", model: email);
     }
 
-    // Gửi email chứa link xác thực tài khoản. Trả về false nếu SMTP lỗi.
-    private async Task<bool> SendConfirmationEmailAsync(ApplicationUser user, string? returnUrl = null)
+    // Gửi email chứa link xác thực tài khoản. Trả về null nếu OK, hoặc chuỗi lỗi Gmail trả về.
+    private async Task<string?> SendConfirmationEmailAsync(ApplicationUser user, string? returnUrl = null)
     {
         try
         {
@@ -212,12 +212,16 @@ public class AccountController : Controller
   </div>
 </div>";
             await _emailSender.SendAsync(user.Email!, "CityScout — Xác thực email đăng ký", html);
-            return true;
+            return null;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Gửi email xác thực thất bại cho {Email}", user.Email);
-            return false;
+            // Lấy message trong cùng (SMTP) để hiển thị nguyên nhân thật (vd: "Username and Password not accepted")
+            var msg = ex.Message;
+            var inner = ex.InnerException;
+            while (inner != null) { msg = inner.Message; inner = inner.InnerException; }
+            return msg;
         }
     }
 
