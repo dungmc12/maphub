@@ -40,7 +40,8 @@ public class SmtpEmailSender : IAppEmailSender
         using var client = new SmtpClient(host, port)
         {
             EnableSsl = true,
-            Credentials = new NetworkCredential(User, Pass)
+            Credentials = new NetworkCredential(User, Pass),
+            Timeout = 15_000   // 15s — lỗi thì báo ngay, không để trang xoay cả phút
         };
         using var msg = new MailMessage
         {
@@ -50,7 +51,8 @@ public class SmtpEmailSender : IAppEmailSender
             IsBodyHtml = true
         };
         msg.To.Add(to);
-        await client.SendMailAsync(msg);
+        // Dùng Send đồng bộ trong Task.Run vì Timeout KHÔNG có hiệu lực với SendMailAsync
+        await Task.Run(() => client.Send(msg));
         _logger.LogInformation("Đã gửi email tới {To}: {Subject}", to, subject);
     }
 }

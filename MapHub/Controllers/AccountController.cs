@@ -132,10 +132,14 @@ public class AccountController : Controller
         var existing = await _userManager.FindByEmailAsync(email);
         if (existing != null)
         {
-            ModelState.AddModelError(nameof(model.Email), existing.EmailConfirmed
-                ? "Email này đã có tài khoản. Hãy đăng nhập (hoặc dùng Quên mật khẩu)."
-                : "Email này đã đăng ký nhưng chưa xác thực — kiểm tra hộp thư hoặc bấm gửi lại email xác thực ở trang đăng nhập.");
-            return View(model);
+            if (existing.EmailConfirmed)
+            {
+                ModelState.AddModelError(nameof(model.Email), "Email này đã có tài khoản. Hãy đăng nhập (hoặc dùng Quên mật khẩu).");
+                return View(model);
+            }
+            // Tài khoản cũ CHƯA xác thực (đăng ký dở/mail lỗi) → xoá để đăng ký lại từ đầu.
+            // An toàn: chưa kích hoạt thì chưa có dữ liệu, và người giữ hộp mail mới là chủ thật.
+            await _userManager.DeleteAsync(existing);
         }
 
         // Tạo tài khoản CHƯA xác thực — phải bấm link trong email mới đăng nhập được
