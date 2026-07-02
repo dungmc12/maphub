@@ -53,8 +53,8 @@
             <input type="hidden" asp-for="ReturnUrl" />
             <div asp-validation-summary="ModelOnly" class="validation"></div>
 
-            <label asp-for="Email">Email / tên đăng nhập</label>
-            <input asp-for="Email" autocomplete="username" placeholder="Email hoặc tên đăng nhập cũ" />
+            <label asp-for="Email">Email</label>
+            <input asp-for="Email" type="email" autocomplete="email" placeholder="vd: ban@gmail.com" />
             <span asp-validation-for="Email" class="validation"></span>
 
             <label asp-for="Password">Mật khẩu</label>
