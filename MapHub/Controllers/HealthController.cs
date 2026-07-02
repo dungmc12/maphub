@@ -14,7 +14,7 @@ public class HealthController : ControllerBase
     [HttpGet]
     public IActionResult Get()
     {
-        // smtp: true = đã đặt env Smtp__User/Smtp__Pass (email xác thực hoạt động); không lộ giá trị bí mật
-        return Ok(new { status = "ok", smtp = _emailSender.IsConfigured, at = DateTime.UtcNow });
+        // email: true = đã cấu hình gửi mail (Brevo API hoặc SMTP); không lộ giá trị bí mật
+        return Ok(new { status = "ok", email = _emailSender.IsConfigured, at = DateTime.UtcNow });
     }
 }
