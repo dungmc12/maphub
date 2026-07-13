@@ -25,6 +25,17 @@
                        class="form-control form-control-sm" style="width:64px">
                 <button type="submit" class="btn-ghost"><i class="fa-solid fa-wand-magic-sparkles"></i> Tạo đơn Pro mẫu (rải đều)</button>
             </form>
+            @{ int seedCount = (int)(ViewBag.SeedCount ?? 0); }
+            @if (seedCount > 0)
+            {
+                <form method="post" action="/Admin/ClearSeedPayments"
+                      onsubmit="return confirm('Xóa hết @seedCount đơn Pro mẫu và hạ các tài khoản đó về Free? (Không đụng đơn thật)');">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn-ghost" style="color:#b91c1c;border-color:#fecaca">
+                        <i class="fa-solid fa-user-minus"></i> Xóa Pro mẫu (@seedCount)
+                    </button>
+                </form>
+            }
             @{ int testCount = (int)(ViewBag.TestCount ?? 0); }
             @if (testCount > 0)
             {
