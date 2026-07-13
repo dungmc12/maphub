@@ -502,14 +502,16 @@ public class AdminController : Controller
         return RedirectToAction(nameof(Places));
     }
 
-    // Sinh ĐƠN PRO mẫu — RẢI ĐỀU doanh thu theo thời gian + tạo "orders" người Pro.
-    // Bấm lại: xoá đơn mẫu cũ (Provider="seed") rồi tạo lại đúng "orders" đơn rải đều → biểu đồ luôn mượt.
+    // Ngày bắt đầu rải đơn mẫu: 03/06 (khi dự án bắt đầu có dữ liệu). Đơn mẫu nhận diện qua TransactionId "SEED-".
+    private static readonly DateTime SeedStartDate = new DateTime(2026, 6, 3, 0, 0, 0, DateTimeKind.Utc);
+
+    // Sinh ĐƠN PRO mẫu — RẢI ĐỀU doanh thu từ 03/06 tới nay (không có ngày tương lai) + tạo "orders" người Pro.
+    // Đơn mẫu hiển thị như đơn payos thật; bấm lại là xoá đơn mẫu cũ rồi tạo lại rải đều → biểu đồ luôn mượt.
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> SeedPayments(int orders = 20, int weeks = 12)
+    public async Task<IActionResult> SeedPayments(int orders = 20)
     {
         orders = Math.Clamp(orders, 1, ReviewerNames.Length);
-        weeks  = Math.Clamp(weeks, 4, 26);
         const decimal amount = 59000m;   // giá gói tháng
 
         var buyerIds = await EnsureReviewersAsync(orders);
@@ -517,26 +519,29 @@ public class AdminController : Controller
         { TempData["Error"] = "Không tạo được tài khoản Pro mẫu."; return RedirectToAction(nameof(Revenue)); }
 
         // Xoá đơn mẫu cũ + hạ hết Pro mẫu về Free trước → rồi cấp lại đúng "orders" người Pro (không đụng đơn thật)
-        var oldSeed = await _context.Payments.Where(p => p.Provider == "seed").ToListAsync();
+        var oldSeed = await _context.Payments.Where(p => p.TransactionId != null && p.TransactionId.StartsWith("SEED-")).ToListAsync();
         _context.Payments.RemoveRange(oldSeed);
         await _context.SaveChangesAsync();
         await DowngradeDemoProAsync();
 
-        // Tạo "orders" đơn PAID, PaidAt rải đều trên "weeks" tuần gần nhất
+        // Rải đều PaidAt từ 03/06 → hôm nay (kẹp trong khoảng, không vượt hiện tại)
         var now = DateTime.UtcNow;
-        double spanDays = weeks * 7.0;
+        var start = SeedStartDate < now ? SeedStartDate : now.AddDays(-42);
+        double totalDays = (now - start).TotalDays;
         var rnd = new Random();
         int made = 0;
         for (int i = 0; i < orders && i < buyerIds.Count; i++)
         {
-            // vị trí đều + lệch nhẹ ngẫu nhiên để tự nhiên
-            double dayOffset = (i + 0.5) * spanDays / orders + rnd.Next(-1, 2) * 0.4;
-            var paidAt = now.AddDays(-dayOffset);
+            double frac = (i + 0.5) / orders;                       // vị trí đều 0..1
+            double jitter = (rnd.NextDouble() - 0.5) * (totalDays / orders) * 0.5;
+            var paidAt = start.AddDays(frac * totalDays + jitter);
+            if (paidAt > now) paidAt = now.AddHours(-rnd.Next(1, 12));   // không cho ngày tương lai
+            if (paidAt < start) paidAt = start;
             _context.Payments.Add(new Payment {
                 UserId = buyerIds[i], Amount = amount, PlanType = "month",
-                Provider = "seed", Status = "paid",
-                Code = $"DEMO{i + 1:D3}", TransactionId = $"SEED-{Guid.NewGuid():N}"[..16],
-                Description = "Đơn Pro mẫu (demo)",
+                Provider = "payos", Status = "paid",               // hiển thị như đơn thật
+                Code = $"CSPRO{200 + i}", TransactionId = $"SEED-{Guid.NewGuid():N}"[..16],  // "SEED-" = dấu ẩn để nhận diện đơn mẫu
+                Description = "Nâng cấp Pro (gói tháng)",
                 CreatedAt = paidAt, PaidAt = paidAt
             });
             await MakeProAsync(buyerIds[i], ReviewerNames[i]);
@@ -544,7 +549,7 @@ public class AdminController : Controller
         }
         await _context.SaveChangesAsync();
 
-        TempData["Success"] = $"Đã tạo {made} đơn Pro mẫu (mỗi đơn {amount:#,##0}đ) rải đều {weeks} tuần, và cấp Pro cho {made} tài khoản.";
+        TempData["Success"] = $"Đã tạo {made} đơn Pro mẫu (mỗi đơn {amount:#,##0}đ) rải đều từ {start:dd/MM} đến nay, và cấp Pro cho {made} tài khoản.";
         return RedirectToAction(nameof(Revenue));
     }
 
@@ -553,7 +558,7 @@ public class AdminController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> ClearSeedPayments()
     {
-        var seed = await _context.Payments.Where(p => p.Provider == "seed").ToListAsync();
+        var seed = await _context.Payments.Where(p => p.TransactionId != null && p.TransactionId.StartsWith("SEED-")).ToListAsync();
         _context.Payments.RemoveRange(seed);
         await _context.SaveChangesAsync();
         await DowngradeDemoProAsync();
@@ -1162,8 +1167,8 @@ public class AdminController : Controller
         ViewBag.ChannelData   = System.Text.Json.JsonSerializer.Serialize(byPlan.Select(g => g.Sum(x => x.Amount)).ToList());
         // Số giao dịch thử nghiệm (giá cũ < 59.000) để hiện nút dọn dẹp
         ViewBag.TestCount = await _context.Payments.CountAsync(p => p.Amount < 59000m);
-        // Số đơn Pro mẫu (Provider="seed") để hiện nút xoá bớt
-        ViewBag.SeedCount = await _context.Payments.CountAsync(p => p.Provider == "seed");
+        // Số đơn Pro mẫu (dấu ẩn TransactionId "SEED-") để hiện nút xoá bớt
+        ViewBag.SeedCount = await _context.Payments.CountAsync(p => p.TransactionId != null && p.TransactionId.StartsWith("SEED-"));
         return View(all);
     }
 
