@@ -502,6 +502,19 @@ public class AdminController : Controller
         return RedirectToAction(nameof(Places));
     }
 
+    // Bật/tắt "chế độ demo" — khi TẮT thì mọi nút tạo dữ liệu mẫu bị ẩn (chụp cho hội đồng không lộ).
+    // Chỉ bật bằng cách truy cập đường link này (chỉ bạn biết): /Admin/ToggleDemoTools
+    [HttpGet]
+    public IActionResult ToggleDemoTools(string? returnUrl = null)
+    {
+        var on = Request.Cookies["demo_tools"] == "1";
+        if (on) Response.Cookies.Delete("demo_tools");
+        else Response.Cookies.Append("demo_tools", "1",
+            new CookieOptions { Expires = DateTimeOffset.UtcNow.AddDays(30), IsEssential = true });
+        TempData["Success"] = on ? "Đã ẨN công cụ demo (an toàn để chụp/hội đồng xem)." : "Đã HIỆN công cụ demo — chỉ mình bạn thấy trên máy này.";
+        return Redirect(string.IsNullOrWhiteSpace(returnUrl) ? "/Admin/Places" : returnUrl);
+    }
+
     // Ngày bắt đầu rải đơn mẫu: 03/06 (khi dự án bắt đầu có dữ liệu). Đơn mẫu nhận diện qua TransactionId "SEED-".
     private static readonly DateTime SeedStartDate = new DateTime(2026, 6, 3, 0, 0, 0, DateTimeKind.Utc);
 
