@@ -290,6 +290,18 @@ using (var scope = app.Services.CreateScope())
     }
     catch (Exception ex) { app.Logger.LogError(ex, "Auto-migration UserProfiles.TrialClaimed lỗi"); }
 
+    // Thêm cột Kind cho Payments (đánh dấu đăng ký mới / gia hạn) nếu chưa có
+    try
+    {
+        if (dbProvider == "postgres")
+            await context.Database.ExecuteSqlRawAsync(
+                "ALTER TABLE \"Payments\" ADD COLUMN IF NOT EXISTS \"Kind\" text NULL;");
+        else
+            await context.Database.ExecuteSqlRawAsync(
+                "IF COL_LENGTH('Payments','Kind') IS NULL ALTER TABLE Payments ADD Kind nvarchar(max) NULL;");
+    }
+    catch (Exception ex) { app.Logger.LogError(ex, "Auto-migration Payments.Kind lỗi"); }
+
     // Thêm cột Phone2 / OpenTime / CloseTime cho Places nếu chưa có
     try
     {

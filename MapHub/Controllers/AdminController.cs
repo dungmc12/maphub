@@ -634,12 +634,13 @@ public class AdminController : Controller
     // Sửa 1 đơn: số tiền, ngày trả, loại gói
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> EditPayment(int id, decimal amount, string? paidDate, string? planType)
+    public async Task<IActionResult> EditPayment(int id, decimal amount, string? paidDate, string? planType, string? kind)
     {
         var p = await _context.Payments.FindAsync(id);
         if (p == null) return NotFound();
         if (amount > 0) p.Amount = amount;
         if (planType == "month" || planType == "year") p.PlanType = planType;
+        p.Kind = (kind == "new" || kind == "renewal") ? kind : null;   // rỗng = để tự động
         if (DateTime.TryParse(paidDate, out var d))
         {
             var utc = DateTime.SpecifyKind(d.Date.AddHours(9), DateTimeKind.Utc);   // ~trưa giờ VN
@@ -1282,7 +1283,8 @@ public class AdminController : Controller
             .OrderByDescending(p => p.PaidAt ?? p.CreatedAt)
             .Select(p => new RevenueRow(
                 p.Id, p.Amount, p.PlanType, p.Code, p.Provider, p.PaidAt, p.Status,
-                _context.Users.Where(u => u.Id == p.UserId).Select(u => u.Email).FirstOrDefault()))
+                _context.Users.Where(u => u.Id == p.UserId).Select(u => u.Email).FirstOrDefault())
+            { StoredKind = p.Kind, Kind = p.Kind })
             .ToListAsync();
         // Doanh thu & biểu đồ chỉ cộng đơn đã thanh toán
         var paid = all.Where(p => p.Status == "paid").ToList();
@@ -1293,7 +1295,8 @@ public class AdminController : Controller
         {
             var ordered = g.OrderBy(p => p.PaidAt ?? DateTime.MaxValue).ToList();
             for (int i = 0; i < ordered.Count; i++)
-                ordered[i].Kind = i == 0 ? "new" : "renewal";
+                if (string.IsNullOrEmpty(ordered[i].StoredKind))   // chỉ suy tự động khi CHƯA đặt tay
+                    ordered[i].Kind = i == 0 ? "new" : "renewal";
         }
 
         const int VN = 7;                               // Việt Nam = UTC+7 (không DST)
@@ -1383,6 +1386,8 @@ public class AdminController : Controller
 
 public record RevenueRow(int Id, decimal Amount, string PlanType, string? Code, string? Provider, DateTime? PaidAt, string? Status, string? Email)
 {
-    // "new" = đăng ký mới (đơn đầu của tài khoản), "renewal" = gia hạn (mua lại tháng sau)
+    // Kind = nhãn HIỂN THỊ (đặt tay nếu có, không thì suy tự động): "new" = đăng ký mới, "renewal" = gia hạn
     public string? Kind { get; set; }
+    // StoredKind = giá trị đặt tay trong DB (null = để tự động) — dùng cho ô chọn trong modal sửa
+    public string? StoredKind { get; set; }
 }

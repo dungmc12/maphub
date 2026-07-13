@@ -173,7 +173,7 @@
                                     @if (demoOn)
                                     {
                                         <button type="button" class="aact-btn aact-edit" title="Sửa đơn"
-                                                onclick="openPayEdit(@r.Id, @((long)r.Amount), '@(r.PaidAt?.ToLocalTime().ToString("yyyy-MM-dd"))', '@r.PlanType', '@r.Code')">
+                                                onclick="openPayEdit(@r.Id, @((long)r.Amount), '@(r.PaidAt?.ToLocalTime().ToString("yyyy-MM-dd"))', '@r.PlanType', '@r.Code', '@(r.StoredKind)')">
                                             <i class="fa-solid fa-pen"></i>
                                         </button>
                                     }
@@ -244,6 +244,12 @@
             <select name="planType" id="pePlan" class="form-select">
                 <option value="month">1 tháng</option>
                 <option value="year">1 năm</option>
+            </select>
+            <label class="fw-semibold small mb-0">Loại đơn</label>
+            <select name="kind" id="peKind" class="form-select">
+                <option value="">Tự động (theo thứ tự mua)</option>
+                <option value="new">Đăng ký mới</option>
+                <option value="renewal">Gia hạn</option>
             </select>
             <div class="d-flex gap-2 mt-3">
                 <button type="button" class="rv-btn rv-btn-ghost" onclick="closePayEdit()">Hủy</button>
@@ -323,11 +329,12 @@ document.getElementById('rvModalOk').addEventListener('click', async function ()
 document.addEventListener('keydown', e => { if (e.key === 'Escape') { rvCloseModal(); closePayEdit(); } });
 
 // Modal sửa đơn
-function openPayEdit(id, amount, date, plan, code) {
+function openPayEdit(id, amount, date, plan, code, kind) {
     document.getElementById('peId').value = id;
     document.getElementById('peAmount').value = amount;
     document.getElementById('peDate').value = date || '';
     document.getElementById('pePlan').value = (plan === 'year') ? 'year' : 'month';
+    document.getElementById('peKind').value = (kind === 'new' || kind === 'renewal') ? kind : '';
     document.getElementById('peCode').textContent = code || '';
     document.getElementById('payEditModal').style.display = 'flex';
 }

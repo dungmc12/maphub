@@ -35,6 +35,7 @@ public class Payment
     public string? Description { get; set; }
     public string? Code { get; set; }                      // nội dung chuyển khoản khớp đơn, vd CSPRO42
     public string PlanType { get; set; } = "month";        // month | year
+    public string? Kind { get; set; }                      // null=tự động | new (đăng ký mới) | renewal (gia hạn)
     public DateTime? PaidAt { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
