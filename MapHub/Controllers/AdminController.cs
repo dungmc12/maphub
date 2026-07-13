@@ -601,6 +601,36 @@ public class AdminController : Controller
         return RedirectToAction(nameof(Revenue));
     }
 
+    // Rải đều NGÀY của mọi đơn đã thanh toán ra "months" tháng gần nhất (không dồn 1 tháng, không ngày tương lai).
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> SpreadPaymentDates(int months = 6)
+    {
+        months = Math.Clamp(months, 2, 12);
+        var paid = await _context.Payments.Where(p => p.Status == "paid")
+            .OrderBy(p => p.PaidAt ?? p.CreatedAt).ToListAsync();
+        if (paid.Count == 0)
+        { TempData["Error"] = "Chưa có đơn đã thanh toán nào để rải."; return RedirectToAction(nameof(Revenue)); }
+
+        var now = DateTime.UtcNow;
+        var start = now.AddMonths(-months).AddDays(2);
+        double totalDays = (now - start).TotalDays;
+        var rnd = new Random();
+        for (int i = 0; i < paid.Count; i++)
+        {
+            double frac = paid.Count == 1 ? 0.5 : (double)i / (paid.Count - 1);   // trải đều 0..1
+            double jitter = (rnd.NextDouble() - 0.5) * (totalDays / Math.Max(paid.Count, 2)) * 0.6;
+            var d = start.AddDays(frac * totalDays + jitter);
+            if (d > now) d = now.AddHours(-rnd.Next(1, 10));
+            if (d < start) d = start;
+            paid[i].PaidAt = d; paid[i].CreatedAt = d;
+        }
+        await _context.SaveChangesAsync();
+
+        TempData["Success"] = $"Đã rải đều {paid.Count} đơn ra {months} tháng gần nhất (từ {start:dd/MM} đến nay).";
+        return RedirectToAction(nameof(Revenue));
+    }
+
     // ── Events ──────────────────────────────────────────────────────────────
     [HttpGet]
     public async Task<IActionResult> Events()

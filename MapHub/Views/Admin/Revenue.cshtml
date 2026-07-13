@@ -27,6 +27,13 @@
                            class="form-control form-control-sm" style="width:64px">
                     <button type="submit" class="btn-ghost"><i class="fa-solid fa-wand-magic-sparkles"></i> Tạo đơn Pro mẫu (rải đều)</button>
                 </form>
+                <form method="post" action="/Admin/SpreadPaymentDates" class="d-inline-flex align-items-center gap-1"
+                      onsubmit="return confirm('Rải đều NGÀY của mọi đơn đã thanh toán ra nhiều tháng (không dồn 1 tháng)?');">
+                    @Html.AntiForgeryToken()
+                    <input type="number" name="months" value="6" min="2" max="12" title="Rải ra mấy tháng"
+                           class="form-control form-control-sm" style="width:56px">
+                    <button type="submit" class="btn-ghost"><i class="fa-solid fa-calendar-days"></i> Rải đều ngày đơn</button>
+                </form>
                 @{ int seedCount = (int)(ViewBag.SeedCount ?? 0); }
                 @if (seedCount > 0)
                 {
