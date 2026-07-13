@@ -1277,9 +1277,9 @@ public class AdminController : Controller
     [HttpGet]
     public async Task<IActionResult> Revenue()
     {
-        // Tất cả giao dịch (mọi trạng thái) — sắp theo NGÀY TRẢ tăng dần (thấp → cao) cho dễ nhìn
+        // Tất cả giao dịch (mọi trạng thái) — sắp theo NGÀY TRẢ: mới nhất trên cùng, cũ nhất dưới cùng
         var all = await _context.Payments
-            .OrderBy(p => p.PaidAt ?? p.CreatedAt)
+            .OrderByDescending(p => p.PaidAt ?? p.CreatedAt)
             .Select(p => new RevenueRow(
                 p.Id, p.Amount, p.PlanType, p.Code, p.Provider, p.PaidAt, p.Status,
                 _context.Users.Where(u => u.Id == p.UserId).Select(u => u.Email).FirstOrDefault()))
