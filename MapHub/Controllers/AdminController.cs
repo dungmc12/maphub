@@ -412,27 +412,6 @@ public class AdminController : Controller
         return ids;
     }
 
-    // Hạ TẤT CẢ tài khoản demo (@cityscout.local) đang Pro về Free (hồ sơ + gỡ role)
-    private async Task DowngradeDemoProAsync()
-    {
-        var demoIds = await _context.Users
-            .Where(u => u.Email!.EndsWith("@cityscout.local"))
-            .Select(u => u.Id).ToListAsync();
-        var profiles = await _context.UserProfiles
-            .Where(p => demoIds.Contains(p.UserId) && p.Tier == "pro").ToListAsync();
-        foreach (var p in profiles)
-        {
-            p.Tier = "free"; p.ProExpiresAt = null; p.MaxPlaces = 3; p.MaxPlans = 3; p.UpdatedAt = DateTime.UtcNow;
-        }
-        await _context.SaveChangesAsync();
-        foreach (var id in demoIds)
-        {
-            var u = await _userManager.FindByIdAsync(id);
-            if (u != null && await _userManager.IsInRoleAsync(u, "Pro"))
-                await _userManager.RemoveFromRoleAsync(u, "Pro");
-        }
-    }
-
     // Nâng 1 tài khoản lên Pro (hồ sơ + role) — dùng cho seed người Pro/đơn hàng
     private async Task MakeProAsync(string userId, string displayName)
     {
@@ -518,24 +497,63 @@ public class AdminController : Controller
     // Ngày bắt đầu rải đơn mẫu: 03/06 (khi dự án bắt đầu có dữ liệu). Đơn mẫu nhận diện qua TransactionId "SEED-".
     private static readonly DateTime SeedStartDate = new DateTime(2026, 6, 3, 0, 0, 0, DateTimeKind.Utc);
 
-    // Sinh ĐƠN PRO mẫu — RẢI ĐỀU doanh thu từ 03/06 tới nay (không có ngày tương lai) + tạo "orders" người Pro.
-    // Đơn mẫu hiển thị như đơn payos thật; bấm lại là xoá đơn mẫu cũ rồi tạo lại rải đều → biểu đồ luôn mượt.
+    // Các tài khoản THẬT đủ điều kiện gắn đơn Pro mẫu (loại tài khoản demo @cityscout.local và Admin).
+    private async Task<List<(string Id, string Name)>> RealBuyerAccountsAsync(int take)
+    {
+        var adminIds = (await _context.UserProfiles.Where(p => p.Tier == "admin").Select(p => p.UserId).ToListAsync()).ToHashSet();
+        var users = await _context.Users
+            .Where(u => u.Email != null && !u.Email.EndsWith("@cityscout.local"))
+            .OrderBy(u => u.Id)
+            .Select(u => new { u.Id, u.Email })
+            .ToListAsync();
+        return users.Where(u => !adminIds.Contains(u.Id))
+            .Take(take)
+            .Select(u => (u.Id, (u.Email ?? "").Split('@')[0]))
+            .ToList();
+    }
+
+    // Hạ về Free các user vừa xoá đơn mẫu — CHỈ khi họ không còn đơn thật nào (giữ nguyên khách Pro thật & Admin).
+    private async Task DowngradeSeedBuyersAsync(List<string> userIds)
+    {
+        foreach (var id in userIds.Distinct())
+        {
+            bool hasReal = await _context.Payments.AnyAsync(p => p.UserId == id && p.Status == "paid"
+                && (p.TransactionId == null || !p.TransactionId.StartsWith("SEED-")));
+            if (hasReal) continue;
+            var p = await _context.UserProfiles.FindAsync(id);
+            if (p == null || p.Tier == "admin") continue;   // không đụng Admin
+            p.Tier = "free"; p.ProExpiresAt = null; p.MaxPlaces = 3; p.MaxPlans = 3; p.UpdatedAt = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+            var u = await _userManager.FindByIdAsync(id);
+            if (u != null && await _userManager.IsInRoleAsync(u, "Pro"))
+                await _userManager.RemoveFromRoleAsync(u, "Pro");
+        }
+    }
+
+    // Sinh ĐƠN PRO mẫu gắn vào TÀI KHOẢN THẬT — rải đều doanh thu từ 03/06 tới nay (không ngày tương lai).
+    // Đơn hiển thị như payos thật (email thật); bấm lại là xoá đơn mẫu cũ rồi tạo lại rải đều.
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> SeedPayments(int orders = 20)
     {
-        orders = Math.Clamp(orders, 1, ReviewerNames.Length);
+        orders = Math.Clamp(orders, 1, 100);
         const decimal amount = 59000m;   // giá gói tháng
 
-        var buyerIds = await EnsureReviewersAsync(orders);
-        if (buyerIds.Count == 0)
-        { TempData["Error"] = "Không tạo được tài khoản Pro mẫu."; return RedirectToAction(nameof(Revenue)); }
+        var buyers = await RealBuyerAccountsAsync(orders);
+        if (buyers.Count == 0)
+        {
+            TempData["Error"] = "Chưa có tài khoản thật nào (ngoài Admin) để gắn đơn Pro. Hãy đăng ký vài tài khoản trước.";
+            return RedirectToAction(nameof(Revenue));
+        }
 
-        // Xoá đơn mẫu cũ + hạ hết Pro mẫu về Free trước → rồi cấp lại đúng "orders" người Pro (không đụng đơn thật)
+        // Ghi nhớ các buyer của đơn mẫu cũ → xoá đơn mẫu cũ → hạ họ về Free (nếu không còn đơn thật)
+        var prevSeedUsers = await _context.Payments
+            .Where(p => p.TransactionId != null && p.TransactionId.StartsWith("SEED-"))
+            .Select(p => p.UserId).Distinct().ToListAsync();
         var oldSeed = await _context.Payments.Where(p => p.TransactionId != null && p.TransactionId.StartsWith("SEED-")).ToListAsync();
         _context.Payments.RemoveRange(oldSeed);
         await _context.SaveChangesAsync();
-        await DowngradeDemoProAsync();
+        await DowngradeSeedBuyersAsync(prevSeedUsers);
 
         // Rải đều PaidAt từ 03/06 → hôm nay (kẹp trong khoảng, không vượt hiện tại)
         var now = DateTime.UtcNow;
@@ -543,39 +561,43 @@ public class AdminController : Controller
         double totalDays = (now - start).TotalDays;
         var rnd = new Random();
         int made = 0;
-        for (int i = 0; i < orders && i < buyerIds.Count; i++)
+        for (int i = 0; i < buyers.Count; i++)
         {
-            double frac = (i + 0.5) / orders;                       // vị trí đều 0..1
-            double jitter = (rnd.NextDouble() - 0.5) * (totalDays / orders) * 0.5;
+            double frac = (i + 0.5) / buyers.Count;
+            double jitter = (rnd.NextDouble() - 0.5) * (totalDays / buyers.Count) * 0.5;
             var paidAt = start.AddDays(frac * totalDays + jitter);
-            if (paidAt > now) paidAt = now.AddHours(-rnd.Next(1, 12));   // không cho ngày tương lai
+            if (paidAt > now) paidAt = now.AddHours(-rnd.Next(1, 12));
             if (paidAt < start) paidAt = start;
             _context.Payments.Add(new Payment {
-                UserId = buyerIds[i], Amount = amount, PlanType = "month",
-                Provider = "payos", Status = "paid",               // hiển thị như đơn thật
-                Code = $"CSPRO{200 + i}", TransactionId = $"SEED-{Guid.NewGuid():N}"[..16],  // "SEED-" = dấu ẩn để nhận diện đơn mẫu
+                UserId = buyers[i].Id, Amount = amount, PlanType = "month",
+                Provider = "payos", Status = "paid",
+                Code = $"CSPRO{200 + i}", TransactionId = $"SEED-{Guid.NewGuid():N}"[..16],
                 Description = "Nâng cấp Pro (gói tháng)",
                 CreatedAt = paidAt, PaidAt = paidAt
             });
-            await MakeProAsync(buyerIds[i], ReviewerNames[i]);
+            await MakeProAsync(buyers[i].Id, buyers[i].Name);
             made++;
         }
         await _context.SaveChangesAsync();
 
-        TempData["Success"] = $"Đã tạo {made} đơn Pro mẫu (mỗi đơn {amount:#,##0}đ) rải đều từ {start:dd/MM} đến nay, và cấp Pro cho {made} tài khoản.";
+        var note = made < orders ? $" (chỉ có {made} tài khoản thật khả dụng)" : "";
+        TempData["Success"] = $"Đã tạo {made} đơn Pro cho tài khoản thật (mỗi đơn {amount:#,##0}đ) rải đều từ {start:dd/MM} đến nay{note}.";
         return RedirectToAction(nameof(Revenue));
     }
 
-    // Xoá HẾT đơn Pro mẫu + hạ mọi tài khoản Pro mẫu về Free (không đụng đơn/tài khoản thật)
+    // Xoá HẾT đơn Pro mẫu + hạ các tài khoản đó về Free (giữ nguyên khách Pro thật & Admin)
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> ClearSeedPayments()
     {
+        var seedUsers = await _context.Payments
+            .Where(p => p.TransactionId != null && p.TransactionId.StartsWith("SEED-"))
+            .Select(p => p.UserId).Distinct().ToListAsync();
         var seed = await _context.Payments.Where(p => p.TransactionId != null && p.TransactionId.StartsWith("SEED-")).ToListAsync();
         _context.Payments.RemoveRange(seed);
         await _context.SaveChangesAsync();
-        await DowngradeDemoProAsync();
-        TempData["Success"] = $"Đã xoá {seed.Count} đơn Pro mẫu và hạ các tài khoản Pro mẫu về Free.";
+        await DowngradeSeedBuyersAsync(seedUsers);
+        TempData["Success"] = $"Đã xoá {seed.Count} đơn Pro mẫu và hạ các tài khoản đó về Free.";
         return RedirectToAction(nameof(Revenue));
     }
 
