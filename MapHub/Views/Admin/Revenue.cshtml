@@ -145,7 +145,17 @@
                                         <span>@(r.Email ?? "—")</span>
                                     </div>
                                 </td>
-                                <td><span class="abadge @(r.PlanType == "year" ? "abadge-gold" : "abadge-blue")">@(r.PlanType == "year" ? "1 năm" : "1 tháng")</span></td>
+                                <td>
+                                    <span class="abadge @(r.PlanType == "year" ? "abadge-gold" : "abadge-blue")">@(r.PlanType == "year" ? "1 năm" : "1 tháng")</span>
+                                    @if (r.Kind == "renewal")
+                                    {
+                                        <span class="abadge abadge-green" title="Tài khoản mua lại tháng sau"><i class="fa-solid fa-rotate"></i> Gia hạn</span>
+                                    }
+                                    else if (r.Kind == "new")
+                                    {
+                                        <span class="abadge abadge-gray"><i class="fa-solid fa-user-plus"></i> Đăng ký mới</span>
+                                    }
+                                </td>
                                 <td class="text-end"><strong style="color:@(r.Status == "paid" ? "var(--green)" : "#94a3b8")">@Vnd(r.Amount)</strong></td>
                                 <td>
                                     @if (r.Status == "paid")           { <span class="abadge abadge-green">Đã thanh toán</span> }

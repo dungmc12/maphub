@@ -1287,6 +1287,15 @@ public class AdminController : Controller
         // Doanh thu & biểu đồ chỉ cộng đơn đã thanh toán
         var paid = all.Where(p => p.Status == "paid").ToList();
 
+        // Nhận biết đăng ký mới vs gia hạn: theo mỗi email, đơn đã trả SỚM NHẤT = "new", các đơn sau = "renewal".
+        // (paid dùng chung tham chiếu với all nên gán Kind ở đây là bảng hiển thị thấy luôn.)
+        foreach (var g in paid.Where(p => !string.IsNullOrEmpty(p.Email)).GroupBy(p => p.Email))
+        {
+            var ordered = g.OrderBy(p => p.PaidAt ?? DateTime.MaxValue).ToList();
+            for (int i = 0; i < ordered.Count; i++)
+                ordered[i].Kind = i == 0 ? "new" : "renewal";
+        }
+
         const int VN = 7;                               // Việt Nam = UTC+7 (không DST)
         var vnNow = DateTime.UtcNow.AddHours(VN);
         var vnMonthStart = new DateTime(vnNow.Year, vnNow.Month, 1);
@@ -1372,4 +1381,8 @@ public class AdminController : Controller
     }
 }
 
-public record RevenueRow(int Id, decimal Amount, string PlanType, string? Code, string? Provider, DateTime? PaidAt, string? Status, string? Email);
+public record RevenueRow(int Id, decimal Amount, string PlanType, string? Code, string? Provider, DateTime? PaidAt, string? Status, string? Email)
+{
+    // "new" = đăng ký mới (đơn đầu của tài khoản), "renewal" = gia hạn (mua lại tháng sau)
+    public string? Kind { get; set; }
+}
