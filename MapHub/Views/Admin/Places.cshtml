@@ -19,9 +19,11 @@
             <p class="admin-section-sub">@total địa điểm</p>
         </div>
         <div class="d-flex gap-2 flex-wrap">
-            <form method="post" action="/Admin/SeedReviews" class="d-inline"
-                  onsubmit="return confirm('Tạo đánh giá mẫu (tối thiểu 10/địa điểm) cho các địa điểm còn thiếu? Dữ liệu demo, không phải từ Google.');">
+            <form method="post" action="/Admin/SeedReviews" class="d-inline-flex align-items-center gap-1"
+                  onsubmit="return confirm('Rải đánh giá mẫu đều cho MỌI địa điểm lên mức đã chọn? Dữ liệu demo, không phải từ Google.');">
                 @Html.AntiForgeryToken()
+                <input type="number" name="perPlace" value="10" min="1" max="50" title="Số đánh giá mỗi địa điểm"
+                       class="form-control form-control-sm" style="width:64px" onclick="event.stopPropagation()">
                 <button type="submit" class="btn-ghost"><i class="bi bi-star"></i> Tạo đánh giá mẫu</button>
             </form>
             <a href="/Admin/ImportPlaces" class="btn-ghost"><i class="bi bi-file-earmark-excel"></i> Nhập Excel</a>

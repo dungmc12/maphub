@@ -335,17 +335,20 @@ public class AdminController : Controller
     }
 
     // ──────────────── Sinh đánh giá mẫu (demo) cho địa điểm ────────────────
-    // KHÔNG copy Google. Tạo tài khoản người đánh giá mẫu + đánh giá tiếng Việt, mỗi địa điểm ≥ 10,
-    // không trùng (user, địa điểm), điểm đa dạng thiên tích cực, ngày rải rác 6 tháng.
-    private static readonly (string Name, string Email)[] DemoReviewers = {
-        ("Minh Anh","reviewer.minhanh@cityscout.local"), ("Quốc Huy","reviewer.quochuy@cityscout.local"),
-        ("Thu Trang","reviewer.thutrang@cityscout.local"), ("Hoàng Nam","reviewer.hoangnam@cityscout.local"),
-        ("Lan Phương","reviewer.lanphuong@cityscout.local"), ("Đức Anh","reviewer.ducanh@cityscout.local"),
-        ("Bảo Ngọc","reviewer.baongoc@cityscout.local"), ("Việt Hùng","reviewer.viethung@cityscout.local"),
-        ("Thùy Linh","reviewer.thuylinh@cityscout.local"), ("Gia Bảo","reviewer.giabao@cityscout.local"),
-        ("Khánh Vy","reviewer.khanhvy@cityscout.local"), ("Tuấn Kiệt","reviewer.tuankiet@cityscout.local"),
-        ("Mai Chi","reviewer.maichi@cityscout.local"), ("Đình Phúc","reviewer.dinhphuc@cityscout.local"),
-        ("Ngọc Ánh","reviewer.ngocanh@cityscout.local"), ("Hải Đăng","reviewer.haidang@cityscout.local"),
+    // KHÔNG copy Google. Tạo tài khoản người đánh giá mẫu + đánh giá tiếng Việt, RẢI ĐỀU mọi địa điểm
+    // về cùng một mức, không trùng (user, địa điểm), điểm đa dạng thiên tích cực, ngày rải rác 6 tháng.
+    // Bấm nhiều lần được: mỗi lần nâng "số đánh giá/địa điểm" là bù thêm cho đủ.
+    private static readonly string[] ReviewerNames = {
+        "Nguyễn Minh Anh","Trần Quốc Huy","Lê Thu Trang","Phạm Hoàng Nam","Hoàng Lan Phương",
+        "Vũ Đức Anh","Đặng Bảo Ngọc","Bùi Việt Hùng","Đỗ Thùy Linh","Hồ Gia Bảo",
+        "Ngô Khánh Vy","Dương Tuấn Kiệt","Lý Mai Chi","Phan Đình Phúc","Võ Ngọc Ánh",
+        "Đinh Hải Đăng","Trịnh Thanh Hà","Mai Quang Dũng","Cao Thảo My","Đào Minh Quân",
+        "Lâm Phương Thảo","Hà Tuấn Anh","Tô Ngọc Diệp","Chu Đăng Khoa","Nguyễn Hồng Nhung",
+        "Trần Bá Lộc","Lê Khả Vy","Phạm Thùy Dung","Hoàng Anh Tú","Vũ Hải Yến",
+        "Đặng Quốc Bảo","Bùi Thu Hiền","Đỗ Nhật Minh","Hồ Ngọc Mai","Ngô Thành Đạt",
+        "Dương Kim Ngân","Lý Hoàng Long","Phan Thảo Vy","Võ Anh Khôi","Đinh Phương Anh",
+        "Trịnh Gia Hân","Mai Đức Thịnh","Cao Thị Ngọc","Đào Văn Nam","Lâm Bảo Trâm",
+        "Hà Minh Đức","Tô Thanh Tùng","Chu Diệu Linh","Nguyễn Tiến Dũng","Trần Yến Nhi",
     };
 
     private static readonly string[] ReviewGeneric = {
@@ -384,34 +387,54 @@ public class AdminController : Controller
         "Trải nghiệm văn hoá thú vị, học hỏi được nhiều.",
     };
 
-    [HttpPost]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> SeedReviews(int perPlace = 10)
+    // Đảm bảo có sẵn "count" tài khoản người đánh giá mẫu (idempotent), trả về danh sách UserId theo thứ tự.
+    private async Task<List<string>> EnsureReviewersAsync(int count)
     {
-        if (perPlace < 1) perPlace = 10;
-        if (perPlace > 20) perPlace = 20;
-
-        // 1) Đảm bảo có sẵn tài khoản người đánh giá mẫu (+ hồ sơ có tên hiển thị)
-        var reviewerIds = new List<string>();
-        foreach (var (name, email) in DemoReviewers)
+        count = Math.Clamp(count, 1, ReviewerNames.Length);
+        var ids = new List<string>();
+        for (int i = 0; i < count; i++)
         {
+            var email = $"reviewer{i + 1}@cityscout.local";
             var u = await _userManager.FindByEmailAsync(email);
             if (u == null)
             {
                 u = new ApplicationUser { UserName = email, Email = email, EmailConfirmed = true };
                 var res = await _userManager.CreateAsync(u, "Demo@12345");
                 if (!res.Succeeded) continue;
-                if (await _context.UserProfiles.FindAsync(u.Id) == null)
-                    _context.UserProfiles.Add(new UserProfile { UserId = u.Id, DisplayName = name, Tier = "free", MaxPlaces = 3, MaxPlans = 3 });
-                await _context.SaveChangesAsync();
             }
-            else if (await _context.UserProfiles.FindAsync(u.Id) == null)
+            if (await _context.UserProfiles.FindAsync(u.Id) == null)
             {
-                _context.UserProfiles.Add(new UserProfile { UserId = u.Id, DisplayName = name, Tier = "free", MaxPlaces = 3, MaxPlans = 3 });
+                _context.UserProfiles.Add(new UserProfile { UserId = u.Id, DisplayName = ReviewerNames[i], Tier = "free", MaxPlaces = 3, MaxPlans = 3 });
                 await _context.SaveChangesAsync();
             }
-            reviewerIds.Add(u.Id);
+            ids.Add(u.Id);
         }
+        return ids;
+    }
+
+    // Nâng 1 tài khoản lên Pro (hồ sơ + role) — dùng cho seed người Pro/đơn hàng
+    private async Task MakeProAsync(string userId, string displayName)
+    {
+        var p = await _context.UserProfiles.FindAsync(userId);
+        if (p == null) { p = new UserProfile { UserId = userId, DisplayName = displayName }; _context.UserProfiles.Add(p); }
+        p.Tier = "pro";
+        p.ProExpiresAt = DateTime.UtcNow.AddYears(1);
+        p.MaxPlaces = int.MaxValue; p.MaxPlans = int.MaxValue; p.UpdatedAt = DateTime.UtcNow;
+        await _context.SaveChangesAsync();
+        var u = await _userManager.FindByIdAsync(userId);
+        if (u != null && !await _userManager.IsInRoleAsync(u, "Pro"))
+            await _userManager.AddToRoleAsync(u, "Pro");
+    }
+
+    // Sinh đánh giá mẫu — RẢI ĐỀU: đưa MỌI địa điểm lên cùng mức "perPlace". Bấm lại với số lớn hơn để tăng dần.
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> SeedReviews(int perPlace = 10)
+    {
+        perPlace = Math.Clamp(perPlace, 1, ReviewerNames.Length);
+
+        // Cần ít nhất "perPlace" người đánh giá khác nhau cho mỗi địa điểm
+        var reviewerIds = await EnsureReviewersAsync(Math.Min(ReviewerNames.Length, perPlace + 5));
         if (reviewerIds.Count == 0)
         { TempData["Error"] = "Không tạo được tài khoản đánh giá mẫu."; return RedirectToAction(nameof(Places)); }
 
@@ -424,7 +447,6 @@ public class AdminController : Controller
             _ => ReviewGeneric
         };
 
-        // 2) Với mỗi địa điểm còn < perPlace đánh giá → bù thêm bằng user chưa đánh giá địa điểm đó
         var places = await _context.Places.Select(p => new { p.Id, p.Category }).ToListAsync();
         int addedReviews = 0, toppedPlaces = 0;
         foreach (var p in places)
@@ -432,7 +454,7 @@ public class AdminController : Controller
             var existingUserIds = await _context.PlaceReviews.Where(r => r.PlaceId == p.Id)
                 .Select(r => r.UserId).ToListAsync();
             int have = existingUserIds.Count;
-            if (have >= perPlace) continue;
+            if (have >= perPlace) continue;   // đã đủ mức → giữ nguyên (đều)
 
             var avail = reviewerIds.Where(id => !existingUserIds.Contains(id)).OrderBy(_ => rnd.Next()).ToList();
             int need = Math.Min(perPlace - have, avail.Count);
@@ -441,7 +463,7 @@ public class AdminController : Controller
             for (int i = 0; i < need; i++)
             {
                 int q = quality();
-                int s = Math.Max(2, Math.Min(5, q + rnd.Next(-1, 2)));   // dịch vụ quanh mức chất lượng
+                int s = Math.Max(2, Math.Min(5, q + rnd.Next(-1, 2)));
                 _context.PlaceReviews.Add(new PlaceReview {
                     PlaceId = p.Id, UserId = avail[i],
                     QualityRating = (byte)q, ServiceRating = (byte)s,
@@ -455,8 +477,53 @@ public class AdminController : Controller
             await _context.SaveChangesAsync();
         }
 
-        TempData["Success"] = $"Đã thêm {addedReviews} đánh giá mẫu cho {toppedPlaces} địa điểm (mỗi nơi tối thiểu {perPlace}).";
+        TempData["Success"] = $"Đã thêm {addedReviews} đánh giá cho {toppedPlaces} địa điểm — mọi địa điểm giờ ở mức {perPlace} đánh giá.";
         return RedirectToAction(nameof(Places));
+    }
+
+    // Sinh ĐƠN PRO mẫu — RẢI ĐỀU doanh thu theo thời gian + tạo "orders" người Pro.
+    // Bấm lại: xoá đơn mẫu cũ (Provider="seed") rồi tạo lại đúng "orders" đơn rải đều → biểu đồ luôn mượt.
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> SeedPayments(int orders = 20, int weeks = 12)
+    {
+        orders = Math.Clamp(orders, 1, ReviewerNames.Length);
+        weeks  = Math.Clamp(weeks, 4, 26);
+        const decimal amount = 59000m;   // giá gói tháng
+
+        var buyerIds = await EnsureReviewersAsync(orders);
+        if (buyerIds.Count == 0)
+        { TempData["Error"] = "Không tạo được tài khoản Pro mẫu."; return RedirectToAction(nameof(Revenue)); }
+
+        // Xoá đơn mẫu cũ để rải lại cho đều (không đụng đơn thật)
+        var oldSeed = await _context.Payments.Where(p => p.Provider == "seed").ToListAsync();
+        _context.Payments.RemoveRange(oldSeed);
+        await _context.SaveChangesAsync();
+
+        // Tạo "orders" đơn PAID, PaidAt rải đều trên "weeks" tuần gần nhất
+        var now = DateTime.UtcNow;
+        double spanDays = weeks * 7.0;
+        var rnd = new Random();
+        int made = 0;
+        for (int i = 0; i < orders && i < buyerIds.Count; i++)
+        {
+            // vị trí đều + lệch nhẹ ngẫu nhiên để tự nhiên
+            double dayOffset = (i + 0.5) * spanDays / orders + rnd.Next(-1, 2) * 0.4;
+            var paidAt = now.AddDays(-dayOffset);
+            _context.Payments.Add(new Payment {
+                UserId = buyerIds[i], Amount = amount, PlanType = "month",
+                Provider = "seed", Status = "paid",
+                Code = $"DEMO{i + 1:D3}", TransactionId = $"SEED-{Guid.NewGuid():N}"[..16],
+                Description = "Đơn Pro mẫu (demo)",
+                CreatedAt = paidAt, PaidAt = paidAt
+            });
+            await MakeProAsync(buyerIds[i], ReviewerNames[i]);
+            made++;
+        }
+        await _context.SaveChangesAsync();
+
+        TempData["Success"] = $"Đã tạo {made} đơn Pro mẫu (mỗi đơn {amount:#,##0}đ) rải đều {weeks} tuần, và cấp Pro cho {made} tài khoản.";
+        return RedirectToAction(nameof(Revenue));
     }
 
     // ── Events ──────────────────────────────────────────────────────────────
