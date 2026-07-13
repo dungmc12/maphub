@@ -504,6 +504,35 @@ public class AccountController : Controller
         return RedirectToAction(nameof(Profile));
     }
 
+    // ── Quên mật khẩu → gửi yêu cầu cho Admin (không dùng email) ──────────────
+    [HttpGet]
+    public IActionResult ForgotPassword() => View();
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ForgotPassword(string email, string? message)
+    {
+        email = (email ?? "").Trim();
+        if (string.IsNullOrWhiteSpace(email) || !email.Contains('@'))
+        {
+            ViewBag.Error = "Vui lòng nhập đúng email tài khoản của bạn.";
+            return View();
+        }
+        // Không lộ tài khoản có tồn tại hay không; chỉ tạo yêu cầu nếu email có thật (tránh spam bảng)
+        var user = await _userManager.FindByEmailAsync(email);
+        if (user != null)
+        {
+            // Gộp yêu cầu: nếu đang có yêu cầu pending thì cập nhật, không tạo trùng
+            var existing = await _context.PasswordResetRequests
+                .FirstOrDefaultAsync(r => r.Email == email && r.Status == "pending");
+            if (existing != null) { existing.Message = message; existing.CreatedAt = DateTime.UtcNow; }
+            else _context.PasswordResetRequests.Add(new PasswordResetRequest { Email = email, Message = message });
+            await _context.SaveChangesAsync();
+        }
+        ViewBag.Sent = true;   // luôn báo đã gửi (bảo mật)
+        return View();
+    }
+
     [Authorize]
     [HttpPost]
     [ValidateAntiForgeryToken]

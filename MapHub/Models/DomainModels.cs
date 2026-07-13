@@ -40,6 +40,19 @@ public class Payment
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
 
+// Yêu cầu đặt lại mật khẩu — người dùng gửi, Admin duyệt & đổi mật khẩu (không dùng email)
+public class PasswordResetRequest
+{
+    [Key]
+    public int Id { get; set; }
+    public string Email { get; set; } = null!;
+    public string? Message { get; set; }
+    public string Status { get; set; } = "pending";   // pending | done
+    public string? NewPassword { get; set; }           // mật khẩu mới Admin đặt (để đọc lại báo cho user)
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime? HandledAt { get; set; }
+}
+
 public class AiUsage
 {
     [Key]

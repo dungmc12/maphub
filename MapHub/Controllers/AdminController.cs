@@ -1179,6 +1179,64 @@ public class AdminController : Controller
         return RedirectToAction(nameof(Users));
     }
 
+    // ── Đặt lại mật khẩu (yêu cầu từ người dùng) ──────────────────────────────
+    [HttpGet]
+    public async Task<IActionResult> PasswordResets()
+    {
+        var list = await _context.PasswordResetRequests
+            .OrderBy(r => r.Status == "done").ThenByDescending(r => r.CreatedAt).ToListAsync();
+        return View(list);
+    }
+
+    // Duyệt 1 yêu cầu: đặt mật khẩu mới cho tài khoản của yêu cầu đó
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ResolveReset(int id, string newPassword)
+    {
+        var req = await _context.PasswordResetRequests.FindAsync(id);
+        if (req == null) return NotFound();
+        if (string.IsNullOrWhiteSpace(newPassword) || newPassword.Length < 8)
+        { TempData["Error"] = "Mật khẩu mới tối thiểu 8 ký tự."; return RedirectToAction(nameof(PasswordResets)); }
+        var user = await _userManager.FindByEmailAsync(req.Email);
+        if (user == null) { TempData["Error"] = $"Không tìm thấy tài khoản {req.Email}."; return RedirectToAction(nameof(PasswordResets)); }
+        var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+        var res = await _userManager.ResetPasswordAsync(user, token, newPassword);
+        if (!res.Succeeded)
+        { TempData["Error"] = string.Join(" ", res.Errors.Select(e => e.Description)); return RedirectToAction(nameof(PasswordResets)); }
+        req.Status = "done"; req.NewPassword = newPassword; req.HandledAt = DateTime.UtcNow;
+        await _context.SaveChangesAsync();
+        TempData["Success"] = $"Đã đặt mật khẩu mới cho {req.Email}. Gửi cho họ mật khẩu: {newPassword}";
+        return RedirectToAction(nameof(PasswordResets));
+    }
+
+    // Xoá 1 yêu cầu (rác/không hợp lệ)
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> DeleteReset(int id)
+    {
+        var req = await _context.PasswordResetRequests.FindAsync(id);
+        if (req != null) { _context.PasswordResetRequests.Remove(req); await _context.SaveChangesAsync(); }
+        TempData["Success"] = "Đã xoá yêu cầu.";
+        return RedirectToAction(nameof(PasswordResets));
+    }
+
+    // Đặt lại mật khẩu cho bất kỳ tài khoản (từ trang Người dùng)
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ResetUserPassword(string userId, string newPassword)
+    {
+        var user = await _userManager.FindByIdAsync(userId);
+        if (user == null) return NotFound();
+        if (string.IsNullOrWhiteSpace(newPassword) || newPassword.Length < 8)
+        { TempData["Error"] = "Mật khẩu mới tối thiểu 8 ký tự."; return RedirectToAction(nameof(Users)); }
+        var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+        var res = await _userManager.ResetPasswordAsync(user, token, newPassword);
+        TempData[res.Succeeded ? "Success" : "Error"] = res.Succeeded
+            ? $"Đã đặt mật khẩu mới cho {user.Email}: {newPassword}"
+            : string.Join(" ", res.Errors.Select(e => e.Description));
+        return RedirectToAction(nameof(Users));
+    }
+
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> UnlockUser(string userId)

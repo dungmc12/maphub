@@ -302,6 +302,24 @@ using (var scope = app.Services.CreateScope())
     }
     catch (Exception ex) { app.Logger.LogError(ex, "Auto-migration Payments.Kind lỗi"); }
 
+    // Tạo bảng PasswordResetRequests (yêu cầu đổi mật khẩu) nếu chưa có
+    try
+    {
+        if (dbProvider == "postgres")
+            await context.Database.ExecuteSqlRawAsync(
+                "CREATE TABLE IF NOT EXISTS \"PasswordResetRequests\" (" +
+                "\"Id\" serial PRIMARY KEY, \"Email\" text NOT NULL, \"Message\" text NULL, " +
+                "\"Status\" text NOT NULL DEFAULT 'pending', \"NewPassword\" text NULL, " +
+                "\"CreatedAt\" timestamptz NOT NULL DEFAULT now(), \"HandledAt\" timestamptz NULL);");
+        else
+            await context.Database.ExecuteSqlRawAsync(
+                "IF OBJECT_ID('PasswordResetRequests','U') IS NULL CREATE TABLE PasswordResetRequests (" +
+                "Id int IDENTITY(1,1) PRIMARY KEY, Email nvarchar(256) NOT NULL, Message nvarchar(max) NULL, " +
+                "Status nvarchar(50) NOT NULL DEFAULT 'pending', NewPassword nvarchar(max) NULL, " +
+                "CreatedAt datetime2 NOT NULL DEFAULT SYSUTCDATETIME(), HandledAt datetime2 NULL);");
+    }
+    catch (Exception ex) { app.Logger.LogError(ex, "Auto-migration PasswordResetRequests lỗi"); }
+
     // Thêm cột Phone2 / OpenTime / CloseTime cho Places nếu chưa có
     try
     {

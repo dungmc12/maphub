@@ -19,6 +19,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>, IDataPro
     public DbSet<UserProfile> UserProfiles => Set<UserProfile>();
     public DbSet<Payment> Payments => Set<Payment>();
     public DbSet<AiUsage> AiUsages => Set<AiUsage>();
+    public DbSet<PasswordResetRequest> PasswordResetRequests => Set<PasswordResetRequest>();
     
     public DbSet<Place> Places => Set<Place>();
     public DbSet<PlaceImage> PlaceImages => Set<PlaceImage>();

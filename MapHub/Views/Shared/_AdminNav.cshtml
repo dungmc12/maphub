@@ -1,6 +1,11 @@
+@using MapHub.Data
+@using Microsoft.EntityFrameworkCore
+@inject ApplicationDbContext _db
 @{
     var current = ViewContext.RouteData.Values["action"]?.ToString() ?? "";
     int pendingCount = (int)(ViewBag.PendingCount ?? 0);
+    int resetPending = 0;
+    try { resetPending = await _db.PasswordResetRequests.CountAsync(r => r.Status == "pending"); } catch { }
 }
 <div class="admin-subnav">
     <div class="admin-subnav-inner">
@@ -27,6 +32,12 @@
         </a>
         <a href="/Admin/Revenue"   class="admin-nav-tab @(current == "Revenue"   ? "active" : "")">
             <i class="bi bi-cash-coin"></i> Doanh thu
+        </a>
+        <a href="/Admin/PasswordResets" class="admin-nav-tab @(current == "PasswordResets" ? "active" : "")">
+            <i class="bi bi-key-fill"></i> Đặt lại MK
+            @if (resetPending > 0 && current != "PasswordResets") {
+                <span class="admin-nav-badge">@resetPending</span>
+            }
         </a>
     </div>
 </div>
