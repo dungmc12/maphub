@@ -631,6 +631,84 @@ public class AdminController : Controller
         return RedirectToAction(nameof(Revenue));
     }
 
+    // Sửa 1 đơn: số tiền, ngày trả, loại gói
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> EditPayment(int id, decimal amount, string? paidDate, string? planType)
+    {
+        var p = await _context.Payments.FindAsync(id);
+        if (p == null) return NotFound();
+        if (amount > 0) p.Amount = amount;
+        if (planType == "month" || planType == "year") p.PlanType = planType;
+        if (DateTime.TryParse(paidDate, out var d))
+        {
+            var utc = DateTime.SpecifyKind(d.Date.AddHours(9), DateTimeKind.Utc);   // ~trưa giờ VN
+            p.PaidAt = utc; p.CreatedAt = utc;
+        }
+        await _context.SaveChangesAsync();
+        TempData["Success"] = $"Đã cập nhật đơn {p.Code} ({p.Amount:#,##0}đ, {p.PaidAt?.ToLocalTime():dd/MM/yyyy}).";
+        return RedirectToAction(nameof(Revenue));
+    }
+
+    // Xóa 1 đơn
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> DeletePayment(int id)
+    {
+        var p = await _context.Payments.FindAsync(id);
+        if (p != null) { _context.Payments.Remove(p); await _context.SaveChangesAsync(); TempData["Success"] = "Đã xóa đơn."; }
+        return RedirectToAction(nameof(Revenue));
+    }
+
+    // Chuẩn hoá gói Pro theo đơn: nhiều đơn cùng tài khoản → cách nhau 1 tháng (như gia hạn);
+    // Pro hết hạn (đơn cuối + thời hạn gói < hôm nay) thì TỰ HẠ về Free; còn hạn thì bật Pro đúng hạn.
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> NormalizeSubscriptions()
+    {
+        var paid = await _context.Payments.Where(p => p.Status == "paid").ToListAsync();
+        var now = DateTime.UtcNow;
+        var adminIds = (await _context.UserProfiles.Where(p => p.Tier == "admin").Select(p => p.UserId).ToListAsync()).ToHashSet();
+        int proOn = 0, proOff = 0;
+
+        foreach (var g in paid.GroupBy(p => p.UserId))
+        {
+            var orders = g.OrderBy(p => p.PaidAt ?? p.CreatedAt).ToList();
+            var anchor = orders[^1].PaidAt ?? orders[^1].CreatedAt;
+            // nhiều đơn → giãn cách 1 tháng, kết thúc ở đơn mới nhất (như đăng ký lại từng tháng)
+            for (int k = 0; k < orders.Count; k++)
+            {
+                var d = anchor.AddMonths(-(orders.Count - 1 - k));
+                orders[k].PaidAt = d; orders[k].CreatedAt = d;
+            }
+            if (adminIds.Contains(g.Key)) continue;   // không đụng Admin
+
+            var last = orders[^1];
+            int months = last.PlanType == "year" ? 12 : 1;
+            var expiry = (last.PaidAt ?? now).AddMonths(months);
+
+            var profile = await _context.UserProfiles.FindAsync(g.Key);
+            if (profile == null) continue;
+            var u = await _userManager.FindByIdAsync(g.Key);
+            if (expiry <= now)   // hết hạn, không gia hạn → tắt Pro
+            {
+                profile.Tier = "free"; profile.ProExpiresAt = null; profile.MaxPlaces = 3; profile.MaxPlans = 3;
+                if (u != null && await _userManager.IsInRoleAsync(u, "Pro")) await _userManager.RemoveFromRoleAsync(u, "Pro");
+                proOff++;
+            }
+            else                 // còn hạn → Pro đúng tới ngày hết hạn
+            {
+                profile.Tier = "pro"; profile.ProExpiresAt = expiry; profile.MaxPlaces = int.MaxValue; profile.MaxPlans = int.MaxValue;
+                if (u != null && !await _userManager.IsInRoleAsync(u, "Pro")) await _userManager.AddToRoleAsync(u, "Pro");
+                proOn++;
+            }
+            profile.UpdatedAt = now;
+        }
+        await _context.SaveChangesAsync();
+        TempData["Success"] = $"Đã chuẩn hoá: {proOn} tài khoản còn hạn (bật Pro), {proOff} tài khoản hết hạn (đã tắt Pro). Đơn trùng đã giãn cách 1 tháng.";
+        return RedirectToAction(nameof(Revenue));
+    }
+
     // ── Events ──────────────────────────────────────────────────────────────
     [HttpGet]
     public async Task<IActionResult> Events()

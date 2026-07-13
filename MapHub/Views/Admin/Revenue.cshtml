@@ -6,6 +6,7 @@
     decimal monthTotal = (decimal)(ViewBag.MonthTotal ?? 0m);
     int monthCount = (int)(ViewBag.MonthCount ?? 0);
     string Vnd(decimal n) => n.ToString("#,##0") + "đ";
+    bool demoOn = Context.Request.Cookies["demo_tools"] == "1";
 }
 
 <partial name="_AdminNav" />
@@ -33,6 +34,11 @@
                     <input type="number" name="months" value="6" min="2" max="12" title="Rải ra mấy tháng"
                            class="form-control form-control-sm" style="width:56px">
                     <button type="submit" class="btn-ghost"><i class="fa-solid fa-calendar-days"></i> Rải đều ngày đơn</button>
+                </form>
+                <form method="post" action="/Admin/NormalizeSubscriptions"
+                      onsubmit="return confirm('Chuẩn hoá gói Pro theo đơn: đơn trùng cách nhau 1 tháng, Pro hết hạn thì tự tắt, còn hạn thì bật đúng ngày?');">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn-ghost"><i class="fa-solid fa-arrows-rotate"></i> Chuẩn hoá Pro theo hạn</button>
                 </form>
                 @{ int seedCount = (int)(ViewBag.SeedCount ?? 0); }
                 @if (seedCount > 0)
@@ -154,7 +160,36 @@
                                         <button class="aact-btn aact-approve" onclick="approvePay(@r.Id)"><i class="fa-solid fa-check"></i> Duyệt</button>
                                         <button class="aact-btn aact-reject" onclick="rejectPay(@r.Id)"><i class="fa-solid fa-xmark"></i></button>
                                     }
-                                    else { <span class="admin-sub">—</span> }
+                                    @if (demoOn)
+                                    {
+                                        <details class="pay-edit">
+                                            <summary class="aact-btn aact-edit" title="Sửa đơn"><i class="fa-solid fa-pen"></i></summary>
+                                            <div class="pay-edit-pop">
+                                                <form method="post" action="/Admin/EditPayment" class="d-flex flex-column gap-2">
+                                                    @Html.AntiForgeryToken()
+                                                    <input type="hidden" name="id" value="@r.Id">
+                                                    <label class="small fw-semibold mb-0">Số tiền (đ)</label>
+                                                    <input type="number" name="amount" value="@((long)r.Amount)" min="0" step="1000" class="form-control form-control-sm">
+                                                    <label class="small fw-semibold mb-0">Ngày trả</label>
+                                                    <input type="date" name="paidDate" value="@(r.PaidAt?.ToLocalTime().ToString("yyyy-MM-dd"))" class="form-control form-control-sm">
+                                                    <label class="small fw-semibold mb-0">Gói</label>
+                                                    <select name="planType" class="form-select form-select-sm">
+                                                        <option value="month" selected="@(r.PlanType != "year")">1 tháng</option>
+                                                        <option value="year" selected="@(r.PlanType == "year")">1 năm</option>
+                                                    </select>
+                                                    <div class="d-flex gap-2 mt-1">
+                                                        <button type="submit" class="btn-accent btn-sm" style="flex:1">Lưu</button>
+                                                        <button type="submit" formaction="/Admin/DeletePayment" class="aact-btn aact-del"
+                                                                onclick="return confirm('Xóa đơn này?')" title="Xóa"><i class="fa-solid fa-trash"></i></button>
+                                                    </div>
+                                                </form>
+                                            </div>
+                                        </details>
+                                    }
+                                    else if (r.Status == "paid")
+                                    {
+                                        <span class="admin-sub">—</span>
+                                    }
                                 </td>
                             </tr>
                         }
@@ -166,6 +201,13 @@
 </div>
 
 <style>
+.pay-edit { position:relative; display:inline-block; }
+.pay-edit > summary { list-style:none; cursor:pointer; }
+.pay-edit > summary::-webkit-details-marker { display:none; }
+.pay-edit-pop { position:absolute; right:0; top:110%; z-index:60; width:210px; background:#fff;
+  border:1px solid var(--line,#e2e8f0); border-radius:12px; box-shadow:0 12px 30px rgba(15,23,42,.18); padding:.75rem; }
+.pay-edit[open] > summary { outline:2px solid var(--accent,#0891B2); }
+.btn-sm { padding:.35rem .7rem; border-radius:8px; font-size:.82rem; font-weight:700; border:none; cursor:pointer; }
 .rv-modal { position:fixed; inset:0; background:rgba(15,23,42,.5); display:flex; align-items:center; justify-content:center; z-index:1080; padding:1rem; }
 .rv-modal-card { background:#fff; border-radius:18px; max-width:380px; width:100%; padding:1.6rem 1.5rem; text-align:center; box-shadow:0 20px 60px rgba(0,0,0,.25); }
 .rv-modal-icon { font-size:2.4rem; line-height:1; margin-bottom:.5rem; }
